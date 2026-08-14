@@ -1,0 +1,47 @@
+%!PS-Adobe-3.0
+%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)
+%%Title: (Compound path frame)
+%%BoundingBox: 0 0 300 300
+%%HiResBoundingBox: 0 0 300 300
+%%DocumentProcessColors: Cyan Magenta Yellow Black
+%AI5_FileFormat 3.0
+%AI3_ColorUsage: Color
+%AI3_DocumentPreview: None
+%%py-ai-metadata: eyJmZWF0dXJlX3Byb2ZpbGUiOiJsZWdhY3ktYWktY29tcG91bmQtcGF0aCJ9
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+%%EndSetup
+%AI5_BeginLayer
+%%py-ai-layer-id: (layer-compound)
+1 1 1 1 0 0 0 79 128 255 Lb
+(Compound) Ln
+%%py-ai-compound-id: (compound-frame)
+%%py-ai-compound-name: (Blue frame)
+*u
+%AI7_Tag: (outer)
+0 A
+1 D
+0.25 0.5 1 Xa
+20 20 m
+280 20 L
+280 280 L
+20 280 L
+20 20 L
+f
+%AI7_Tag: (inner)
+0 A
+0 D
+0.25 0.5 1 Xa
+90 90 m
+90 210 L
+210 210 L
+210 90 L
+90 90 L
+f
+*U
+LB
+%AI5_EndLayer
+%%Trailer
+%%EOF

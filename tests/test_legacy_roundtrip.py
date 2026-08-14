@@ -2,7 +2,16 @@ import json
 from pathlib import Path
 
 from py_ai_illustrator.legacy import dumps_ai7, load_ai7, loads_ai7
-from py_ai_illustrator.model import CmykColor, Color, ControlPoint, Document, Layer, Point
+from py_ai_illustrator.model import (
+    ClippingGroup,
+    CmykColor,
+    Color,
+    CompoundPath,
+    ControlPoint,
+    Document,
+    Layer,
+    Point,
+)
 from py_ai_illustrator.model import Path as AIPath
 
 
@@ -60,6 +69,24 @@ def test_generated_cmyk_curve_matches_its_json_source() -> None:
         json.loads((examples / "cmyk-curve.json").read_text(encoding="utf-8"))
     )
     generated = load_ai7(examples / "cmyk-curve.ai")
+    assert generated.to_dict() == source.to_dict()
+
+
+def test_generated_compound_path_matches_its_json_source() -> None:
+    examples = Path(__file__).parents[1] / "examples"
+    source = Document.from_dict(
+        json.loads((examples / "compound-path.json").read_text(encoding="utf-8"))
+    )
+    generated = load_ai7(examples / "compound-path.ai")
+    assert generated.to_dict() == source.to_dict()
+
+
+def test_generated_clipping_group_matches_its_json_source() -> None:
+    examples = Path(__file__).parents[1] / "examples"
+    source = Document.from_dict(
+        json.loads((examples / "clipping-group.json").read_text(encoding="utf-8"))
+    )
+    generated = load_ai7(examples / "clipping-group.ai")
     assert generated.to_dict() == source.to_dict()
 
 
@@ -192,3 +219,105 @@ LB
     assert path.stroke == Color(0.14902, 0.101961, 0.05098)
     assert path.stroke_width == 3.0
     assert len(path.points) == 4
+
+
+def test_compound_path_roundtrip_preserves_components_and_polarity() -> None:
+    fill = Color(0.25, 0.5, 1.0)
+    original = Document(
+        width=300,
+        height=300,
+        layers=[
+            Layer(
+                id="compound-layer",
+                name="Compound",
+                compound_paths=[
+                    CompoundPath(
+                        id="compound-1",
+                        name="Frame",
+                        paths=[
+                            AIPath(
+                                id="outer",
+                                points=[
+                                    Point(20, 20),
+                                    Point(280, 20),
+                                    Point(280, 280),
+                                    Point(20, 280),
+                                ],
+                                fill=fill,
+                                stroke=None,
+                                polarity="positive",
+                            ),
+                            AIPath(
+                                id="inner",
+                                points=[
+                                    Point(90, 90),
+                                    Point(90, 210),
+                                    Point(210, 210),
+                                    Point(210, 90),
+                                ],
+                                fill=fill,
+                                stroke=None,
+                                polarity="negative",
+                            ),
+                        ],
+                    )
+                ],
+            )
+        ],
+    )
+    serialized = dumps_ai7(original)
+    assert b"*u" in serialized
+    assert b"1 D" in serialized
+    assert b"0 D" in serialized
+    assert b"*U" in serialized
+    restored = loads_ai7(serialized)
+    assert restored.to_dict() == original.to_dict()
+
+
+def test_clipping_group_roundtrip_preserves_mask_and_content() -> None:
+    original = Document(
+        width=300,
+        height=300,
+        layers=[
+            Layer(
+                id="clipping-layer",
+                name="Clipping",
+                clipping_groups=[
+                    ClippingGroup(
+                        id="clip-1",
+                        name="Square crop",
+                        clipping_path=AIPath(
+                            id="mask",
+                            points=[
+                                Point(80, 80),
+                                Point(220, 80),
+                                Point(220, 220),
+                                Point(80, 220),
+                            ],
+                            fill=None,
+                            stroke=None,
+                        ),
+                        paths=[
+                            AIPath(
+                                id="content",
+                                points=[
+                                    Point(20, 20),
+                                    Point(280, 20),
+                                    Point(280, 280),
+                                    Point(20, 280),
+                                ],
+                                fill=Color(1.0, 0.25, 0.5),
+                                stroke=None,
+                            )
+                        ],
+                    )
+                ],
+            )
+        ],
+    )
+    serialized = dumps_ai7(original)
+    assert b"q" in serialized
+    assert b"h\nW\nn" in serialized
+    assert b"Q" in serialized
+    restored = loads_ai7(serialized)
+    assert restored.to_dict() == original.to_dict()

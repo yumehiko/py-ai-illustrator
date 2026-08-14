@@ -111,6 +111,7 @@ class Path:
     stroke: ProcessColor | None = None
     stroke_width: float = 1.0
     name: str | None = None
+    polarity: str = "positive"
     unknown: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -118,6 +119,8 @@ class Path:
             raise ValueError("A path needs at least two points")
         if self.stroke_width < 0:
             raise ValueError("stroke_width must not be negative")
+        if self.polarity not in {"positive", "negative"}:
+            raise ValueError("polarity must be 'positive' or 'negative'")
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Path:
@@ -131,6 +134,51 @@ class Path:
                 _process_color_from_dict(data["stroke"]) if data.get("stroke") is not None else None
             ),
             stroke_width=float(data.get("stroke_width", 1.0)),
+            polarity=str(data.get("polarity", "positive")),
+            unknown=dict(data.get("unknown", {})),
+        )
+
+
+@dataclass(slots=True)
+class CompoundPath:
+    id: str
+    paths: list[Path]
+    name: str | None = None
+    unknown: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if len(self.paths) < 2:
+            raise ValueError("A compound path needs at least two component paths")
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CompoundPath:
+        return cls(
+            id=str(data["id"]),
+            name=data.get("name"),
+            paths=[Path.from_dict(path) for path in data.get("paths", [])],
+            unknown=dict(data.get("unknown", {})),
+        )
+
+
+@dataclass(slots=True)
+class ClippingGroup:
+    id: str
+    clipping_path: Path
+    paths: list[Path]
+    name: str | None = None
+    unknown: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.paths:
+            raise ValueError("A clipping group needs at least one content path")
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ClippingGroup:
+        return cls(
+            id=str(data["id"]),
+            name=data.get("name"),
+            clipping_path=Path.from_dict(data["clipping_path"]),
+            paths=[Path.from_dict(path) for path in data.get("paths", [])],
             unknown=dict(data.get("unknown", {})),
         )
 
@@ -140,6 +188,8 @@ class Layer:
     id: str
     name: str
     paths: list[Path] = field(default_factory=list)
+    compound_paths: list[CompoundPath] = field(default_factory=list)
+    clipping_groups: list[ClippingGroup] = field(default_factory=list)
     visible: bool = True
     locked: bool = False
     unknown: dict[str, Any] = field(default_factory=dict)
@@ -150,6 +200,12 @@ class Layer:
             id=str(data["id"]),
             name=str(data["name"]),
             paths=[Path.from_dict(path) for path in data.get("paths", [])],
+            compound_paths=[
+                CompoundPath.from_dict(path) for path in data.get("compound_paths", [])
+            ],
+            clipping_groups=[
+                ClippingGroup.from_dict(group) for group in data.get("clipping_groups", [])
+            ],
             visible=bool(data.get("visible", True)),
             locked=bool(data.get("locked", False)),
             unknown=dict(data.get("unknown", {})),

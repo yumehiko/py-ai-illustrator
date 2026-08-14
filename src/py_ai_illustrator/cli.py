@@ -163,7 +163,7 @@ def build_parser() -> argparse.ArgumentParser:
     illustrator_export_parser.add_argument("--application", default="Adobe Illustrator")
     illustrator_export_parser.add_argument(
         "--fixture",
-        choices=("rgb-rectangle", "cmyk-curve"),
+        choices=("rgb-rectangle", "cmyk-curve", "compound-path", "clipping-group"),
         default="rgb-rectangle",
     )
     illustrator_export_parser.add_argument("--ai-output")

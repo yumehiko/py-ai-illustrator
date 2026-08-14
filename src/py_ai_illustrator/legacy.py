@@ -7,7 +7,18 @@ import json
 import re
 from pathlib import Path as FilePath
 
-from .model import CmykColor, Color, ControlPoint, Document, Layer, Path, Point, ProcessColor
+from .model import (
+    ClippingGroup,
+    CmykColor,
+    Color,
+    CompoundPath,
+    ControlPoint,
+    Document,
+    Layer,
+    Path,
+    Point,
+    ProcessColor,
+)
 
 _NUMBER = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
 _POINT_RE = re.compile(rf"^({_NUMBER})\s+({_NUMBER})\s+([mLl])$")
@@ -23,6 +34,7 @@ _CUBIC_RE = re.compile(
 )
 _SHORT_CUBIC_RE = re.compile(rf"^({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+([vVyY])$")
 _WIDTH_RE = re.compile(rf"(?:^|\s)({_NUMBER})\s+w(?:\s|$)")
+_POLARITY_RE = re.compile(r"^([01])\s+D$")
 _BOUNDS_RE = re.compile(r"^%%(?:HiRes)?BoundingBox:\s+(.+)$")
 _LAYER_NAME_RE = re.compile(r"^\((.*)\)\s+Ln$")
 _LAYER_RE = re.compile(r"^([01])\s+1\s+([01])\s+1\s+0\s+0\s+.+\s+Lb$")
@@ -84,6 +96,48 @@ def _path_geometry(path: Path) -> list[str]:
     return lines
 
 
+def _serialized_path(path: Path, *, locked: bool) -> list[str]:
+    lines = [f"%AI7_Tag: ({_escape_postscript_string(path.id)})"]
+    if path.name is not None:
+        lines.append(f"%%py-ai-path-name: ({_escape_postscript_string(path.name)})")
+    lines.extend(["1 A" if locked else "0 A", "1 D" if path.polarity == "positive" else "0 D"])
+    if path.fill is not None:
+        lines.append(_color_operator(path.fill, stroke=False))
+    if path.stroke is not None:
+        lines.extend(
+            [
+                _color_operator(path.stroke, stroke=True),
+                f"{_number(path.stroke_width)} w",
+            ]
+        )
+    lines.extend(_path_geometry(path))
+    render = {
+        (True, True, True): "b",
+        (True, True, False): "f",
+        (True, False, True): "s",
+        (True, False, False): "n",
+        (False, True, True): "B",
+        (False, True, False): "F",
+        (False, False, True): "S",
+        (False, False, False): "N",
+    }[(path.closed, path.fill is not None, path.stroke is not None)]
+    lines.append(render)
+    return lines
+
+
+def _serialized_clipping_path(path: Path, *, locked: bool) -> list[str]:
+    lines = [
+        f"%AI7_Tag: ({_escape_postscript_string(path.id)})",
+        "1 A" if locked else "0 A",
+        "1 D" if path.polarity == "positive" else "0 D",
+        *_path_geometry(path),
+        "h" if path.closed else "H",
+        "W",
+        "n" if path.closed else "N",
+    ]
+    return lines
+
+
 def dumps_ai7(document: Document) -> bytes:
     """Serialize the supported IR subset as editable legacy Illustrator data."""
 
@@ -124,31 +178,44 @@ def dumps_ai7(document: Document) -> bytes:
             ]
         )
         for path in layer.paths:
-            lines.append(f"%AI7_Tag: ({_escape_postscript_string(path.id)})")
-            if path.name is not None:
-                lines.append(f"%%py-ai-path-name: ({_escape_postscript_string(path.name)})")
-            lines.append("1 A" if layer.locked else "0 A")
-            if path.fill is not None:
-                lines.append(_color_operator(path.fill, stroke=False))
-            if path.stroke is not None:
-                lines.extend(
-                    [
-                        _color_operator(path.stroke, stroke=True),
-                        f"{_number(path.stroke_width)} w",
-                    ]
-                )
-            lines.extend(_path_geometry(path))
-            render = {
-                (True, True, True): "b",
-                (True, True, False): "f",
-                (True, False, True): "s",
-                (True, False, False): "n",
-                (False, True, True): "B",
-                (False, True, False): "F",
-                (False, False, True): "S",
-                (False, False, False): "N",
-            }[(path.closed, path.fill is not None, path.stroke is not None)]
-            lines.append(render)
+            lines.extend(_serialized_path(path, locked=layer.locked))
+        for compound in layer.compound_paths:
+            lines.extend(
+                [
+                    f"%%py-ai-compound-id: ({_escape_postscript_string(compound.id)})",
+                    *(
+                        [
+                            "%%py-ai-compound-name: "
+                            f"({_escape_postscript_string(compound.name)})"
+                        ]
+                        if compound.name is not None
+                        else []
+                    ),
+                    "*u",
+                ]
+            )
+            for path in compound.paths:
+                lines.extend(_serialized_path(path, locked=layer.locked))
+            lines.append("*U")
+        for group in layer.clipping_groups:
+            lines.extend(
+                [
+                    f"%%py-ai-clipping-id: ({_escape_postscript_string(group.id)})",
+                    *(
+                        [
+                            "%%py-ai-clipping-name: "
+                            f"({_escape_postscript_string(group.name)})"
+                        ]
+                        if group.name is not None
+                        else []
+                    ),
+                    "q",
+                ]
+            )
+            lines.extend(_serialized_clipping_path(group.clipping_path, locked=layer.locked))
+            for path in group.paths:
+                lines.extend(_serialized_path(path, locked=layer.locked))
+            lines.append("Q")
         lines.extend(["LB", "%AI5_EndLayer"])
 
     lines.extend(["%%Trailer", "%%EOF", ""])
@@ -171,12 +238,25 @@ def loads_ai7(data: bytes) -> Document:
     title_seen = False
     layers: list[Layer] = []
     current_layer: Layer | None = None
+    current_compound_paths: list[Path] | None = None
+    current_compound_id: str | None = None
+    current_compound_name: str | None = None
+    current_clipping_paths: list[Path] | None = None
+    current_clipping_path: Path | None = None
+    current_clipping_id: str | None = None
+    current_clipping_name: str | None = None
+    clipping_mask_closed: bool | None = None
     current_points: list[Point] = []
     fill: ProcessColor | None = None
     stroke: ProcessColor | None = None
     stroke_width = 1.0
     pending_id: str | None = None
     pending_name: str | None = None
+    pending_compound_id: str | None = None
+    pending_compound_name: str | None = None
+    pending_clipping_id: str | None = None
+    pending_clipping_name: str | None = None
+    polarity = "positive"
     path_counter = 0
     metadata: dict[str, object] = {}
 
@@ -221,6 +301,77 @@ def loads_ai7(data: bytes) -> Document:
             layers.append(current_layer)
             current_layer = None
             continue
+        if line.startswith("%%py-ai-compound-id: (") and line.endswith(")"):
+            value = line.removeprefix("%%py-ai-compound-id: (")[:-1]
+            pending_compound_id = _unescape_postscript_string(value)
+            continue
+        if line.startswith("%%py-ai-compound-name: (") and line.endswith(")"):
+            value = line.removeprefix("%%py-ai-compound-name: (")[:-1]
+            pending_compound_name = _unescape_postscript_string(value)
+            continue
+        if line == "*u":
+            current_compound_paths = []
+            current_compound_id = pending_compound_id or f"compound-{len(layers) + 1}"
+            current_compound_name = pending_compound_name
+            pending_compound_id = None
+            pending_compound_name = None
+            continue
+        if line == "*U" and current_compound_paths is not None:
+            if current_layer is None:
+                current_layer = Layer(id="layer-1", name="Layer 1")
+            if len(current_compound_paths) >= 2:
+                current_layer.compound_paths.append(
+                    CompoundPath(
+                        id=current_compound_id or f"compound-{len(layers) + 1}",
+                        name=current_compound_name,
+                        paths=current_compound_paths,
+                    )
+                )
+            else:
+                current_layer.paths.extend(current_compound_paths)
+            current_compound_paths = None
+            current_compound_id = None
+            current_compound_name = None
+            continue
+        if line.startswith("%%py-ai-clipping-id: (") and line.endswith(")"):
+            value = line.removeprefix("%%py-ai-clipping-id: (")[:-1]
+            pending_clipping_id = _unescape_postscript_string(value)
+            continue
+        if line.startswith("%%py-ai-clipping-name: (") and line.endswith(")"):
+            value = line.removeprefix("%%py-ai-clipping-name: (")[:-1]
+            pending_clipping_name = _unescape_postscript_string(value)
+            continue
+        if line == "q":
+            current_clipping_paths = []
+            current_clipping_path = None
+            current_clipping_id = pending_clipping_id or f"clipping-{len(layers) + 1}"
+            current_clipping_name = pending_clipping_name
+            clipping_mask_closed = None
+            pending_clipping_id = None
+            pending_clipping_name = None
+            continue
+        if line == "Q" and current_clipping_paths is not None:
+            if current_layer is None:
+                current_layer = Layer(id="layer-1", name="Layer 1")
+            if current_clipping_path is not None and current_clipping_paths:
+                current_layer.clipping_groups.append(
+                    ClippingGroup(
+                        id=current_clipping_id or f"clipping-{len(layers) + 1}",
+                        name=current_clipping_name,
+                        clipping_path=current_clipping_path,
+                        paths=current_clipping_paths,
+                    )
+                )
+            else:
+                if current_clipping_path is not None:
+                    current_layer.paths.append(current_clipping_path)
+                current_layer.paths.extend(current_clipping_paths)
+            current_clipping_paths = None
+            current_clipping_path = None
+            current_clipping_id = None
+            current_clipping_name = None
+            clipping_mask_closed = None
+            continue
         if line.startswith("%AI7_Tag: (") and line.endswith(")"):
             pending_id = _unescape_postscript_string(line[11:-1])
             continue
@@ -254,6 +405,15 @@ def loads_ai7(data: bytes) -> Document:
         width_match = _WIDTH_RE.search(line)
         if width_match:
             stroke_width = float(width_match.group(1))
+            continue
+        polarity_match = _POLARITY_RE.match(line)
+        if polarity_match:
+            polarity = "positive" if polarity_match.group(1) == "1" else "negative"
+            continue
+        if line in {"h", "H"} and current_clipping_paths is not None and current_points:
+            clipping_mask_closed = line == "h"
+            continue
+        if line == "W" and current_clipping_paths is not None:
             continue
         point_match = _POINT_RE.match(line)
         if point_match:
@@ -307,7 +467,12 @@ def loads_ai7(data: bytes) -> Document:
             if current_layer is None:
                 current_layer = Layer(id="layer-1", name="Layer 1")
             path_counter += 1
-            is_closed = line.islower()
+            is_clipping_mask = (
+                current_clipping_paths is not None
+                and current_clipping_path is None
+                and clipping_mask_closed is not None
+            )
+            is_closed = clipping_mask_closed if is_clipping_mask else line.islower()
             path_points = current_points
             if (
                 is_closed
@@ -327,22 +492,31 @@ def loads_ai7(data: bytes) -> Document:
                     ),
                     *current_points[1:-1],
                 ]
-            has_fill = line in {"b", "f", "B", "F"}
-            has_stroke = line in {"b", "s", "B", "S"}
-            current_layer.paths.append(
-                Path(
-                    id=pending_id or f"path-{path_counter}",
-                    points=path_points,
-                    closed=is_closed,
-                    fill=fill if has_fill else None,
-                    stroke=stroke if has_stroke else None,
-                    stroke_width=stroke_width,
-                    name=pending_name,
-                )
+            has_fill = not is_clipping_mask and line in {"b", "f", "B", "F"}
+            has_stroke = not is_clipping_mask and line in {"b", "s", "B", "S"}
+            parsed_path = Path(
+                id=pending_id or f"path-{path_counter}",
+                points=path_points,
+                closed=is_closed,
+                fill=fill if has_fill else None,
+                stroke=stroke if has_stroke else None,
+                stroke_width=stroke_width,
+                name=pending_name,
+                polarity=polarity,
             )
+            if is_clipping_mask:
+                current_clipping_path = parsed_path
+                clipping_mask_closed = None
+            elif current_compound_paths is not None:
+                current_compound_paths.append(parsed_path)
+            elif current_clipping_paths is not None:
+                current_clipping_paths.append(parsed_path)
+            else:
+                current_layer.paths.append(parsed_path)
             current_points = []
             pending_id = None
             pending_name = None
+            polarity = "positive"
 
     if current_layer is not None:
         layers.append(current_layer)

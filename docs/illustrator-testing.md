@@ -36,6 +36,8 @@ uv run py-ai test-illustrator-export --fixture cmyk-curve
 ```bash
 uv run py-ai test-illustrator-roundtrip examples/rectangle.ai
 uv run py-ai test-illustrator-roundtrip examples/cmyk-curve.ai
+uv run py-ai test-illustrator-roundtrip examples/compound-path.ai
+uv run py-ai test-illustrator-roundtrip examples/clipping-group.ai
 ```
 
 調査用にIllustrator生成AIを残す場合は、既存ファイルではない出力先を指定します。上書きは拒否されます。
@@ -94,6 +96,8 @@ Illustratorはlegacy AIを開く際にdocument原点を移動することがあ�
 | --- | --- | --- |
 | `examples/rectangle.ai` | 1 layer / 1 path / 4 anchors | closed、RGB fill/stroke、stroke width 3 |
 | `examples/cmyk-curve.ai` | 1 layer / 1 path / 2 anchors | open、Bézier方向点、CMYK stroke、stroke width 4 |
+| `examples/compound-path.ai` | 1 layer / 1 compound / 2 component paths | 8 anchors、正負polarity、RGB fill |
+| `examples/clipping-group.ai` | 1 layer / 1 clipped group / mask + content | mask 4 anchors、content 4 anchors、RGB fill |
 
 逆方向も同じ環境で確認済みです。
 
@@ -103,5 +107,9 @@ Illustratorはlegacy AIを開く際にdocument原点を移動することがあ�
 | `cmyk-curve` | legacy AI検出、1 layer、2 anchors、open、Bézier方向点、CMYK stroke、stroke width 4 |
 
 完全往復も両fixtureで`passed`です。RGB矩形は全体が平行移動しRGB値が8-bitへ量子化されましたが、正規化後のpath geometryとpaint属性は一致しました。CMYK Bézierはanchor・handle・CMYK値・stroke widthが保持されました。
+
+compound pathも完全往復で`passed`です。比較器はcontainer数、component数、各subpathのpolarityも照合します。
+
+clipping groupも完全往復で`passed`です。比較器はclipping container数、content数、maskとcontent双方のgeometry・paint属性を照合します。
 
 これは記載したfixtureと機能subsetの適合結果です。任意のAI7ファイルや未対応機能の互換性を保証するものではありません。

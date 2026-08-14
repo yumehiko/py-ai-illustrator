@@ -6,6 +6,8 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 
 - 内容に基づく legacy AI / PDF-compatible AI / PDF / EPS の形式判定
 - 基本的な document / layer / path / Bézier handle / RGB・CMYK process color の Python IR
+- 複数subpathとpolarityを保持するcompound path IR
+- mask pathとcontent pathsを保持するclipping group IR
 - 公開仕様に沿った Illustrator 7 互換サブセットと JSON IR の往復変換
 - `inspect` / `export` / `validate` / `test-illustrator` CLI
 - 対応範囲の意味的 round-trip テスト
@@ -55,6 +57,8 @@ uv run py-ai test-illustrator-export --fixture rgb-rectangle
 uv run py-ai test-illustrator-export --fixture cmyk-curve
 uv run py-ai test-illustrator-roundtrip examples/rectangle.ai
 uv run py-ai test-illustrator-roundtrip examples/cmyk-curve.ai
+uv run py-ai test-illustrator examples/compound-path.ai
+uv run py-ai test-illustrator examples/clipping-group.ai
 ```
 
 同梱fixtureをIllustratorで開く方向に加え、Illustrator自身が作成・AI8保存したfixtureをPython IRへ読む方向も確認済みです。layer/path/anchor、開閉、塗り・線、Bézier方向点、RGB/CMYK属性を照合します。これは現在の限定subsetに対する結果で、任意のAIファイルの完全互換を意味しません。

@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "title": "Clipping group",
+  "width": 300,
+  "height": 300,
+  "metadata": {
+    "feature_profile": "legacy-ai-clipping-group"
+  },
+  "layers": [
+    {
+      "id": "layer-clipping",
+      "name": "Clipping",
+      "visible": true,
+      "locked": false,
+      "paths": [],
+      "compound_paths": [],
+      "clipping_groups": [
+        {
+          "id": "clipping-square",
+          "name": "Square crop",
+          "clipping_path": {
+            "id": "mask",
+            "points": [
+              {"x": 80, "y": 80},
+              {"x": 220, "y": 80},
+              {"x": 220, "y": 220},
+              {"x": 80, "y": 220}
+            ],
+            "closed": true,
+            "fill": null,
+            "stroke": null
+          },
+          "paths": [
+            {
+              "id": "content",
+              "points": [
+                {"x": 20, "y": 20},
+                {"x": 280, "y": 20},
+                {"x": 280, "y": 280},
+                {"x": 20, "y": 280}
+              ],
+              "closed": true,
+              "fill": {"red": 1.0, "green": 0.25, "blue": 0.5},
+              "stroke": null
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

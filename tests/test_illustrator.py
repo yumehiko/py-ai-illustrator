@@ -58,6 +58,8 @@ def test_expected_structure_comes_from_legacy_reader() -> None:
         "closed_count": 1,
         "filled_count": 1,
         "stroked_count": 1,
+        "compound_path_item_count": 0,
+        "clipping_group_count": 0,
     }
 
 
@@ -70,6 +72,8 @@ def test_structure_comparison_reports_individual_mismatches() -> None:
         "closed_count": 1,
         "filled_count": 1,
         "stroked_count": 1,
+        "compound_path_item_count": 0,
+        "clipping_group_count": 0,
     }
     actual = dict(expected, point_counts=[3])
     checks = _compare_structure(expected, actual)
@@ -89,6 +93,8 @@ def test_runner_reports_a_successful_illustrator_import(monkeypatch) -> None:
         "closed_count": 1,
         "filled_count": 1,
         "stroked_count": 1,
+        "compound_path_item_count": 0,
+        "clipping_group_count": 0,
     }
 
     def fake_run(command, **kwargs):
@@ -169,6 +175,28 @@ def test_roundtrip_comparison_reports_color_changes() -> None:
     checks = _compare_roundtrip_semantics(expected, actual)
     assert checks["fill_colors"] is False
     assert checks["path_geometry"] is True
+
+
+def test_roundtrip_comparison_reports_compound_path_polarity_changes() -> None:
+    source = Path(__file__).parents[1] / "examples" / "compound-path.ai"
+    expected = illustrator.load_ai7(source)
+    actual = Document.from_dict(expected.to_dict())
+    actual.layers[0].compound_paths[0].paths[1].polarity = "positive"
+    checks = _compare_roundtrip_semantics(expected, actual)
+    assert checks["compound_path_count"] is True
+    assert checks["compound_component_counts"] is True
+    assert checks["path_polarities"] is False
+
+
+def test_roundtrip_comparison_reports_clipping_group_removal() -> None:
+    source = Path(__file__).parents[1] / "examples" / "clipping-group.ai"
+    expected = illustrator.load_ai7(source)
+    actual = Document.from_dict(expected.to_dict())
+    group = actual.layers[0].clipping_groups.pop()
+    actual.layers[0].paths.extend([group.clipping_path, *group.paths])
+    checks = _compare_roundtrip_semantics(expected, actual)
+    assert checks["path_item_count"] is True
+    assert checks["clipping_group_count"] is False
 
 
 def test_roundtrip_runner_refuses_to_overwrite_existing_output(

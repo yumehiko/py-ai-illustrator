@@ -22,6 +22,18 @@ def _character_code_expression(value: str | Path) -> str:
     return f"String.fromCharCode({codepoints})"
 
 
+def _document_paths(document: Document) -> list[AIPath]:
+    paths: list[AIPath] = []
+    for layer in document.layers:
+        paths.extend(layer.paths)
+        for compound in layer.compound_paths:
+            paths.extend(compound.paths)
+        for group in layer.clipping_groups:
+            paths.append(group.clipping_path)
+            paths.extend(group.paths)
+    return paths
+
+
 def _expected_structure(source: Path) -> dict[str, Any] | None:
     report = inspect_file(source)
     if report.format is not FileFormat.LEGACY_AI:
@@ -30,7 +42,7 @@ def _expected_structure(source: Path) -> dict[str, Any] | None:
         document = load_ai7(source)
     except ValueError:
         return None
-    paths = [path for layer in document.layers for path in layer.paths]
+    paths = _document_paths(document)
     return {
         "layer_count": len(document.layers),
         "layer_names": [layer.name for layer in document.layers],
@@ -39,6 +51,10 @@ def _expected_structure(source: Path) -> dict[str, Any] | None:
         "closed_count": sum(path.closed for path in paths),
         "filled_count": sum(path.fill is not None for path in paths),
         "stroked_count": sum(path.stroke is not None for path in paths),
+        "compound_path_item_count": sum(
+            len(layer.compound_paths) for layer in document.layers
+        ),
+        "clipping_group_count": sum(len(layer.clipping_groups) for layer in document.layers),
     }
 
 
@@ -173,6 +189,10 @@ def _build_javascript(source: Path) -> str:
             if (paths[pathCountIndex].stroked) strokedCount++;
         }}
         pointCounts.sort(function (left, right) {{ return left - right; }});
+        var clippingGroupCount = 0;
+        for (var groupIndex = 0; groupIndex < documentRef.groupItems.length; groupIndex++) {{
+            if (documentRef.groupItems[groupIndex].clipped) clippingGroupCount++;
+        }}
 
         return toJson({{
             ok: true,
@@ -183,6 +203,8 @@ def _build_javascript(source: Path) -> str:
             path_item_count: documentRef.pathItems.length,
             page_item_count: documentRef.pageItems.length,
             artboard_count: documentRef.artboards.length,
+            compound_path_item_count: documentRef.compoundPathItems.length,
+            clipping_group_count: clippingGroupCount,
             layer_names: layerNames,
             point_counts: pointCounts,
             closed_count: closedCount,
@@ -265,6 +287,56 @@ def _build_export_javascript(destination: Path, fixture: str) -> str:
         stroke.yellow = 0;
         stroke.black = 10;
         path.strokeColor = stroke;
+"""
+    elif fixture == "compound-path":
+        fixture_javascript = """
+        documentRef = app.documents.add(DocumentColorSpace.RGB, 300, 300);
+        var layer = documentRef.layers[0];
+        layer.name = "Illustrator Native Compound";
+
+        var compound = layer.compoundPathItems.add();
+        compound.name = "Native Compound Path";
+        var outer = compound.pathItems.add();
+        outer.setEntirePath([[20, 20], [280, 20], [280, 280], [20, 280]]);
+        outer.closed = true;
+        var inner = compound.pathItems.add();
+        inner.setEntirePath([[90, 90], [90, 210], [210, 210], [210, 90]]);
+        inner.closed = true;
+
+        var fill = new RGBColor();
+        fill.red = 64;
+        fill.green = 128;
+        fill.blue = 255;
+        outer.filled = true;
+        outer.stroked = false;
+        outer.fillColor = fill;
+"""
+    elif fixture == "clipping-group":
+        fixture_javascript = """
+        documentRef = app.documents.add(DocumentColorSpace.RGB, 300, 300);
+        var layer = documentRef.layers[0];
+        layer.name = "Illustrator Native Clipping";
+
+        var group = layer.groupItems.add();
+        group.name = "Native Clipping Group";
+        var content = group.pathItems.add();
+        content.setEntirePath([[20, 20], [280, 20], [280, 280], [20, 280]]);
+        content.closed = true;
+        content.filled = true;
+        content.stroked = false;
+        var contentFill = new RGBColor();
+        contentFill.red = 255;
+        contentFill.green = 64;
+        contentFill.blue = 128;
+        content.fillColor = contentFill;
+
+        var clip = group.pathItems.add();
+        clip.setEntirePath([[80, 80], [220, 80], [220, 220], [80, 220]]);
+        clip.closed = true;
+        clip.filled = false;
+        clip.stroked = false;
+        clip.clipping = true;
+        group.clipped = true;
 """
     else:
         raise ValueError(f"Unknown Illustrator fixture: {fixture}")
@@ -366,6 +438,8 @@ def _compare_structure(expected: dict[str, Any], actual: dict[str, Any]) -> dict
         "closed_count",
         "filled_count",
         "stroked_count",
+        "compound_path_item_count",
+        "clipping_group_count",
     )
     return {key: actual.get(key) == expected[key] for key in keys}
 
@@ -437,8 +511,20 @@ def _compare_roundtrip_semantics(
     *,
     tolerance: float = 1 / 255 + 1e-6,
 ) -> dict[str, bool]:
-    expected_paths = [path for layer in expected.layers for path in layer.paths]
-    actual_paths = [path for layer in actual.layers for path in layer.paths]
+    expected_paths = _document_paths(expected)
+    actual_paths = _document_paths(actual)
+    expected_compounds = [
+        compound for layer in expected.layers for compound in layer.compound_paths
+    ]
+    actual_compounds = [
+        compound for layer in actual.layers for compound in layer.compound_paths
+    ]
+    expected_clipping_groups = [
+        group for layer in expected.layers for group in layer.clipping_groups
+    ]
+    actual_clipping_groups = [
+        group for layer in actual.layers for group in layer.clipping_groups
+    ]
     paired_paths = list(zip(expected_paths, actual_paths, strict=False))
     same_path_count = len(expected_paths) == len(actual_paths)
     return {
@@ -455,6 +541,24 @@ def _compare_roundtrip_semantics(
             (left.closed, left.fill is not None, left.stroke is not None)
             == (right.closed, right.fill is not None, right.stroke is not None)
             for left, right in paired_paths
+        ),
+        "path_polarities": same_path_count
+        and all(left.polarity == right.polarity for left, right in paired_paths),
+        "compound_path_count": len(expected_compounds) == len(actual_compounds),
+        "compound_component_counts": len(expected_compounds) == len(actual_compounds)
+        and all(
+            len(left.paths) == len(right.paths)
+            for left, right in zip(expected_compounds, actual_compounds, strict=True)
+        ),
+        "clipping_group_count": len(expected_clipping_groups)
+        == len(actual_clipping_groups),
+        "clipping_content_counts": len(expected_clipping_groups)
+        == len(actual_clipping_groups)
+        and all(
+            len(left.paths) == len(right.paths)
+            for left, right in zip(
+                expected_clipping_groups, actual_clipping_groups, strict=True
+            )
         ),
         "stroke_widths": same_path_count
         and all(
@@ -572,7 +676,12 @@ def run_illustrator_export_test(
         }
     if timeout <= 0:
         return {"status": "invalid-input", "error": "timeout must be positive"}
-    if fixture not in {"rgb-rectangle", "cmyk-curve"}:
+    if fixture not in {
+        "rgb-rectangle",
+        "cmyk-curve",
+        "compound-path",
+        "clipping-group",
+    }:
         return {"status": "invalid-input", "error": f"Unknown fixture: {fixture}"}
 
     output_path = Path(output).resolve() if output is not None else None
@@ -628,23 +737,27 @@ def run_illustrator_export_test(
                 "reader_error": str(error),
             }
 
-        paths = [path for layer in document.layers for path in layer.paths]
+        paths = _document_paths(document)
         path = paths[0] if paths else None
-        expected_layer_name = (
-            "Illustrator Native" if fixture == "rgb-rectangle" else "Illustrator Native Curves"
-        )
+        expected_layer_name = {
+            "rgb-rectangle": "Illustrator Native",
+            "cmyk-curve": "Illustrator Native Curves",
+            "compound-path": "Illustrator Native Compound",
+            "clipping-group": "Illustrator Native Clipping",
+        }[fixture]
         checks: dict[str, bool] = {
             "legacy_ai_detected": format_report.format is FileFormat.LEGACY_AI,
             "artwork_bounds": document.width > 0 and document.height > 0,
             "layer_count": len(document.layers) == 1,
             "layer_name": bool(document.layers)
             and document.layers[0].name == expected_layer_name,
-            "path_item_count": len(paths) == 1,
-            "stroked": path is not None and path.stroke is not None,
+            "path_item_count": len(paths)
+            == (2 if fixture in {"compound-path", "clipping-group"} else 1),
         }
         if fixture == "rgb-rectangle":
             checks.update(
                 {
+                    "stroked": path is not None and path.stroke is not None,
                     "point_count": path is not None and len(path.points) == 4,
                     "closed": path is not None and path.closed,
                     "filled": path is not None and path.fill is not None,
@@ -653,9 +766,10 @@ def run_illustrator_export_test(
                     "rgb_stroke": path is not None and isinstance(path.stroke, Color),
                 }
             )
-        else:
+        elif fixture == "cmyk-curve":
             checks.update(
                 {
+                    "stroked": path is not None and path.stroke is not None,
                     "point_count": path is not None and len(path.points) == 2,
                     "open": path is not None and not path.closed,
                     "unfilled": path is not None and path.fill is None,
@@ -664,6 +778,37 @@ def run_illustrator_export_test(
                     "bezier_handles": path is not None
                     and path.points[0].out_handle is not None
                     and path.points[1].in_handle is not None,
+                }
+            )
+        elif fixture == "compound-path":
+            compound_paths = document.layers[0].compound_paths if document.layers else []
+            compound = compound_paths[0] if compound_paths else None
+            checks.update(
+                {
+                    "compound_path_count": len(compound_paths) == 1,
+                    "component_count": compound is not None and len(compound.paths) == 2,
+                    "component_polarities": compound is not None
+                    and [path.polarity for path in compound.paths]
+                    == ["positive", "negative"],
+                    "filled": compound is not None
+                    and all(path.fill is not None for path in compound.paths),
+                    "unstroked": compound is not None
+                    and all(path.stroke is None for path in compound.paths),
+                }
+            )
+        else:
+            clipping_groups = document.layers[0].clipping_groups if document.layers else []
+            group = clipping_groups[0] if clipping_groups else None
+            checks.update(
+                {
+                    "clipping_group_count": len(clipping_groups) == 1,
+                    "content_path_count": group is not None and len(group.paths) == 1,
+                    "mask_closed": group is not None and group.clipping_path.closed,
+                    "mask_unpainted": group is not None
+                    and group.clipping_path.fill is None
+                    and group.clipping_path.stroke is None,
+                    "content_filled": group is not None
+                    and group.paths[0].fill is not None,
                 }
             )
         passed = all(checks.values())
