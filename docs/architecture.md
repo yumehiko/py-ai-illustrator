@@ -89,7 +89,9 @@ PlacedImage
 
 Adobe Illustrator 7 specification の DSC comments と operator を読みます。古い形式を単なる中間形式とみなさず、最初の writer の仕様にも使います。
 
-最初のlossless層として、元bytesと各物理行の`start/content_end/end` spanを保持する`LegacySource`を実装済みです。改行や未知byteを正規化しないため`LegacySource.to_bytes()`は入力と完全一致します。semantic parserはこの行索引から既知subsetをIRへ投影します。次段階でstatement内のoperator token spanとnode source spanを追加します。
+最初のlossless層として、元bytesと各物理行の`start/content_end/end` spanを保持する`LegacySource`を実装済みです。改行や未知byteを正規化しないため`LegacySource.to_bytes()`は入力と完全一致します。statementはPostScript文字列とinline commentを飛ばして末尾operator spanも索引化します。semantic parserはこの行索引から既知subsetをIRへ投影します。
+
+`SourceReplacement`と`LegacySource.patched()`は、範囲内かつ非重複のspanだけを差し替えてsource mapを再構築します。これはlossless patch writerの低レベルprimitiveで、operatorの妥当性やIR preconditionは検証しません。次段階ではnode source spanとtyped editを結び、高レベル操作からのみreplacementを生成します。
 
 ## Writer 戦略
 

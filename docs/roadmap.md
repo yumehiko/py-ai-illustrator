@@ -24,8 +24,8 @@
 
 - 完了: 依存ゼロの形式判定、最小Python IR、legacy AIサブセットreader/writer、JSON往復、CLI、自動テスト、Illustrator 30.7.0実機適合試験、MITライセンス決定
 - 実証済みsubset: RGB/CMYK、直線/Bézier、compound、clipping、異種itemのstacking order、path ID・名前のAI8再保存保持
-- 基盤実装済み: legacy元bytes・物理行改行・byte spanを保持する読み取り専用lossless source mapとresource limit
-- 未完了: 現代AI fixtureのPrivateData dump、`inkai`比較環境、operator-level CSTと局所patch、text/image/artboard
+- 基盤実装済み: legacy元bytes・物理行改行・operator byte spanを保持するlossless source map、resource limit、非重複local patch primitive
+- 未完了: 現代AI fixtureのPrivateData dump、`inkai`比較環境、node-level CSTとtyped patch、text/image/artboard
 - 詳細: [Phase 0 の実装状況](phase0-status.md)
 
 ## Phase 1: Reader + IR + inspection CLI

@@ -1,7 +1,13 @@
 """Python tools for inspecting and translating Adobe Illustrator files."""
 
 from .format import FileFormat, FormatReport, inspect_file
-from .lossless import LegacyLineToken, LegacySource, SourceLimitExceeded, tokenize_legacy
+from .lossless import (
+    LegacyLineToken,
+    LegacySource,
+    SourceLimitExceeded,
+    SourceReplacement,
+    tokenize_legacy,
+)
 from .model import (
     ClippingGroup,
     CmykColor,
@@ -31,6 +37,7 @@ __all__ = [
     "Path",
     "Point",
     "SourceLimitExceeded",
+    "SourceReplacement",
     "inspect_file",
     "tokenize_legacy",
 ]

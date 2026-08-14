@@ -35,17 +35,24 @@ uv run ruff check .
 ```python
 from pathlib import Path
 
-from py_ai_illustrator import tokenize_legacy
+from py_ai_illustrator import SourceReplacement, tokenize_legacy
 
 data = Path("input.ai").read_bytes()
 source = tokenize_legacy(data)
 assert source.to_bytes() == data
 
 for line in source.lines:
-    print(line.line_number, line.kind, line.start, line.content_end, line.end)
+    print(line.line_number, line.kind, source.operator(line))
+
+# 既知operatorのspanだけを置換し、その他のbytesと改行は保持する低レベル例
+line = next(line for line in source.lines if source.operator(line) == b"m")
+assert line.operator_start is not None and line.operator_end is not None
+patched = source.patched(
+    [SourceReplacement(line.operator_start, line.operator_end, b"L")]
+)
 ```
 
-既定では入力64 MiB、1行8 MiB、200万行を上限とし、超過時は`SourceLimitExceeded`を返します。現時点ではsource mapからIR変更箇所だけを書き換えるpatch writerまでは未実装です。
+既定では入力64 MiB、1行8 MiB、200万行を上限とし、超過時は`SourceLimitExceeded`を返します。`patched()`は範囲外・重複spanを拒否しますが、operatorの意味検証を行わない低レベルprimitiveです。IR編集を安全なspan変更へ変換する高レベルpatch writerは未実装です。
 
 ## 最初の往復変換
 

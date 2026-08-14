@@ -43,7 +43,7 @@ legacy .ai bytes
 ## 次の検証ゲート
 
 1. Illustrator再保存をまたぐlayer/container IDとdocument metadataの保持方式を調査する。
-2. 実装済みのlossless line source mapをoperator token/CSTへ拡張し、局所patchを実証する。
+2. 実装済みのoperator span/local patch primitiveをnode source spanとtyped editへ接続する。
 3. text/image/nested groupの次期feature profileを決める。
 4. 検証対象とするIllustratorバージョンの範囲を広げる。
 
@@ -72,6 +72,8 @@ clipping groupは`q` / `Q` container、mask pathの`h/H`・`W`、後続content p
 
 通常path、compound、clippingを別配列に保持しつつ、Layerの`item_order`で異種itemのAI描画順を参照するようにしました。古いJSONにこのfieldがなければ従来の配列順から自動導出します。混在fixtureはIllustrator DOMでtop-to-bottomの`CompoundPathItem → PathItem → GroupItem`として認識され、AI8再保存後も逆向きのAI描画順`clipping_group → path → compound_path`が保持されました。
 
-lossless source prototypeは元bytesを所有し、各物理行を`start/content_end/end`の半開byte spanとして索引化します。CRLF/LF/CR、非UTF-8 byte、未知operatorをそのまま再構築でき、legacy semantic readerも同じsource mapを入力境界に使います。入力全体・単一行・行数に既定上限を設けました。まだoperator単位のCSTや局所patch writerには接続していません。
+lossless source prototypeは元bytesを所有し、各物理行を`start/content_end/end`の半開byte spanとして索引化します。CRLF/LF/CR、非UTF-8 byte、未知operatorをそのまま再構築でき、legacy semantic readerも同じsource mapを入力境界に使います。PostScript文字列とinline commentを考慮してstatement末尾operatorのspanも取得できます。入力全体・単一行・行数に既定上限を設けました。
+
+範囲外・重複spanを拒否する`SourceReplacement` / `LegacySource.patched()`で、既知operatorだけを差し替え、未知byteと改行を完全維持する局所patchも実証しました。これは意味検証をしない低レベルprimitiveであり、IR nodeのsource spanやtyped editとの接続は次段階です。
 
 最初の試験では閉じた矩形が3 anchorsとして読まれました。AI7の閉じパスに開始点へ戻る明示的な最終segmentを出力するようwriterを修正し、4 anchorsで再試験に合格しています。また、日本語環境でExtendScript内のreverse solidusが円記号として解釈される問題を避けるため、検査用JSXは該当文字とファイルパスを文字コードから構築します。詳細は [Illustrator 適合試験](illustrator-testing.md) を参照してください。
