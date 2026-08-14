@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from py_ai_illustrator.legacy import dumps_ai7, load_ai7, loads_ai7
-from py_ai_illustrator.model import Color, Document, Layer, Point
+from py_ai_illustrator.model import CmykColor, Color, ControlPoint, Document, Layer, Point
 from py_ai_illustrator.model import Path as AIPath
 
 
@@ -50,3 +50,64 @@ def test_generated_example_matches_its_json_source() -> None:
     )
     generated = load_ai7(examples / "rectangle.ai")
     assert generated.to_dict() == source.to_dict()
+
+
+def test_generated_cmyk_curve_matches_its_json_source() -> None:
+    examples = Path(__file__).parents[1] / "examples"
+    source = Document.from_dict(
+        json.loads((examples / "cmyk-curve.json").read_text(encoding="utf-8"))
+    )
+    generated = load_ai7(examples / "cmyk-curve.ai")
+    assert generated.to_dict() == source.to_dict()
+
+
+def test_bezier_and_cmyk_roundtrip() -> None:
+    original = Document(
+        width=200,
+        height=200,
+        layers=[
+            Layer(
+                id="curves",
+                name="Curves",
+                paths=[
+                    AIPath(
+                        id="cmyk-curve",
+                        points=[
+                            Point(20, 20, out_handle=ControlPoint(20, 120)),
+                            Point(
+                                180,
+                                180,
+                                in_handle=ControlPoint(180, 80),
+                                smooth=True,
+                            ),
+                        ],
+                        closed=False,
+                        fill=None,
+                        stroke=CmykColor(1.0, 0.25, 0.0, 0.1),
+                        stroke_width=4,
+                    )
+                ],
+            )
+        ],
+    )
+    restored = loads_ai7(dumps_ai7(original))
+    assert restored.to_dict() == original.to_dict()
+
+
+def test_reads_compact_v_and_y_curve_operators() -> None:
+    source = b"""%!PS-Adobe-3.0
+%%BoundingBox: 0 0 100 100
+%AI5_FileFormat 3.0
+0 0 0 1 k
+10 10 m
+20 30 40 50 v
+60 70 80 90 y
+S
+%%EOF
+"""
+    document = loads_ai7(source)
+    points = document.layers[0].paths[0].points
+    assert points[0].out_handle is None
+    assert points[1].in_handle == ControlPoint(20, 30)
+    assert points[1].out_handle == ControlPoint(60, 70)
+    assert points[2].in_handle is None

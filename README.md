@@ -5,7 +5,7 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 現在は Phase 0（技術スパイク）です。次の小さな縦切りが動作します。
 
 - 内容に基づく legacy AI / PDF-compatible AI / PDF / EPS の形式判定
-- 基本的な document / layer / path / RGB fill / RGB stroke の Python IR
+- 基本的な document / layer / path / Bézier handle / RGB・CMYK process color の Python IR
 - 公開仕様に沿った Illustrator 7 互換サブセットと JSON IR の往復変換
 - `inspect` / `export` / `validate` CLI
 - 対応範囲の意味的 round-trip テスト
@@ -42,7 +42,9 @@ uv run py-ai validate rectangle.ai
 
 同じコマンドで生成した [examples/rectangle.ai](examples/rectangle.ai) も同梱しています。現行Illustratorでの適合試験にそのまま使えます。
 
-初期 reader は、直線アンカーからなる基本 path を対象にしています。任意の legacy AI を完全に読める段階ではありません。入力は上書きせず、出力先を明示してください。
+Bézier曲線とCMYK線の入力例は [examples/cmyk-curve.json](examples/cmyk-curve.json) です。
+
+初期 reader は、直線・3次Bézierからなる基本 path を対象にしています。compound pathやclippingを含む任意のlegacy AIを完全に読める段階ではありません。入力は上書きせず、出力先を明示してください。
 
 ## ドキュメント
 

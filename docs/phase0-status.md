@@ -22,9 +22,10 @@ legacy .ai bytes
 | legacy AI container | 対応 | 対応 | Illustrator 7 公開仕様のサブセット |
 | document bounds / title | 対応 | 対応 | 原点は `(0, 0)` |
 | layer name / visibility / lock | 対応 | 対応 | 安定IDは独自DSCコメントでも保持 |
-| straight path | 対応 | 対応 | `m`, `L`, path render operators |
+| straight path | 対応 | 対応 | `m`, `l/L`, path render operators |
+| Bézier curve | 対応 | 対応 | `c/C`, `v/V`, `y/Y`を読み、writerは`c/C`へ正規化 |
 | RGB fill / stroke / width | 対応 | 対応 | `Xa`, `XA`, `w` |
-| Bézier curve | 未対応 | 未対応 | 次のreader拡張候補 |
+| CMYK fill / stroke | 対応 | 対応 | `k`, `K` |
 | compound path / clipping | 未対応 | 未対応 | lossless token層の設計後 |
 | text / image | 未対応 | 未対応 | fixture調査後 |
 | PDF-compatible AI semantic data | 未対応 | 未対応 | 現在は形式判定のみ |
@@ -40,10 +41,13 @@ legacy .ai bytes
 
 1. `examples/rectangle.json` から生成した `.ai` を現行 Illustrator で開き、再保存する。
 2. Illustrator で作った最小fixtureを用意し、`inspect` と Phase 0 reader の差分を記録する。
-3. Bézier (`c`, `v`, `y`) と CMYK (`k`, `K`) を追加する。
-4. fixtureが揃った段階で、lossless token/CST 層と `inkai` adapter の境界を決める。
-5. 対応を保証する Illustrator バージョンを決定する。
+3. fixtureが揃った段階で、lossless token/CST 層と `inkai` adapter の境界を決める。
+4. 対応を保証する Illustrator バージョンを決定する。
 
 終了条件のうち、Python内の `IR -> AI7 -> IR` は自動テスト済みです。Illustrator本体で開く適合試験は未実施なので、AI7 writerは引き続き experimental です。
 
 配布ライセンスは MIT に決定しました。GPL実装はコア依存に含めません。
+
+### Illustrator 2026 適合試験メモ
+
+2026-08-14にmacOS上のIllustrator 2026へ `rectangle.ai` の自動オープンを試みましたが、IllustratorがAppleScriptへ応答せず、ドキュメント情報を取得できませんでした。ユーザー文書を誤って閉じる危険を避けるため、強制終了やcurrent document操作は行っていません。この結果はwriterの成功・失敗どちらの判定にも使わず、手動確認または隔離したIllustrator起動環境で再試験します。

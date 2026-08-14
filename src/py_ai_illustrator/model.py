@@ -7,13 +7,47 @@ from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
-class Point:
+class ControlPoint:
+    """A Bézier control handle in document coordinates."""
+
     x: float
     y: float
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Point:
+    def from_dict(cls, data: dict[str, Any]) -> ControlPoint:
         return cls(float(data["x"]), float(data["y"]))
+
+
+@dataclass(frozen=True, slots=True)
+class Point:
+    """A path anchor and its optional incoming/outgoing Bézier handles."""
+
+    x: float
+    y: float
+    in_handle: ControlPoint | None = None
+    out_handle: ControlPoint | None = None
+    smooth: bool = False
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Point:
+        return cls(
+            x=float(data["x"]),
+            y=float(data["y"]),
+            in_handle=(
+                ControlPoint.from_dict(data["in_handle"])
+                if data.get("in_handle") is not None
+                else None
+            ),
+            out_handle=(
+                ControlPoint.from_dict(data["out_handle"])
+                if data.get("out_handle") is not None
+                else None
+            ),
+            smooth=bool(data.get("smooth", False)),
+        )
+
+    def with_out_handle(self, handle: ControlPoint | None) -> Point:
+        return Point(self.x, self.y, self.in_handle, handle, self.smooth)
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,13 +67,48 @@ class Color:
         return cls(float(data["red"]), float(data["green"]), float(data["blue"]))
 
 
+@dataclass(frozen=True, slots=True)
+class CmykColor:
+    """A CMYK process color with normalized 0..1 components."""
+
+    cyan: float
+    magenta: float
+    yellow: float
+    black: float
+
+    def __post_init__(self) -> None:
+        values = (self.cyan, self.magenta, self.yellow, self.black)
+        if not all(0.0 <= value <= 1.0 for value in values):
+            raise ValueError("CMYK components must be between 0.0 and 1.0")
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CmykColor:
+        return cls(
+            float(data["cyan"]),
+            float(data["magenta"]),
+            float(data["yellow"]),
+            float(data["black"]),
+        )
+
+
+ProcessColor = Color | CmykColor
+
+
+def _process_color_from_dict(data: dict[str, Any]) -> ProcessColor:
+    if {"cyan", "magenta", "yellow", "black"}.issubset(data):
+        return CmykColor.from_dict(data)
+    if {"red", "green", "blue"}.issubset(data):
+        return Color.from_dict(data)
+    raise ValueError("A process color must contain RGB or CMYK components")
+
+
 @dataclass(slots=True)
 class Path:
     id: str
     points: list[Point]
     closed: bool = True
-    fill: Color | None = None
-    stroke: Color | None = None
+    fill: ProcessColor | None = None
+    stroke: ProcessColor | None = None
     stroke_width: float = 1.0
     name: str | None = None
     unknown: dict[str, Any] = field(default_factory=dict)
@@ -57,8 +126,10 @@ class Path:
             name=data.get("name"),
             points=[Point.from_dict(point) for point in data["points"]],
             closed=bool(data.get("closed", True)),
-            fill=Color.from_dict(data["fill"]) if data.get("fill") is not None else None,
-            stroke=(Color.from_dict(data["stroke"]) if data.get("stroke") is not None else None),
+            fill=(_process_color_from_dict(data["fill"]) if data.get("fill") is not None else None),
+            stroke=(
+                _process_color_from_dict(data["stroke"]) if data.get("stroke") is not None else None
+            ),
             stroke_width=float(data.get("stroke_width", 1.0)),
             unknown=dict(data.get("unknown", {})),
         )

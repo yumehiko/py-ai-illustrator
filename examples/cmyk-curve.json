@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "title": "CMYK Bezier curve",
+  "width": 200,
+  "height": 200,
+  "metadata": {
+    "feature_profile": "legacy-ai-bezier-cmyk"
+  },
+  "layers": [
+    {
+      "id": "layer-curves",
+      "name": "Curves",
+      "visible": true,
+      "locked": false,
+      "paths": [
+        {
+          "id": "cmyk-curve",
+          "name": "CMYK curve",
+          "points": [
+            {
+              "x": 20,
+              "y": 20,
+              "out_handle": {"x": 20, "y": 150}
+            },
+            {
+              "x": 180,
+              "y": 180,
+              "in_handle": {"x": 180, "y": 50},
+              "smooth": true
+            }
+          ],
+          "closed": false,
+          "fill": null,
+          "stroke": {
+            "cyan": 1.0,
+            "magenta": 0.25,
+            "yellow": 0.0,
+            "black": 0.1
+          },
+          "stroke_width": 4.0
+        }
+      ]
+    }
+  ]
+}

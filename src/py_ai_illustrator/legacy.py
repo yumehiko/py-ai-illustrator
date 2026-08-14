@@ -7,11 +7,17 @@ import json
 import re
 from pathlib import Path as FilePath
 
-from .model import Color, Document, Layer, Path, Point
+from .model import CmykColor, Color, ControlPoint, Document, Layer, Path, Point, ProcessColor
 
 _NUMBER = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
 _POINT_RE = re.compile(rf"^({_NUMBER})\s+({_NUMBER})\s+([mLl])$")
 _COLOR_RE = re.compile(rf"^({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+(Xa|XA)$")
+_CMYK_COLOR_RE = re.compile(rf"^({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+([kK])$")
+_CUBIC_RE = re.compile(
+    rf"^({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+"
+    rf"({_NUMBER})\s+({_NUMBER})\s+([cC])$"
+)
+_SHORT_CUBIC_RE = re.compile(rf"^({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+([vVyY])$")
 _WIDTH_RE = re.compile(rf"^({_NUMBER})\s+w$")
 _BOUNDS_RE = re.compile(r"^%%(?:HiRes)?BoundingBox:\s+(.+)$")
 _LAYER_NAME_RE = re.compile(r"^\((.*)\)\s+Ln$")
@@ -32,6 +38,45 @@ def _escape_postscript_string(value: str) -> str:
 
 def _unescape_postscript_string(value: str) -> str:
     return value.replace("\\)", ")").replace("\\(", "(").replace("\\\\", "\\")
+
+
+def _color_operator(color: ProcessColor, *, stroke: bool) -> str:
+    if isinstance(color, CmykColor):
+        operator = "K" if stroke else "k"
+        values = (color.cyan, color.magenta, color.yellow, color.black)
+    else:
+        operator = "XA" if stroke else "Xa"
+        values = (color.red, color.green, color.blue)
+    return " ".join([*(_number(value) for value in values), operator])
+
+
+def _path_geometry(path: Path) -> list[str]:
+    first, *rest = path.points
+    lines = [f"{_number(first.x)} {_number(first.y)} m"]
+    previous = first
+    for point in rest:
+        if previous.out_handle is not None or point.in_handle is not None:
+            control1 = previous.out_handle or ControlPoint(previous.x, previous.y)
+            control2 = point.in_handle or ControlPoint(point.x, point.y)
+            operator = "c" if point.smooth else "C"
+            lines.append(
+                " ".join(
+                    [
+                        _number(control1.x),
+                        _number(control1.y),
+                        _number(control2.x),
+                        _number(control2.y),
+                        _number(point.x),
+                        _number(point.y),
+                        operator,
+                    ]
+                )
+            )
+        else:
+            operator = "l" if point.smooth else "L"
+            lines.append(f"{_number(point.x)} {_number(point.y)} {operator}")
+        previous = point
+    return lines
 
 
 def dumps_ai7(document: Document) -> bytes:
@@ -79,21 +124,15 @@ def dumps_ai7(document: Document) -> bytes:
                 lines.append(f"%%py-ai-path-name: ({_escape_postscript_string(path.name)})")
             lines.append("1 A" if layer.locked else "0 A")
             if path.fill is not None:
-                lines.append(
-                    f"{_number(path.fill.red)} {_number(path.fill.green)} "
-                    f"{_number(path.fill.blue)} Xa"
-                )
+                lines.append(_color_operator(path.fill, stroke=False))
             if path.stroke is not None:
                 lines.extend(
                     [
-                        f"{_number(path.stroke.red)} {_number(path.stroke.green)} "
-                        f"{_number(path.stroke.blue)} XA",
+                        _color_operator(path.stroke, stroke=True),
                         f"{_number(path.stroke_width)} w",
                     ]
                 )
-            first, *rest = path.points
-            lines.append(f"{_number(first.x)} {_number(first.y)} m")
-            lines.extend(f"{_number(point.x)} {_number(point.y)} L" for point in rest)
+            lines.extend(_path_geometry(path))
             render = {
                 (True, True, True): "b",
                 (True, True, False): "f",
@@ -127,8 +166,8 @@ def loads_ai7(data: bytes) -> Document:
     layers: list[Layer] = []
     current_layer: Layer | None = None
     current_points: list[Point] = []
-    fill: Color | None = None
-    stroke: Color | None = None
+    fill: ProcessColor | None = None
+    stroke: ProcessColor | None = None
     stroke_width = 1.0
     pending_id: str | None = None
     pending_name: str | None = None
@@ -189,17 +228,65 @@ def loads_ai7(data: bytes) -> Document:
             else:
                 stroke = color
             continue
+        cmyk_match = _CMYK_COLOR_RE.match(line)
+        if cmyk_match:
+            color = CmykColor(*(float(cmyk_match.group(index)) for index in range(1, 5)))
+            if cmyk_match.group(5) == "k":
+                fill = color
+            else:
+                stroke = color
+            continue
         width_match = _WIDTH_RE.match(line)
         if width_match:
             stroke_width = float(width_match.group(1))
             continue
         point_match = _POINT_RE.match(line)
         if point_match:
-            point = Point(float(point_match.group(1)), float(point_match.group(2)))
-            if point_match.group(3) == "m":
+            operator = point_match.group(3)
+            point = Point(
+                float(point_match.group(1)),
+                float(point_match.group(2)),
+                smooth=operator == "l",
+            )
+            if operator == "m":
                 current_points = [point]
             else:
                 current_points.append(point)
+            continue
+        cubic_match = _CUBIC_RE.match(line)
+        if cubic_match and current_points:
+            values = [float(cubic_match.group(index)) for index in range(1, 7)]
+            current_points[-1] = current_points[-1].with_out_handle(
+                ControlPoint(values[0], values[1])
+            )
+            current_points.append(
+                Point(
+                    values[4],
+                    values[5],
+                    in_handle=ControlPoint(values[2], values[3]),
+                    smooth=cubic_match.group(7) == "c",
+                )
+            )
+            continue
+        short_cubic_match = _SHORT_CUBIC_RE.match(line)
+        if short_cubic_match and current_points:
+            values = [float(short_cubic_match.group(index)) for index in range(1, 5)]
+            operator = short_cubic_match.group(5)
+            if operator in {"y", "Y"}:
+                current_points[-1] = current_points[-1].with_out_handle(
+                    ControlPoint(values[0], values[1])
+                )
+                in_handle = None
+            else:
+                in_handle = ControlPoint(values[0], values[1])
+            current_points.append(
+                Point(
+                    values[2],
+                    values[3],
+                    in_handle=in_handle,
+                    smooth=operator.islower(),
+                )
+            )
             continue
         if line in {"b", "f", "s", "n", "B", "F", "S", "N"} and current_points:
             if current_layer is None:
