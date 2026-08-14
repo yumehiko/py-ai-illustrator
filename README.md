@@ -9,6 +9,7 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 - 複数subpathとpolarityを保持するcompound path IR
 - mask pathとcontent pathsを保持するclipping group IR
 - 通常path・compound・clippingの混在した描画順を保持するlayer `item_order`
+- 未知行や非UTF-8 byteを変更せず、物理行のbyte spanを索引化するlossless source prototype
 - 公開仕様に沿った Illustrator 7 互換サブセットと JSON IR の往復変換
 - `inspect` / `export` / `validate` / `test-illustrator` CLI
 - 対応範囲の意味的 round-trip テスト
@@ -28,6 +29,23 @@ uv run ruff check .
 ```
 
 コアパッケージの実行時依存は現在ゼロです。GPL-2.0-or-later の `inkai` は先行実装の比較・検証対象ですが、コア依存には含めていません。
+
+未知operatorを保持する次段階の基盤として、元bytesと改行をそのまま持つ読み取り専用source mapを公開しています。
+
+```python
+from pathlib import Path
+
+from py_ai_illustrator import tokenize_legacy
+
+data = Path("input.ai").read_bytes()
+source = tokenize_legacy(data)
+assert source.to_bytes() == data
+
+for line in source.lines:
+    print(line.line_number, line.kind, line.start, line.content_end, line.end)
+```
+
+既定では入力64 MiB、1行8 MiB、200万行を上限とし、超過時は`SourceLimitExceeded`を返します。現時点ではsource mapからIR変更箇所だけを書き換えるpatch writerまでは未実装です。
 
 ## 最初の往復変換
 

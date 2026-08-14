@@ -7,6 +7,7 @@ import json
 import re
 from pathlib import Path as FilePath
 
+from .lossless import tokenize_legacy
 from .model import (
     ClippingGroup,
     CmykColor,
@@ -271,6 +272,7 @@ def dump_ai7(document: Document, destination: str | FilePath) -> None:
 def loads_ai7(data: bytes) -> Document:
     """Parse files emitted by this project and a conservative AI7 path subset."""
 
+    source = tokenize_legacy(data)
     text = data.decode("latin-1")
     if not text.startswith("%!PS-Adobe") or "%AI" not in text:
         raise UnsupportedLegacyFeature("Not a recognizable legacy Illustrator document")
@@ -302,8 +304,8 @@ def loads_ai7(data: bytes) -> Document:
     path_counter = 0
     metadata: dict[str, object] = {}
 
-    for raw_line in text.splitlines():
-        line = raw_line.strip()
+    for token in source.lines:
+        line = source.line_content(token).decode("latin-1").strip()
         if not title_seen and line.startswith("%%Title: (") and line.endswith(")"):
             title = _unescape_postscript_string(line[10:-1])
             title_seen = True

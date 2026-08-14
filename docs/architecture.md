@@ -89,6 +89,8 @@ PlacedImage
 
 Adobe Illustrator 7 specification の DSC comments と operator を読みます。古い形式を単なる中間形式とみなさず、最初の writer の仕様にも使います。
 
+最初のlossless層として、元bytesと各物理行の`start/content_end/end` spanを保持する`LegacySource`を実装済みです。改行や未知byteを正規化しないため`LegacySource.to_bytes()`は入力と完全一致します。semantic parserはこの行索引から既知subsetをIRへ投影します。次段階でstatement内のoperator token spanとnode source spanを追加します。
+
 ## Writer 戦略
 
 ### Writer A: AI7/AI8
