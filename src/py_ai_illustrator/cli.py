@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .format import FileFormat, inspect_file
+from .illustrator import run_illustrator_test
 from .legacy import UnsupportedLegacyFeature, dump_ai7, load_ai7
 from .model import Document
 
@@ -86,6 +87,17 @@ def _validate(args: argparse.Namespace) -> int:
     return 0 if not errors else 1
 
 
+def _test_illustrator(args: argparse.Namespace) -> int:
+    result = run_illustrator_test(
+        args.input,
+        timeout=args.timeout,
+        application_name=args.application,
+    )
+    destination = Path(args.output) if args.output else None
+    _write_json(result, destination)
+    return 0 if result["status"] == "passed" else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="py-ai", description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -104,6 +116,16 @@ def build_parser() -> argparse.ArgumentParser:
     validate_parser = subparsers.add_parser("validate", help="run available structural checks")
     validate_parser.add_argument("input")
     validate_parser.set_defaults(handler=_validate)
+
+    illustrator_parser = subparsers.add_parser(
+        "test-illustrator",
+        help="open a temporary copy in Illustrator and inspect the imported structure",
+    )
+    illustrator_parser.add_argument("input")
+    illustrator_parser.add_argument("--timeout", type=float, default=90.0)
+    illustrator_parser.add_argument("--application", default="Adobe Illustrator")
+    illustrator_parser.add_argument("-o", "--output")
+    illustrator_parser.set_defaults(handler=_test_illustrator)
     return parser
 
 

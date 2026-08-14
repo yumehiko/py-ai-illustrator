@@ -51,3 +51,7 @@ legacy .ai bytes
 ### Illustrator 2026 適合試験メモ
 
 2026-08-14にmacOS上のIllustrator 2026へ `rectangle.ai` の自動オープンを試みましたが、IllustratorがAppleScriptへ応答せず、ドキュメント情報を取得できませんでした。ユーザー文書を誤って閉じる危険を避けるため、強制終了やcurrent document操作は行っていません。この結果はwriterの成功・失敗どちらの判定にも使わず、手動確認または隔離したIllustrator起動環境で再試験します。
+
+Adobeログには `Document Opened` とdocument count 1が記録されている一方、`Cached License Missing` とCCXProcess/OnBoarding timeoutも記録されていました。少なくともファイル読込処理は通過していますが、編集構造の確認にはCreative Cloudログインと初回画面完了後の再試験が必要です。
+
+再試験用に `py-ai test-illustrator` を追加しました。入力の一時コピーだけを開き、layer/path/anchor/artboard/colorを取得し、その文書参照だけを保存せず閉じます。詳細は [Illustrator 適合試験](illustrator-testing.md) を参照してください。
