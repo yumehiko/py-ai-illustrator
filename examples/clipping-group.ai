@@ -23,6 +23,7 @@ q
 %AI7_Tag: (mask)
 0 A
 1 D
+%AI3_Note:py-ai:eyJpZCI6Im1hc2sifQ==
 80 80 m
 220 80 L
 220 220 L
@@ -34,6 +35,7 @@ n
 %AI7_Tag: (content)
 0 A
 1 D
+%AI3_Note:py-ai:eyJpZCI6ImNvbnRlbnQifQ==
 1 0.25 0.5 Xa
 20 20 m
 280 20 L

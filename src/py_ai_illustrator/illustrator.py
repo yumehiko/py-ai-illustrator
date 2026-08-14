@@ -146,6 +146,7 @@ def _build_javascript(source: Path) -> str:
             }}
             paths.push({{
                 name: path.name,
+                note: path.note,
                 closed: path.closed,
                 filled: path.filled,
                 stroked: path.stroked,
@@ -534,6 +535,10 @@ def _compare_roundtrip_semantics(
         "layer_visibility": [layer.visible for layer in expected.layers]
         == [layer.visible for layer in actual.layers],
         "path_item_count": same_path_count,
+        "path_ids": same_path_count
+        and all(left.id == right.id for left, right in paired_paths),
+        "path_names": same_path_count
+        and all(left.name == right.name for left, right in paired_paths),
         "point_counts": same_path_count
         and all(len(left.points) == len(right.points) for left, right in paired_paths),
         "path_flags": same_path_count

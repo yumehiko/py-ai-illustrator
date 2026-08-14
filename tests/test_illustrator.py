@@ -177,6 +177,18 @@ def test_roundtrip_comparison_reports_color_changes() -> None:
     assert checks["path_geometry"] is True
 
 
+def test_roundtrip_comparison_reports_path_identity_changes() -> None:
+    source = Path(__file__).parents[1] / "examples" / "rectangle.ai"
+    expected = illustrator.load_ai7(source)
+    actual = Document.from_dict(expected.to_dict())
+    actual.layers[0].paths[0].id = "changed"
+    actual.layers[0].paths[0].name = "Changed"
+    checks = _compare_roundtrip_semantics(expected, actual)
+    assert checks["path_ids"] is False
+    assert checks["path_names"] is False
+    assert checks["path_geometry"] is True
+
+
 def test_roundtrip_comparison_reports_compound_path_polarity_changes() -> None:
     source = Path(__file__).parents[1] / "examples" / "compound-path.ai"
     expected = illustrator.load_ai7(source)

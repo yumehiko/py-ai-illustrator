@@ -80,13 +80,16 @@ uv run py-ai test-illustrator examples/rectangle.ai \
 
 - layer数・名前・visibility
 - path数、anchor数、open/closed、fill/strokeの有無
+- pathの安定IDと名前
 - anchor間の相対座標と、anchorに対するBézier handleの相対座標
 - stroke width
 - RGB/CMYK process color
 
 Illustratorはlegacy AIを開く際にdocument原点を移動することがあるため、path全体の平行移動は正規化します。RGBはIllustratorの8-bit値への量子化を許容します。
 
-現在、独自DSCコメントで保持しているdocument metadata、layer/pathの安定ID、path名はIllustratorのAI8再保存で除去されます。また、document titleとboundsは保存先名とartwork boundsに変わります。これらは既知のlossとしてレポートの意味合格判定から除外しています。
+pathの安定IDと名前はAI7仕様の`%AI3_Note` path属性へ`py-ai:`接頭辞付きのASCII payloadとして格納します。Illustrator 30.7.0では通常path、compound subpath、clipping mask/contentのDOMへ読み込まれ、AI8再保存後も復元・照合できました。仕様上noteは254文字までなので、payloadが上限を超える場合は従来の独自コメントだけへフォールバックします。
+
+現在、独自DSCコメントだけで保持しているdocument metadata、layer ID、compound/clipping containerのID・名前はIllustratorのAI8再保存で除去されます。また、document titleとboundsは保存先名とartwork boundsに変わります。これらは既知のlossとしてレポートの意味合格判定から除外しています。
 
 ## 確認済み環境
 
@@ -106,7 +109,7 @@ Illustratorはlegacy AIを開く際にdocument原点を移動することがあ�
 | `rgb-rectangle` | legacy AI検出、1 layer、4 anchors、closed、RGB fill/stroke、stroke width 3 |
 | `cmyk-curve` | legacy AI検出、1 layer、2 anchors、open、Bézier方向点、CMYK stroke、stroke width 4 |
 
-完全往復も両fixtureで`passed`です。RGB矩形は全体が平行移動しRGB値が8-bitへ量子化されましたが、正規化後のpath geometryとpaint属性は一致しました。CMYK Bézierはanchor・handle・CMYK値・stroke widthが保持されました。
+完全往復も両fixtureで`passed`です。RGB矩形は全体が平行移動しRGB値が8-bitへ量子化されましたが、正規化後のpath geometryとpaint属性は一致しました。CMYK Bézierはanchor・handle・CMYK値・stroke widthが保持されました。両方ともpath ID・名前も保持されました。
 
 compound pathも完全往復で`passed`です。比較器はcontainer数、component数、各subpathのpolarityも照合します。
 

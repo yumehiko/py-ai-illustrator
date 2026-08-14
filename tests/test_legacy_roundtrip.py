@@ -44,8 +44,21 @@ def test_ai7_roundtrip_preserves_supported_semantics() -> None:
     original = sample_document()
     serialized = dumps_ai7(original)
     assert b"40 200 L\n40 40 L\nb" in serialized
+    assert b"%AI3_Note:py-ai:" in serialized
     restored = loads_ai7(serialized)
     assert restored.to_dict() == original.to_dict()
+
+
+def test_standard_path_note_recovers_id_and_name_without_private_comments() -> None:
+    serialized = dumps_ai7(sample_document())
+    illustrator_style = b"\n".join(
+        line
+        for line in serialized.splitlines()
+        if not line.startswith((b"%AI7_Tag:", b"%%py-ai-path-name:"))
+    )
+    restored_path = loads_ai7(illustrator_style).layers[0].paths[0]
+    assert restored_path.id == "rectangle"
+    assert restored_path.name == "Primary (shape)"
 
 
 def test_example_json_is_a_valid_document() -> None:

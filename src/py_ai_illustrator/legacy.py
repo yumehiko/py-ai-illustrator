@@ -38,6 +38,7 @@ _POLARITY_RE = re.compile(r"^([01])\s+D$")
 _BOUNDS_RE = re.compile(r"^%%(?:HiRes)?BoundingBox:\s+(.+)$")
 _LAYER_NAME_RE = re.compile(r"^\((.*)\)\s+Ln$")
 _LAYER_RE = re.compile(r"^([01])\s+1\s+([01])\s+1\s+0\s+0\s+.+\s+Lb$")
+_PATH_NOTE_PREFIX = "py-ai:"
 
 
 class UnsupportedLegacyFeature(ValueError):
@@ -54,6 +55,37 @@ def _escape_postscript_string(value: str) -> str:
 
 def _unescape_postscript_string(value: str) -> str:
     return value.replace("\\)", ")").replace("\\(", "(").replace("\\\\", "\\")
+
+
+def _path_note(path: Path) -> str | None:
+    payload = {"id": path.id}
+    if path.name is not None:
+        payload["name"] = path.name
+    encoded = base64.b64encode(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    ).decode("ascii")
+    note = _PATH_NOTE_PREFIX + encoded
+    return note if len(note) <= 254 else None
+
+
+def _parse_path_note(note: str) -> tuple[str | None, str | None]:
+    if not note.startswith(_PATH_NOTE_PREFIX):
+        return None, None
+    try:
+        decoded = base64.b64decode(
+            note.removeprefix(_PATH_NOTE_PREFIX), validate=True
+        ).decode("utf-8")
+        payload = json.loads(decoded)
+    except (ValueError, UnicodeError, json.JSONDecodeError):
+        return None, None
+    if not isinstance(payload, dict):
+        return None, None
+    path_id = payload.get("id")
+    path_name = payload.get("name")
+    return (
+        path_id if isinstance(path_id, str) and path_id else None,
+        path_name if isinstance(path_name, str) else None,
+    )
 
 
 def _color_operator(color: ProcessColor, *, stroke: bool) -> str:
@@ -101,6 +133,9 @@ def _serialized_path(path: Path, *, locked: bool) -> list[str]:
     if path.name is not None:
         lines.append(f"%%py-ai-path-name: ({_escape_postscript_string(path.name)})")
     lines.extend(["1 A" if locked else "0 A", "1 D" if path.polarity == "positive" else "0 D"])
+    note = _path_note(path)
+    if note is not None:
+        lines.append(f"%AI3_Note:{note}")
     if path.fill is not None:
         lines.append(_color_operator(path.fill, stroke=False))
     if path.stroke is not None:
@@ -130,11 +165,18 @@ def _serialized_clipping_path(path: Path, *, locked: bool) -> list[str]:
         f"%AI7_Tag: ({_escape_postscript_string(path.id)})",
         "1 A" if locked else "0 A",
         "1 D" if path.polarity == "positive" else "0 D",
-        *_path_geometry(path),
-        "h" if path.closed else "H",
-        "W",
-        "n" if path.closed else "N",
     ]
+    note = _path_note(path)
+    if note is not None:
+        lines.append(f"%AI3_Note:{note}")
+    lines.extend(
+        [
+            *_path_geometry(path),
+            "h" if path.closed else "H",
+            "W",
+            "n" if path.closed else "N",
+        ]
+    )
     return lines
 
 
@@ -377,6 +419,13 @@ def loads_ai7(data: bytes) -> Document:
             continue
         if line.startswith("%%py-ai-path-name: (") and line.endswith(")"):
             pending_name = _unescape_postscript_string(line[20:-1])
+            continue
+        if line.startswith("%AI3_Note:"):
+            note_id, note_name = _parse_path_note(line[10:].lstrip())
+            if note_id is not None:
+                pending_id = note_id
+            if note_name is not None:
+                pending_name = note_name
             continue
         ai8_rgb_match = _AI8_RGB_COLOR_RE.match(line)
         if ai8_rgb_match:

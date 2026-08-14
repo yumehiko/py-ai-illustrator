@@ -22,7 +22,7 @@ legacy .ai bytes
 | legacy AI container | 対応 | 対応 | Illustrator 7 公開仕様のサブセット |
 | document bounds / title | 対応 | 対応 | 原点は `(0, 0)` |
 | layer name / visibility / lock | 対応 | 対応 | 安定IDは独自DSCコメントでも保持 |
-| straight path | 対応 | 対応 | `m`, `l/L`, path render operators |
+| straight path | 対応 | 対応 | `m`, `l/L`, path render operators。ID・名前は`%AI3_Note`でも保持 |
 | Bézier curve | 対応 | 対応 | `c/C`, `v/V`, `y/Y`を読み、writerは`c/C`へ正規化 |
 | RGB fill / stroke / width | 対応 | 対応 | `Xa`, `XA`, `w` |
 | CMYK fill / stroke | 対応 | 対応 | `k`, `K` |
@@ -35,12 +35,13 @@ legacy .ai bytes
 
 - 形式判定は拡張子ではなく `%PDF-` / `%!PS-Adobe` と Illustrator marker を使う。
 - 大きな入力を無制限に読み込まないよう、形式判定の探索は先頭・末尾それぞれ 4 MiB に制限する。
-- JSON IR のID、名前、最小metadataは、他のPostScript readerが無視できる独自DSCコメントで保持する。
+- JSON IR のpath ID・名前は独自コメントに加え、IllustratorがAI8再保存でも保持する標準`%AI3_Note` path属性へ格納する。
+- layer/containerのID・名前とdocument metadataは、現時点では他のPostScript readerが無視できる独自DSCコメントだけで保持する。
 - 未対応の現代AIをPDF内容だけでJSON化したように見せず、CLIを失敗させる。
 
 ## 次の検証ゲート
 
-1. Illustrator再保存をまたぐ安定ID・metadata保持方式を調査する。
+1. Illustrator再保存をまたぐlayer/container IDとdocument metadataの保持方式を調査する。
 2. 通常path、compound、clippingのstacking orderを保持する共通item列を設計する。
 3. lossless token/CST 層と `inkai` adapter の境界を決める。
 4. 検証対象とするIllustratorバージョンの範囲を広げる。
@@ -60,7 +61,9 @@ legacy .ai bytes
 
 逆方向ではIllustrator自身にRGB矩形とCMYK Bézier曲線を作らせ、AI8互換で一時保存したファイルをPython readerへ読み戻しました。両fixtureともlayer/path/anchor、開閉、paint style、stroke width、RGB/CMYK、Bézier handleの照合に合格しています。この過程で、Illustrator標準AI8が出力する7成分`Xa/XA` paint style、同じ行に並ぶ`w` operator、埋め込みprocset内の`%%Title`をreaderで正しく扱うよう修正しました。
 
-さらにPython生成fixtureをIllustratorでAI8再保存し、再びPython IRへ戻す完全往復を実施しました。RGB矩形とCMYK Bézierはいずれも、平行移動とRGB量子化を正規化した意味比較に合格しています。独自DSCコメント由来の安定ID、path名、metadata、元のdocument title/boundsはIllustrator再保存では保持されないことも確認し、既知のlossとして明示しました。
+さらにPython生成fixtureをIllustratorでAI8再保存し、再びPython IRへ戻す完全往復を実施しました。RGB矩形とCMYK Bézierはいずれも、平行移動とRGB量子化を正規化した意味比較に合格しています。path ID・名前はAI7仕様の`%AI3_Note`属性へASCII payloadとして格納することで、Illustrator 30.7.0のDOMとAI8再保存の両方に保持されました。通常path、compound subpath、clipping mask/contentの全fixtureでID照合に合格しています。
+
+一方、独自DSCコメントだけに保存しているlayer ID、compound/clipping containerのID・名前、document metadataはIllustrator再保存で除去されます。元のdocument title/boundsも保存先名とartwork boundsへ変わるため、引き続き既知のlossです。
 
 compound pathはIllustrator生成AI8から`*u` / `*U` containerと`D` polarityを採取し、専用IR、reader、writerを追加しました。Python生成fixtureはIllustrator 30.7.0で2 componentを持つ1つの`CompoundPathItem`として認識され、Illustrator再保存後の完全往復でもcontainer、polarity、geometry、RGB fillが保持されました。
 
