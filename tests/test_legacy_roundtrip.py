@@ -157,3 +157,38 @@ S
     assert points[1].in_handle == ControlPoint(20, 30)
     assert points[1].out_handle == ControlPoint(60, 70)
     assert points[2].in_handle is None
+
+
+def test_reads_illustrator_native_ai8_paint_style_and_top_level_metadata() -> None:
+    source = b"""%!PS-Adobe-3.0
+%%Title: (Native Fixture)
+%%BoundingBox: 38 38 282 202
+%AI5_FileFormat 3.0
+%%BeginProlog
+%%Title: (Embedded Procset)
+%%BoundingBox: 0 0 5 5
+%%EndProlog
+%AI5_BeginLayer
+1 1 1 1 0 0 1 0 79 128 255 0 50 Lb
+(Illustrator Native) Ln
+0 0.82324 0.932219 0 1 0.301961 0 Xa
+0.76434 0.800351 0.929503 0.666529 0.14902 0.101961 0.05098 XA
+0 J 0 j 3 w 10 M []0 d
+40 40 m
+280 40 L
+280 200 L
+40 200 L
+40 40 L
+b
+LB
+%AI5_EndLayer
+%%EOF
+"""
+    document = loads_ai7(source)
+    path = document.layers[0].paths[0]
+    assert document.title == "Native Fixture"
+    assert (document.width, document.height) == (244.0, 164.0)
+    assert path.fill == Color(1.0, 0.301961, 0.0)
+    assert path.stroke == Color(0.14902, 0.101961, 0.05098)
+    assert path.stroke_width == 3.0
+    assert len(path.points) == 4

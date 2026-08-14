@@ -12,6 +12,7 @@ from typing import Any
 
 from .format import FileFormat, inspect_file
 from .legacy import load_ai7
+from .model import CmykColor, Color
 
 
 def _expected_structure(source: Path) -> dict[str, Any] | None:
@@ -201,6 +202,125 @@ def _build_javascript(source: Path) -> str:
 """
 
 
+def _build_export_javascript(destination: Path, fixture: str) -> str:
+    destination_codepoints = ",".join(
+        str(ord(character)) for character in str(destination)
+    )
+    destination_literal = f"String.fromCharCode({destination_codepoints})"
+    if fixture == "rgb-rectangle":
+        fixture_javascript = """
+        documentRef = app.documents.add(DocumentColorSpace.RGB, 320, 240);
+        var layer = documentRef.layers[0];
+        layer.name = "Illustrator Native";
+
+        var path = layer.pathItems.add();
+        path.name = "Native Rectangle";
+        path.setEntirePath([[40, 40], [280, 40], [280, 200], [40, 200]]);
+        path.closed = true;
+        path.filled = true;
+        path.stroked = true;
+        path.strokeWidth = 3;
+
+        var fill = new RGBColor();
+        fill.red = 255;
+        fill.green = 77;
+        fill.blue = 0;
+        path.fillColor = fill;
+
+        var stroke = new RGBColor();
+        stroke.red = 38;
+        stroke.green = 26;
+        stroke.blue = 13;
+        path.strokeColor = stroke;
+"""
+    elif fixture == "cmyk-curve":
+        fixture_javascript = """
+        documentRef = app.documents.add(DocumentColorSpace.CMYK, 200, 200);
+        var layer = documentRef.layers[0];
+        layer.name = "Illustrator Native Curves";
+
+        var path = layer.pathItems.add();
+        path.name = "Native CMYK Curve";
+        var first = path.pathPoints.add();
+        first.anchor = [20, 20];
+        first.leftDirection = [20, 20];
+        first.rightDirection = [20, 150];
+        first.pointType = PointType.SMOOTH;
+        var second = path.pathPoints.add();
+        second.anchor = [180, 180];
+        second.leftDirection = [180, 50];
+        second.rightDirection = [180, 180];
+        second.pointType = PointType.SMOOTH;
+        path.closed = false;
+        path.filled = false;
+        path.stroked = true;
+        path.strokeWidth = 4;
+
+        var stroke = new CMYKColor();
+        stroke.cyan = 100;
+        stroke.magenta = 25;
+        stroke.yellow = 0;
+        stroke.black = 10;
+        path.strokeColor = stroke;
+"""
+    else:
+        raise ValueError(f"Unknown Illustrator fixture: {fixture}")
+    return f"""#target illustrator
+(function () {{
+    var destination = new File({destination_literal});
+    var documentRef = null;
+    var previousInteractionLevel = app.userInteractionLevel;
+
+    try {{
+        app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
+{fixture_javascript}
+
+        var options = new IllustratorSaveOptions();
+        options.compatibility = Compatibility.ILLUSTRATOR8;
+        options.pdfCompatible = false;
+        options.embedLinkedFiles = false;
+        options.flattenOutput = OutputFlattening.PRESERVEAPPEARANCE;
+        documentRef.saveAs(destination, options);
+        return "ok:" + app.version;
+    }} catch (error) {{
+        return "error:" + String(error) + ":line:" + String(error.line || "");
+    }} finally {{
+        if (documentRef !== null) {{
+            documentRef.close(SaveOptions.DONOTSAVECHANGES);
+        }}
+        app.userInteractionLevel = previousInteractionLevel;
+    }}
+}}());
+"""
+
+
+def _execute_javascript(
+    javascript: str,
+    directory: Path,
+    *,
+    timeout: float,
+    application_name: str,
+) -> subprocess.CompletedProcess[str]:
+    script_path = directory / "illustrator-test.jsx"
+    script_path.write_text(javascript, encoding="utf-8")
+    escaped_app = application_name.replace("\\", "\\\\").replace('"', '\\"')
+    escaped_script = str(script_path).replace("\\", "\\\\").replace('"', '\\"')
+    apple_script = f"""with timeout of {max(1, int(timeout))} seconds
+    set scriptFile to POSIX file "{escaped_script}"
+    tell application "{escaped_app}"
+        return do javascript scriptFile
+    end tell
+end timeout
+"""
+    return subprocess.run(
+        ["osascript", "-e", apple_script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=timeout + 5,
+    )
+
+
 def _compare_structure(expected: dict[str, Any], actual: dict[str, Any]) -> dict[str, bool]:
     keys = (
         "layer_count",
@@ -237,26 +357,13 @@ def run_illustrator_test(
     with tempfile.TemporaryDirectory(prefix="py-ai-illustrator-") as temp_directory:
         temp_path = Path(temp_directory)
         fixture_path = temp_path / f"fixture{source_path.suffix or '.ai'}"
-        script_path = temp_path / "inspect.jsx"
         shutil.copy2(source_path, fixture_path)
-        script_path.write_text(_build_javascript(fixture_path), encoding="utf-8")
-
-        escaped_app = application_name.replace("\\", "\\\\").replace('"', '\\"')
-        escaped_script = str(script_path).replace("\\", "\\\\").replace('"', '\\"')
-        apple_script = f"""with timeout of {max(1, int(timeout))} seconds
-    set scriptFile to POSIX file "{escaped_script}"
-    tell application "{escaped_app}"
-        return do javascript scriptFile
-    end tell
-end timeout
-"""
         try:
-            completed = subprocess.run(
-                ["osascript", "-e", apple_script],
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=timeout + 5,
+            completed = _execute_javascript(
+                _build_javascript(fixture_path),
+                temp_path,
+                timeout=timeout,
+                application_name=application_name,
             )
         except subprocess.TimeoutExpired:
             return {
@@ -297,3 +404,126 @@ end timeout
         "checks": checks,
         "illustrator": actual,
     }
+
+
+def run_illustrator_export_test(
+    *,
+    fixture: str = "rgb-rectangle",
+    output: str | Path | None = None,
+    timeout: float = 90.0,
+    application_name: str = "Adobe Illustrator",
+) -> dict[str, Any]:
+    """Create an AI8 fixture in Illustrator and read it back through the Python IR."""
+
+    if platform.system() != "Darwin":
+        return {
+            "status": "environment-unavailable",
+            "error": "Illustrator export testing is currently supported on macOS only.",
+        }
+    if timeout <= 0:
+        return {"status": "invalid-input", "error": "timeout must be positive"}
+    if fixture not in {"rgb-rectangle", "cmyk-curve"}:
+        return {"status": "invalid-input", "error": f"Unknown fixture: {fixture}"}
+
+    output_path = Path(output).resolve() if output is not None else None
+    if output_path is not None and output_path.exists():
+        return {
+            "status": "invalid-input",
+            "error": f"Refusing to overwrite existing output: {output_path}",
+        }
+
+    with tempfile.TemporaryDirectory(prefix="py-ai-illustrator-export-") as temp_directory:
+        temp_path = Path(temp_directory)
+        fixture_path = temp_path / "illustrator-native.ai"
+        try:
+            completed = _execute_javascript(
+                _build_export_javascript(fixture_path, fixture),
+                temp_path,
+                timeout=timeout,
+                application_name=application_name,
+            )
+        except subprocess.TimeoutExpired:
+            return {
+                "status": "environment-unavailable",
+                "error": f"Illustrator did not answer within {timeout:g} seconds.",
+            }
+        if completed.returncode != 0:
+            return {
+                "status": "environment-unavailable",
+                "error": completed.stderr.strip() or "Illustrator AppleScript failed.",
+            }
+
+        response = completed.stdout.strip()
+        if not response.startswith("ok:"):
+            return {"status": "failed", "illustrator_response": response}
+        if not fixture_path.is_file():
+            return {
+                "status": "failed",
+                "error": "Illustrator reported success but did not create the AI fixture.",
+            }
+        if output_path is not None:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(fixture_path, output_path)
+
+        format_report = inspect_file(fixture_path)
+        format_details = format_report.to_dict()
+        format_details["path"] = str(output_path) if output_path is not None else None
+        try:
+            document = load_ai7(fixture_path)
+        except (ValueError, UnicodeError) as error:
+            return {
+                "status": "failed",
+                "illustrator_version": response[3:],
+                "format": format_details,
+                "reader_error": str(error),
+            }
+
+        paths = [path for layer in document.layers for path in layer.paths]
+        path = paths[0] if paths else None
+        expected_layer_name = (
+            "Illustrator Native" if fixture == "rgb-rectangle" else "Illustrator Native Curves"
+        )
+        checks: dict[str, bool] = {
+            "legacy_ai_detected": format_report.format is FileFormat.LEGACY_AI,
+            "artwork_bounds": document.width > 0 and document.height > 0,
+            "layer_count": len(document.layers) == 1,
+            "layer_name": bool(document.layers)
+            and document.layers[0].name == expected_layer_name,
+            "path_item_count": len(paths) == 1,
+            "stroked": path is not None and path.stroke is not None,
+        }
+        if fixture == "rgb-rectangle":
+            checks.update(
+                {
+                    "point_count": path is not None and len(path.points) == 4,
+                    "closed": path is not None and path.closed,
+                    "filled": path is not None and path.fill is not None,
+                    "stroke_width": path is not None and path.stroke_width == 3.0,
+                    "rgb_fill": path is not None and isinstance(path.fill, Color),
+                    "rgb_stroke": path is not None and isinstance(path.stroke, Color),
+                }
+            )
+        else:
+            checks.update(
+                {
+                    "point_count": path is not None and len(path.points) == 2,
+                    "open": path is not None and not path.closed,
+                    "unfilled": path is not None and path.fill is None,
+                    "stroke_width": path is not None and path.stroke_width == 4.0,
+                    "cmyk_stroke": path is not None and isinstance(path.stroke, CmykColor),
+                    "bezier_handles": path is not None
+                    and path.points[0].out_handle is not None
+                    and path.points[1].in_handle is not None,
+                }
+            )
+        passed = all(checks.values())
+
+        return {
+            "status": "passed" if passed else "mismatch",
+            "fixture": fixture,
+            "illustrator_version": response[3:],
+            "format": format_details,
+            "checks": checks,
+            "python_ir": document.to_dict(),
+            "output": str(output_path) if output_path is not None else None,
+        }

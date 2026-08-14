@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .format import FileFormat, inspect_file
-from .illustrator import run_illustrator_test
+from .illustrator import run_illustrator_export_test, run_illustrator_test
 from .legacy import UnsupportedLegacyFeature, dump_ai7, load_ai7
 from .model import Document
 
@@ -98,6 +98,18 @@ def _test_illustrator(args: argparse.Namespace) -> int:
     return 0 if result["status"] == "passed" else 1
 
 
+def _test_illustrator_export(args: argparse.Namespace) -> int:
+    result = run_illustrator_export_test(
+        fixture=args.fixture,
+        output=args.ai_output,
+        timeout=args.timeout,
+        application_name=args.application,
+    )
+    destination = Path(args.output) if args.output else None
+    _write_json(result, destination)
+    return 0 if result["status"] == "passed" else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="py-ai", description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -126,6 +138,21 @@ def build_parser() -> argparse.ArgumentParser:
     illustrator_parser.add_argument("--application", default="Adobe Illustrator")
     illustrator_parser.add_argument("-o", "--output")
     illustrator_parser.set_defaults(handler=_test_illustrator)
+
+    illustrator_export_parser = subparsers.add_parser(
+        "test-illustrator-export",
+        help="create an AI8 fixture in Illustrator and parse it through the Python IR",
+    )
+    illustrator_export_parser.add_argument("--timeout", type=float, default=90.0)
+    illustrator_export_parser.add_argument("--application", default="Adobe Illustrator")
+    illustrator_export_parser.add_argument(
+        "--fixture",
+        choices=("rgb-rectangle", "cmyk-curve"),
+        default="rgb-rectangle",
+    )
+    illustrator_export_parser.add_argument("--ai-output")
+    illustrator_export_parser.add_argument("-o", "--output")
+    illustrator_export_parser.set_defaults(handler=_test_illustrator_export)
     return parser
 
 

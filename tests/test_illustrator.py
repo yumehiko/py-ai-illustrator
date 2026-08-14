@@ -3,6 +3,7 @@ from subprocess import CompletedProcess, TimeoutExpired
 
 from py_ai_illustrator import illustrator
 from py_ai_illustrator.illustrator import (
+    _build_export_javascript,
     _build_javascript,
     _compare_structure,
     _expected_structure,
@@ -17,6 +18,16 @@ def test_javascript_closes_only_its_document_without_saving(tmp_path: Path) -> N
     assert "current document" not in javascript
     assert "String.fromCharCode(92)" in javascript
     assert "String.fromCharCode(34)" in javascript
+    assert "\\" not in javascript
+
+
+def test_export_javascript_creates_and_closes_only_its_cmyk_fixture(tmp_path: Path) -> None:
+    javascript = _build_export_javascript(tmp_path / 'native "curve".ai', "cmyk-curve")
+    assert "app.documents.add(DocumentColorSpace.CMYK, 200, 200)" in javascript
+    assert "Compatibility.ILLUSTRATOR8" in javascript
+    assert "documentRef.saveAs(destination, options)" in javascript
+    assert "documentRef.close(SaveOptions.DONOTSAVECHANGES)" in javascript
+    assert "current document" not in javascript
     assert "\\" not in javascript
 
 
@@ -88,3 +99,20 @@ def test_runner_distinguishes_an_unready_environment(monkeypatch) -> None:
     result = illustrator.run_illustrator_test(source, timeout=5)
     assert result["status"] == "environment-unavailable"
     assert "sign in" in result["next_action"]
+
+
+def test_export_runner_refuses_to_overwrite_existing_output(
+    monkeypatch, tmp_path: Path
+) -> None:
+    output = tmp_path / "existing.ai"
+    output.write_bytes(b"user data")
+    monkeypatch.setattr(illustrator.platform, "system", lambda: "Darwin")
+    result = illustrator.run_illustrator_export_test(output=output)
+    assert result["status"] == "invalid-input"
+    assert output.read_bytes() == b"user data"
+
+
+def test_export_runner_rejects_unknown_fixture(monkeypatch) -> None:
+    monkeypatch.setattr(illustrator.platform, "system", lambda: "Darwin")
+    result = illustrator.run_illustrator_export_test(fixture="unknown")
+    assert result == {"status": "invalid-input", "error": "Unknown fixture: unknown"}

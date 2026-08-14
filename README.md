@@ -9,7 +9,7 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 - 公開仕様に沿った Illustrator 7 互換サブセットと JSON IR の往復変換
 - `inspect` / `export` / `validate` / `test-illustrator` CLI
 - 対応範囲の意味的 round-trip テスト
-- Illustrator 30.7.0での矩形・Bézier/CMYK fixture実機適合試験
+- Illustrator 30.7.0との双方向fixture実機適合試験
 
 現代版 AI の意味解析と書き戻しはまだ実装していません。ファイル拡張子を変えただけの PDF を「AI writer」と呼ばず、対応範囲を明示して段階的に広げます。
 
@@ -50,9 +50,11 @@ Creative CloudへのログインとIllustratorの初回起動が完了したmacO
 ```bash
 uv run py-ai test-illustrator examples/rectangle.ai
 uv run py-ai test-illustrator examples/cmyk-curve.ai
+uv run py-ai test-illustrator-export --fixture rgb-rectangle
+uv run py-ai test-illustrator-export --fixture cmyk-curve
 ```
 
-同梱fixtureはIllustrator 30.7.0で、layer/path/anchor、開閉、塗り・線、Bézier方向点、RGB/CMYK属性まで取得できることを確認済みです。これは現在の限定subsetに対する結果で、任意のAIファイルの完全互換を意味しません。
+同梱fixtureをIllustratorで開く方向に加え、Illustrator自身が作成・AI8保存したfixtureをPython IRへ読む方向も確認済みです。layer/path/anchor、開閉、塗り・線、Bézier方向点、RGB/CMYK属性を照合します。これは現在の限定subsetに対する結果で、任意のAIファイルの完全互換を意味しません。
 
 初期 reader は、直線・3次Bézierからなる基本 path を対象にしています。compound pathやclippingを含む任意のlegacy AIを完全に読める段階ではありません。入力は上書きせず、出力先を明示してください。
 

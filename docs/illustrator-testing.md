@@ -24,6 +24,21 @@ uv run py-ai test-illustrator examples/rectangle.ai
 uv run py-ai test-illustrator examples/cmyk-curve.ai
 ```
 
+逆方向（Illustratorでfixtureを作成・AI8保存し、Python IRへ読み戻す）:
+
+```bash
+uv run py-ai test-illustrator-export --fixture rgb-rectangle
+uv run py-ai test-illustrator-export --fixture cmyk-curve
+```
+
+調査用にIllustrator生成AIを残す場合は、既存ファイルではない出力先を指定します。上書きは拒否されます。
+
+```bash
+uv run py-ai test-illustrator-export \
+  --fixture cmyk-curve \
+  --ai-output illustrator-native-curve.ai
+```
+
 JSONレポートを保存する場合:
 
 ```bash
@@ -37,6 +52,8 @@ uv run py-ai test-illustrator examples/rectangle.ai \
 - JavaScriptが返したドキュメント参照だけを検査する。
 - `current document`や既存ドキュメントを操作しない。
 - 検査対象は`DONOTSAVECHANGES`で閉じる。
+- 逆方向試験は新規ドキュメントを作り、指定した一時出力だけへ保存する。
+- `--ai-output`が既存ファイルを指す場合は上書きしない。
 - Illustratorが応答しない場合はタイムアウトし、互換性失敗ではなく`environment-unavailable`を返す。
 
 ## 判定
@@ -58,5 +75,12 @@ uv run py-ai test-illustrator examples/rectangle.ai \
 | --- | --- | --- |
 | `examples/rectangle.ai` | 1 layer / 1 path / 4 anchors | closed、RGB fill/stroke、stroke width 3 |
 | `examples/cmyk-curve.ai` | 1 layer / 1 path / 2 anchors | open、Bézier方向点、CMYK stroke、stroke width 4 |
+
+逆方向も同じ環境で確認済みです。
+
+| Illustrator生成fixture | Python readerでの結果 |
+| --- | --- |
+| `rgb-rectangle` | legacy AI検出、1 layer、4 anchors、closed、RGB fill/stroke、stroke width 3 |
+| `cmyk-curve` | legacy AI検出、1 layer、2 anchors、open、Bézier方向点、CMYK stroke、stroke width 4 |
 
 これは記載したfixtureと機能subsetの適合結果です。任意のAI7ファイルや未対応機能の互換性を保証するものではありません。

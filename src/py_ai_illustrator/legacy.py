@@ -12,13 +12,17 @@ from .model import CmykColor, Color, ControlPoint, Document, Layer, Path, Point,
 _NUMBER = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
 _POINT_RE = re.compile(rf"^({_NUMBER})\s+({_NUMBER})\s+([mLl])$")
 _COLOR_RE = re.compile(rf"^({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+(Xa|XA)$")
+_AI8_RGB_COLOR_RE = re.compile(
+    rf"^({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+"
+    rf"({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+(Xa|XA)$"
+)
 _CMYK_COLOR_RE = re.compile(rf"^({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+([kK])$")
 _CUBIC_RE = re.compile(
     rf"^({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+"
     rf"({_NUMBER})\s+({_NUMBER})\s+([cC])$"
 )
 _SHORT_CUBIC_RE = re.compile(rf"^({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+([vVyY])$")
-_WIDTH_RE = re.compile(rf"^({_NUMBER})\s+w$")
+_WIDTH_RE = re.compile(rf"(?:^|\s)({_NUMBER})\s+w(?:\s|$)")
 _BOUNDS_RE = re.compile(r"^%%(?:HiRes)?BoundingBox:\s+(.+)$")
 _LAYER_NAME_RE = re.compile(r"^\((.*)\)\s+Ln$")
 _LAYER_RE = re.compile(r"^([01])\s+1\s+([01])\s+1\s+0\s+0\s+.+\s+Lb$")
@@ -164,6 +168,7 @@ def loads_ai7(data: bytes) -> Document:
 
     width = height = None
     title = "Untitled"
+    title_seen = False
     layers: list[Layer] = []
     current_layer: Layer | None = None
     current_points: list[Point] = []
@@ -177,8 +182,9 @@ def loads_ai7(data: bytes) -> Document:
 
     for raw_line in text.splitlines():
         line = raw_line.strip()
-        if line.startswith("%%Title: (") and line.endswith(")"):
+        if not title_seen and line.startswith("%%Title: (") and line.endswith(")"):
             title = _unescape_postscript_string(line[10:-1])
+            title_seen = True
             continue
         if line.startswith("%%py-ai-metadata: "):
             try:
@@ -221,6 +227,14 @@ def loads_ai7(data: bytes) -> Document:
         if line.startswith("%%py-ai-path-name: (") and line.endswith(")"):
             pending_name = _unescape_postscript_string(line[20:-1])
             continue
+        ai8_rgb_match = _AI8_RGB_COLOR_RE.match(line)
+        if ai8_rgb_match:
+            color = Color(*(float(ai8_rgb_match.group(index)) for index in range(5, 8)))
+            if ai8_rgb_match.group(8) == "Xa":
+                fill = color
+            else:
+                stroke = color
+            continue
         color_match = _COLOR_RE.match(line)
         if color_match:
             color = Color(*(float(color_match.group(index)) for index in range(1, 4)))
@@ -237,7 +251,7 @@ def loads_ai7(data: bytes) -> Document:
             else:
                 stroke = color
             continue
-        width_match = _WIDTH_RE.match(line)
+        width_match = _WIDTH_RE.search(line)
         if width_match:
             stroke_width = float(width_match.group(1))
             continue
