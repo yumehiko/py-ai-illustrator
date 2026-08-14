@@ -35,7 +35,11 @@ def _expected_structure(source: Path) -> dict[str, Any] | None:
 
 
 def _build_javascript(source: Path) -> str:
-    source_literal = json.dumps(str(source), ensure_ascii=True)
+    # Illustrator's Japanese ExtendScript parser can display and parse the ASCII
+    # reverse solidus as a yen sign.  Build both the path and JSON escapes from
+    # character codes so the generated JSX contains no ambiguous character.
+    source_codepoints = ",".join(str(ord(character)) for character in str(source))
+    source_literal = f"String.fromCharCode({source_codepoints})"
     return f"""#target illustrator
 (function () {{
     var source = new File({source_literal});
@@ -43,11 +47,15 @@ def _build_javascript(source: Path) -> str:
     var previousInteractionLevel = app.userInteractionLevel;
 
     function quoteString(value) {{
-        return '"' + value
-            .replace(/\\/g, "\\\\")
-            .replace(/"/g, '\\"')
-            .replace(/\r/g, "\\r")
-            .replace(/\n/g, "\\n") + '"';
+        var slash = String.fromCharCode(92);
+        var quote = String.fromCharCode(34);
+        var carriageReturn = String.fromCharCode(13);
+        var lineFeed = String.fromCharCode(10);
+        return quote + String(value)
+            .split(slash).join(slash + slash)
+            .split(quote).join(slash + quote)
+            .split(carriageReturn).join(slash + "r")
+            .split(lineFeed).join(slash + "n") + quote;
     }}
 
     function toJson(value) {{

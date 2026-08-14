@@ -15,7 +15,9 @@ def test_javascript_closes_only_its_document_without_saving(tmp_path: Path) -> N
     assert "documentRef = app.open(source)" in javascript
     assert "documentRef.close(SaveOptions.DONOTSAVECHANGES)" in javascript
     assert "current document" not in javascript
-    assert '\\"quoted\\"' in javascript
+    assert "String.fromCharCode(92)" in javascript
+    assert "String.fromCharCode(34)" in javascript
+    assert "\\" not in javascript
 
 
 def test_expected_structure_comes_from_legacy_reader() -> None:

@@ -54,7 +54,8 @@ def _path_geometry(path: Path) -> list[str]:
     first, *rest = path.points
     lines = [f"{_number(first.x)} {_number(first.y)} m"]
     previous = first
-    for point in rest:
+    targets = [*rest, first] if path.closed else rest
+    for point in targets:
         if previous.out_handle is not None or point.in_handle is not None:
             control1 = previous.out_handle or ControlPoint(previous.x, previous.y)
             control2 = point.in_handle or ControlPoint(point.x, point.y)
@@ -292,13 +293,33 @@ def loads_ai7(data: bytes) -> Document:
             if current_layer is None:
                 current_layer = Layer(id="layer-1", name="Layer 1")
             path_counter += 1
+            is_closed = line.islower()
+            path_points = current_points
+            if (
+                is_closed
+                and len(current_points) > 2
+                and current_points[-1].x == current_points[0].x
+                and current_points[-1].y == current_points[0].y
+            ):
+                closing_point = current_points[-1]
+                opening_point = current_points[0]
+                path_points = [
+                    Point(
+                        opening_point.x,
+                        opening_point.y,
+                        in_handle=closing_point.in_handle,
+                        out_handle=opening_point.out_handle,
+                        smooth=closing_point.smooth,
+                    ),
+                    *current_points[1:-1],
+                ]
             has_fill = line in {"b", "f", "B", "F"}
             has_stroke = line in {"b", "s", "B", "S"}
             current_layer.paths.append(
                 Path(
                     id=pending_id or f"path-{path_counter}",
-                    points=current_points,
-                    closed=line.islower(),
+                    points=path_points,
+                    closed=is_closed,
                     fill=fill if has_fill else None,
                     stroke=stroke if has_stroke else None,
                     stroke_width=stroke_width,

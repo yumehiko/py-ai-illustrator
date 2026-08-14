@@ -33,7 +33,9 @@ def sample_document() -> Document:
 
 def test_ai7_roundtrip_preserves_supported_semantics() -> None:
     original = sample_document()
-    restored = loads_ai7(dumps_ai7(original))
+    serialized = dumps_ai7(original)
+    assert b"40 200 L\n40 40 L\nb" in serialized
+    restored = loads_ai7(serialized)
     assert restored.to_dict() == original.to_dict()
 
 
@@ -85,6 +87,50 @@ def test_bezier_and_cmyk_roundtrip() -> None:
                         fill=None,
                         stroke=CmykColor(1.0, 0.25, 0.0, 0.1),
                         stroke_width=4,
+                    )
+                ],
+            )
+        ],
+    )
+    restored = loads_ai7(dumps_ai7(original))
+    assert restored.to_dict() == original.to_dict()
+
+
+def test_closed_bezier_roundtrip_preserves_closing_handles() -> None:
+    original = Document(
+        width=200,
+        height=200,
+        layers=[
+            Layer(
+                id="curves",
+                name="Curves",
+                paths=[
+                    AIPath(
+                        id="closed-curve",
+                        points=[
+                            Point(
+                                20,
+                                20,
+                                in_handle=ControlPoint(10, 40),
+                                out_handle=ControlPoint(40, 10),
+                                smooth=True,
+                            ),
+                            Point(
+                                180,
+                                20,
+                                in_handle=ControlPoint(160, 10),
+                                out_handle=ControlPoint(190, 40),
+                            ),
+                            Point(
+                                100,
+                                180,
+                                in_handle=ControlPoint(140, 180),
+                                out_handle=ControlPoint(60, 180),
+                            ),
+                        ],
+                        closed=True,
+                        fill=None,
+                        stroke=CmykColor(1.0, 0.25, 0.0, 0.1),
                     )
                 ],
             )

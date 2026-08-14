@@ -1,6 +1,6 @@
 # Phase 0 実装状況
 
-更新日: 2026-08-14
+更新日: 2026-08-15
 
 ## 今回作った縦切り
 
@@ -39,19 +39,22 @@ legacy .ai bytes
 
 ## 次の検証ゲート
 
-1. `examples/rectangle.json` から生成した `.ai` を現行 Illustrator で開き、再保存する。
-2. Illustrator で作った最小fixtureを用意し、`inspect` と Phase 0 reader の差分を記録する。
+1. Illustratorで開いたfixtureをAIとして再保存し、再保存前後の意味差分を取る。
+2. Illustratorで作った最小fixtureを用意し、`inspect` と Phase 0 reader の差分を記録する。
 3. fixtureが揃った段階で、lossless token/CST 層と `inkai` adapter の境界を決める。
-4. 対応を保証する Illustrator バージョンを決定する。
+4. 検証対象とするIllustratorバージョンの範囲を広げる。
 
-終了条件のうち、Python内の `IR -> AI7 -> IR` は自動テスト済みです。Illustrator本体で開く適合試験は未実施なので、AI7 writerは引き続き experimental です。
+終了条件のうち、Python内の `IR -> AI7 -> IR` と、Illustrator 30.7.0でfixtureを開いた際の編集構造検査は完了しました。対応範囲はまだ小さいため、AI7 writer全体の位置付けは引き続き experimental です。
 
 配布ライセンスは MIT に決定しました。GPL実装はコア依存に含めません。
 
 ### Illustrator 2026 適合試験メモ
 
-2026-08-14にmacOS上のIllustrator 2026へ `rectangle.ai` の自動オープンを試みましたが、IllustratorがAppleScriptへ応答せず、ドキュメント情報を取得できませんでした。ユーザー文書を誤って閉じる危険を避けるため、強制終了やcurrent document操作は行っていません。この結果はwriterの成功・失敗どちらの判定にも使わず、手動確認または隔離したIllustrator起動環境で再試験します。
+2026-08-15、Creative Cloudへのログインと初回画面の完了後、macOS上のIllustrator 30.7.0で実機試験を完了しました。入力は一時コピーとし、取得したドキュメント参照だけを保存せず閉じています。開いていた別のユーザー文書や`current document`は操作していません。
 
-Adobeログには `Document Opened` とdocument count 1が記録されている一方、`Cached License Missing` とCCXProcess/OnBoarding timeoutも記録されていました。少なくともファイル読込処理は通過していますが、編集構造の確認にはCreative Cloudログインと初回画面完了後の再試験が必要です。
+| fixture | Illustratorでの結果 | 確認した内容 |
+| --- | --- | --- |
+| `rectangle.ai` | pass | 1 layer、1 closed path、4 anchors、RGB fill/stroke、stroke width 3 |
+| `cmyk-curve.ai` | pass | 1 layer、1 open path、2 anchors、Bézier方向点、CMYK 100/25/0/10、stroke width 4 |
 
-再試験用に `py-ai test-illustrator` を追加しました。入力の一時コピーだけを開き、layer/path/anchor/artboard/colorを取得し、その文書参照だけを保存せず閉じます。詳細は [Illustrator 適合試験](illustrator-testing.md) を参照してください。
+最初の試験では閉じた矩形が3 anchorsとして読まれました。AI7の閉じパスに開始点へ戻る明示的な最終segmentを出力するようwriterを修正し、4 anchorsで再試験に合格しています。また、日本語環境でExtendScript内のreverse solidusが円記号として解釈される問題を避けるため、検査用JSXは該当文字とファイルパスを文字コードから構築します。詳細は [Illustrator 適合試験](illustrator-testing.md) を参照してください。

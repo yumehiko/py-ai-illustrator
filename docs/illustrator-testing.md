@@ -49,3 +49,14 @@ uv run py-ai test-illustrator examples/rectangle.ai \
 - closed / filled / strokedの個数
 
 レポートにはartboard、anchor座標、Bézier方向点、stroke幅、RGB/CMYK colorも含めます。今後fixtureが増えたとき、数の一致だけでなく属性ごとの許容差比較へ拡張します。
+
+## 確認済み環境
+
+2026-08-15にIllustrator 30.7.0で次のfixtureが`passed`になりました。
+
+| fixture | 構造 | Illustratorが取得した主な属性 |
+| --- | --- | --- |
+| `examples/rectangle.ai` | 1 layer / 1 path / 4 anchors | closed、RGB fill/stroke、stroke width 3 |
+| `examples/cmyk-curve.ai` | 1 layer / 1 path / 2 anchors | open、Bézier方向点、CMYK stroke、stroke width 4 |
+
+これは記載したfixtureと機能subsetの適合結果です。任意のAI7ファイルや未対応機能の互換性を保証するものではありません。
