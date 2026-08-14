@@ -1,0 +1,34 @@
+%!PS-Adobe-3.0
+%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)
+%%Title: (Phase 0 rectangle)
+%%BoundingBox: 0 0 320 240
+%%HiResBoundingBox: 0 0 320 240
+%%DocumentProcessColors: Cyan Magenta Yellow Black
+%AI5_FileFormat 3.0
+%AI3_ColorUsage: Color
+%AI3_DocumentPreview: None
+%%py-ai-metadata: eyJmZWF0dXJlX3Byb2ZpbGUiOiJsZWdhY3ktYWktcGhhc2UtMCJ9
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+%%EndSetup
+%AI5_BeginLayer
+%%py-ai-layer-id: (layer-artwork)
+1 1 1 1 0 0 0 79 128 255 Lb
+(Artwork) Ln
+%AI7_Tag: (orange-rectangle)
+%%py-ai-path-name: (Orange rectangle)
+0 A
+1 0.3 0 Xa
+0.15 0.1 0.05 XA
+3 w
+40 40 m
+280 40 L
+280 200 L
+40 200 L
+b
+LB
+%AI5_EndLayer
+%%Trailer
+%%EOF

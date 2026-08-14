@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "title": "Phase 0 rectangle",
+  "width": 320,
+  "height": 240,
+  "metadata": {
+    "feature_profile": "legacy-ai-phase-0"
+  },
+  "layers": [
+    {
+      "id": "layer-artwork",
+      "name": "Artwork",
+      "visible": true,
+      "locked": false,
+      "paths": [
+        {
+          "id": "orange-rectangle",
+          "name": "Orange rectangle",
+          "points": [
+            {"x": 40, "y": 40},
+            {"x": 280, "y": 40},
+            {"x": 280, "y": 200},
+            {"x": 40, "y": 200}
+          ],
+          "closed": true,
+          "fill": {"red": 1.0, "green": 0.3, "blue": 0.0},
+          "stroke": {"red": 0.15, "green": 0.1, "blue": 0.05},
+          "stroke_width": 3.0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+"""Command-line boundary shared by humans and future agent adapters."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+from .format import FileFormat, inspect_file
+from .legacy import UnsupportedLegacyFeature, dump_ai7, load_ai7
+from .model import Document
+
+
+def _write_json(data: Any, destination: Path | None) -> None:
+    payload = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    if destination is None:
+        sys.stdout.write(payload)
+    else:
+        destination.write_text(payload, encoding="utf-8")
+
+
+def _inspect(args: argparse.Namespace) -> int:
+    report = inspect_file(args.input)
+    if args.json:
+        _write_json(report.to_dict(), None)
+    else:
+        print(f"format: {report.format.value}")
+        print(f"size: {report.size_bytes} bytes")
+        print(f"confidence: {report.confidence}")
+        if report.illustrator_markers:
+            print("markers: " + ", ".join(report.illustrator_markers))
+        for note in report.notes:
+            print(f"note: {note}")
+    return 0
+
+
+def _export(args: argparse.Namespace) -> int:
+    source = Path(args.input)
+    destination = Path(args.output) if args.output else None
+    if args.to == "json":
+        report = inspect_file(source)
+        if report.format is not FileFormat.LEGACY_AI:
+            raise UnsupportedLegacyFeature(
+                "Phase 0 JSON export currently supports legacy Illustrator files only; "
+                f"detected {report.format.value}."
+            )
+        _write_json(load_ai7(source).to_dict(), destination)
+        return 0
+
+    if args.to == "ai7":
+        if destination is None:
+            raise ValueError("--output is required when writing binary/file output")
+        data = json.loads(source.read_text(encoding="utf-8"))
+        dump_ai7(Document.from_dict(data), destination)
+        return 0
+    raise ValueError(f"Unsupported target: {args.to}")
+
+
+def _validate(args: argparse.Namespace) -> int:
+    report = inspect_file(args.input)
+    errors: list[str] = []
+    warnings = list(report.notes)
+    if report.format is FileFormat.LEGACY_AI:
+        try:
+            document = load_ai7(args.input)
+            if not document.layers:
+                warnings.append("No layers were parsed by the Phase 0 reader.")
+        except (ValueError, UnicodeError) as error:
+            errors.append(str(error))
+    elif report.format is FileFormat.PDF_COMPATIBLE_AI:
+        warnings.append(
+            "Modern AI semantic parsing is not implemented yet; container only checked."
+        )
+    else:
+        errors.append(f"Unsupported input format: {report.format.value}")
+
+    result = {
+        "valid": not errors,
+        "format": report.format.value,
+        "errors": errors,
+        "warnings": warnings,
+    }
+    _write_json(result, None)
+    return 0 if not errors else 1
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="py-ai", description=__doc__)
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    inspect_parser = subparsers.add_parser("inspect", help="detect the file container")
+    inspect_parser.add_argument("input")
+    inspect_parser.add_argument("--json", action="store_true")
+    inspect_parser.set_defaults(handler=_inspect)
+
+    export_parser = subparsers.add_parser("export", help="translate between AI and the JSON IR")
+    export_parser.add_argument("input")
+    export_parser.add_argument("--to", choices=("json", "ai7"), required=True)
+    export_parser.add_argument("-o", "--output")
+    export_parser.set_defaults(handler=_export)
+
+    validate_parser = subparsers.add_parser("validate", help="run available structural checks")
+    validate_parser.add_argument("input")
+    validate_parser.set_defaults(handler=_validate)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    try:
+        return int(args.handler(args))
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        parser.error(str(error))
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
