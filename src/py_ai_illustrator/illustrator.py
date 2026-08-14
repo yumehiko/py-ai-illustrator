@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import platform
 import shutil
 import subprocess
@@ -12,7 +13,13 @@ from typing import Any
 
 from .format import FileFormat, inspect_file
 from .legacy import load_ai7
-from .model import CmykColor, Color
+from .model import CmykColor, Color, Document, ProcessColor
+from .model import Path as AIPath
+
+
+def _character_code_expression(value: str | Path) -> str:
+    codepoints = ",".join(str(ord(character)) for character in str(value))
+    return f"String.fromCharCode({codepoints})"
 
 
 def _expected_structure(source: Path) -> dict[str, Any] | None:
@@ -39,8 +46,7 @@ def _build_javascript(source: Path) -> str:
     # Illustrator's Japanese ExtendScript parser can display and parse the ASCII
     # reverse solidus as a yen sign.  Build both the path and JSON escapes from
     # character codes so the generated JSX contains no ambiguous character.
-    source_codepoints = ",".join(str(ord(character)) for character in str(source))
-    source_literal = f"String.fromCharCode({source_codepoints})"
+    source_literal = _character_code_expression(source)
     return f"""#target illustrator
 (function () {{
     var source = new File({source_literal});
@@ -203,10 +209,7 @@ def _build_javascript(source: Path) -> str:
 
 
 def _build_export_javascript(destination: Path, fixture: str) -> str:
-    destination_codepoints = ",".join(
-        str(ord(character)) for character in str(destination)
-    )
-    destination_literal = f"String.fromCharCode({destination_codepoints})"
+    destination_literal = _character_code_expression(destination)
     if fixture == "rgb-rectangle":
         fixture_javascript = """
         documentRef = app.documents.add(DocumentColorSpace.RGB, 320, 240);
@@ -294,6 +297,39 @@ def _build_export_javascript(destination: Path, fixture: str) -> str:
 """
 
 
+def _build_roundtrip_javascript(source: Path, destination: Path) -> str:
+    source_literal = _character_code_expression(source)
+    destination_literal = _character_code_expression(destination)
+    return f"""#target illustrator
+(function () {{
+    var source = new File({source_literal});
+    var destination = new File({destination_literal});
+    var documentRef = null;
+    var previousInteractionLevel = app.userInteractionLevel;
+
+    try {{
+        app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
+        if (!source.exists) throw new Error("Temporary fixture does not exist");
+        documentRef = app.open(source);
+        var options = new IllustratorSaveOptions();
+        options.compatibility = Compatibility.ILLUSTRATOR8;
+        options.pdfCompatible = false;
+        options.embedLinkedFiles = false;
+        options.flattenOutput = OutputFlattening.PRESERVEAPPEARANCE;
+        documentRef.saveAs(destination, options);
+        return "ok:" + app.version;
+    }} catch (error) {{
+        return "error:" + String(error) + ":line:" + String(error.line || "");
+    }} finally {{
+        if (documentRef !== null) {{
+            documentRef.close(SaveOptions.DONOTSAVECHANGES);
+        }}
+        app.userInteractionLevel = previousInteractionLevel;
+    }}
+}}());
+"""
+
+
 def _execute_javascript(
     javascript: str,
     directory: Path,
@@ -332,6 +368,120 @@ def _compare_structure(expected: dict[str, Any], actual: dict[str, Any]) -> dict
         "stroked_count",
     )
     return {key: actual.get(key) == expected[key] for key in keys}
+
+
+def _color_close(
+    expected: ProcessColor | None,
+    actual: ProcessColor | None,
+    *,
+    tolerance: float,
+) -> bool:
+    if expected is None or actual is None:
+        return expected is actual
+    if type(expected) is not type(actual):
+        return False
+    if isinstance(expected, Color) and isinstance(actual, Color):
+        expected_values = (expected.red, expected.green, expected.blue)
+        actual_values = (actual.red, actual.green, actual.blue)
+    elif isinstance(expected, CmykColor) and isinstance(actual, CmykColor):
+        expected_values = (expected.cyan, expected.magenta, expected.yellow, expected.black)
+        actual_values = (actual.cyan, actual.magenta, actual.yellow, actual.black)
+    else:
+        return False
+    return all(
+        math.isclose(left, right, rel_tol=0.0, abs_tol=tolerance)
+        for left, right in zip(expected_values, actual_values, strict=True)
+    )
+
+
+def _path_geometry_close(expected: AIPath, actual: AIPath, *, tolerance: float) -> bool:
+    if len(expected.points) != len(actual.points):
+        return False
+    expected_origin = expected.points[0]
+    actual_origin = actual.points[0]
+    for expected_point, actual_point in zip(expected.points, actual.points, strict=True):
+        coordinates = (
+            (expected_point.x - expected_origin.x, actual_point.x - actual_origin.x),
+            (expected_point.y - expected_origin.y, actual_point.y - actual_origin.y),
+        )
+        if not all(
+            math.isclose(left, right, rel_tol=0.0, abs_tol=tolerance)
+            for left, right in coordinates
+        ):
+            return False
+        for expected_handle, actual_handle in (
+            (expected_point.in_handle, actual_point.in_handle),
+            (expected_point.out_handle, actual_point.out_handle),
+        ):
+            if expected_handle is None or actual_handle is None:
+                if expected_handle is not actual_handle:
+                    return False
+                continue
+            handle_coordinates = (
+                (expected_handle.x - expected_point.x, actual_handle.x - actual_point.x),
+                (expected_handle.y - expected_point.y, actual_handle.y - actual_point.y),
+            )
+            if not all(
+                math.isclose(left, right, rel_tol=0.0, abs_tol=tolerance)
+                for left, right in handle_coordinates
+            ):
+                return False
+        if expected_point.smooth != actual_point.smooth:
+            return False
+    return True
+
+
+def _compare_roundtrip_semantics(
+    expected: Document,
+    actual: Document,
+    *,
+    tolerance: float = 1 / 255 + 1e-6,
+) -> dict[str, bool]:
+    expected_paths = [path for layer in expected.layers for path in layer.paths]
+    actual_paths = [path for layer in actual.layers for path in layer.paths]
+    paired_paths = list(zip(expected_paths, actual_paths, strict=False))
+    same_path_count = len(expected_paths) == len(actual_paths)
+    return {
+        "layer_count": len(expected.layers) == len(actual.layers),
+        "layer_names": [layer.name for layer in expected.layers]
+        == [layer.name for layer in actual.layers],
+        "layer_visibility": [layer.visible for layer in expected.layers]
+        == [layer.visible for layer in actual.layers],
+        "path_item_count": same_path_count,
+        "point_counts": same_path_count
+        and all(len(left.points) == len(right.points) for left, right in paired_paths),
+        "path_flags": same_path_count
+        and all(
+            (left.closed, left.fill is not None, left.stroke is not None)
+            == (right.closed, right.fill is not None, right.stroke is not None)
+            for left, right in paired_paths
+        ),
+        "stroke_widths": same_path_count
+        and all(
+            math.isclose(
+                left.stroke_width,
+                right.stroke_width,
+                rel_tol=0.0,
+                abs_tol=tolerance,
+            )
+            for left, right in paired_paths
+        ),
+        "fill_colors": same_path_count
+        and all(
+            _color_close(left.fill, right.fill, tolerance=tolerance)
+            for left, right in paired_paths
+        ),
+        "stroke_colors": same_path_count
+        and all(
+            _color_close(left.stroke, right.stroke, tolerance=tolerance)
+            for left, right in paired_paths
+        ),
+        "path_geometry": same_path_count
+        and all(
+            _path_geometry_close(left, right, tolerance=tolerance)
+            for left, right in paired_paths
+        ),
+    }
 
 
 def run_illustrator_test(
@@ -525,5 +675,107 @@ def run_illustrator_export_test(
             "format": format_details,
             "checks": checks,
             "python_ir": document.to_dict(),
+            "output": str(output_path) if output_path is not None else None,
+        }
+
+
+def run_illustrator_roundtrip_test(
+    source: str | Path,
+    *,
+    output: str | Path | None = None,
+    timeout: float = 90.0,
+    application_name: str = "Adobe Illustrator",
+) -> dict[str, Any]:
+    """Resave a Python-readable AI file in Illustrator and compare semantic IRs."""
+
+    source_path = Path(source).resolve()
+    if platform.system() != "Darwin":
+        return {
+            "status": "environment-unavailable",
+            "error": "Illustrator round-trip testing is currently supported on macOS only.",
+        }
+    if not source_path.is_file():
+        return {"status": "invalid-input", "error": f"File does not exist: {source_path}"}
+    if timeout <= 0:
+        return {"status": "invalid-input", "error": "timeout must be positive"}
+    if inspect_file(source_path).format is not FileFormat.LEGACY_AI:
+        return {
+            "status": "invalid-input",
+            "error": "Round-trip testing currently requires a legacy AI input.",
+        }
+    try:
+        expected = load_ai7(source_path)
+    except (ValueError, UnicodeError) as error:
+        return {"status": "invalid-input", "error": str(error)}
+
+    output_path = Path(output).resolve() if output is not None else None
+    if output_path is not None and output_path.exists():
+        return {
+            "status": "invalid-input",
+            "error": f"Refusing to overwrite existing output: {output_path}",
+        }
+
+    with tempfile.TemporaryDirectory(prefix="py-ai-illustrator-roundtrip-") as temp_directory:
+        temp_path = Path(temp_directory)
+        input_copy = temp_path / "python-generated.ai"
+        resaved_path = temp_path / "illustrator-resaved.ai"
+        shutil.copy2(source_path, input_copy)
+        try:
+            completed = _execute_javascript(
+                _build_roundtrip_javascript(input_copy, resaved_path),
+                temp_path,
+                timeout=timeout,
+                application_name=application_name,
+            )
+        except subprocess.TimeoutExpired:
+            return {
+                "status": "environment-unavailable",
+                "error": f"Illustrator did not answer within {timeout:g} seconds.",
+            }
+        if completed.returncode != 0:
+            return {
+                "status": "environment-unavailable",
+                "error": completed.stderr.strip() or "Illustrator AppleScript failed.",
+            }
+
+        response = completed.stdout.strip()
+        if not response.startswith("ok:"):
+            return {"status": "failed", "illustrator_response": response}
+        if not resaved_path.is_file():
+            return {
+                "status": "failed",
+                "error": "Illustrator reported success but did not create the resaved AI file.",
+            }
+        if output_path is not None:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(resaved_path, output_path)
+
+        format_report = inspect_file(resaved_path)
+        format_details = format_report.to_dict()
+        format_details["path"] = str(output_path) if output_path is not None else None
+        try:
+            actual = load_ai7(resaved_path)
+        except (ValueError, UnicodeError) as error:
+            return {
+                "status": "failed",
+                "illustrator_version": response[3:],
+                "format": format_details,
+                "reader_error": str(error),
+                "output": str(output_path) if output_path is not None else None,
+            }
+
+        checks = _compare_roundtrip_semantics(expected, actual)
+        passed = format_report.format is FileFormat.LEGACY_AI and all(checks.values())
+        return {
+            "status": "passed" if passed else "mismatch",
+            "input": str(source_path),
+            "illustrator_version": response[3:],
+            "format": format_details,
+            "checks": {
+                "legacy_ai_detected": format_report.format is FileFormat.LEGACY_AI,
+                **checks,
+            },
+            "expected_ir": expected.to_dict(),
+            "roundtrip_ir": actual.to_dict(),
             "output": str(output_path) if output_path is not None else None,
         }

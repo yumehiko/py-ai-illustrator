@@ -9,7 +9,11 @@ from pathlib import Path
 from typing import Any
 
 from .format import FileFormat, inspect_file
-from .illustrator import run_illustrator_export_test, run_illustrator_test
+from .illustrator import (
+    run_illustrator_export_test,
+    run_illustrator_roundtrip_test,
+    run_illustrator_test,
+)
 from .legacy import UnsupportedLegacyFeature, dump_ai7, load_ai7
 from .model import Document
 
@@ -110,6 +114,18 @@ def _test_illustrator_export(args: argparse.Namespace) -> int:
     return 0 if result["status"] == "passed" else 1
 
 
+def _test_illustrator_roundtrip(args: argparse.Namespace) -> int:
+    result = run_illustrator_roundtrip_test(
+        args.input,
+        output=args.ai_output,
+        timeout=args.timeout,
+        application_name=args.application,
+    )
+    destination = Path(args.output) if args.output else None
+    _write_json(result, destination)
+    return 0 if result["status"] == "passed" else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="py-ai", description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -153,6 +169,17 @@ def build_parser() -> argparse.ArgumentParser:
     illustrator_export_parser.add_argument("--ai-output")
     illustrator_export_parser.add_argument("-o", "--output")
     illustrator_export_parser.set_defaults(handler=_test_illustrator_export)
+
+    illustrator_roundtrip_parser = subparsers.add_parser(
+        "test-illustrator-roundtrip",
+        help="resave a legacy AI fixture in Illustrator and compare the Python IR",
+    )
+    illustrator_roundtrip_parser.add_argument("input")
+    illustrator_roundtrip_parser.add_argument("--timeout", type=float, default=90.0)
+    illustrator_roundtrip_parser.add_argument("--application", default="Adobe Illustrator")
+    illustrator_roundtrip_parser.add_argument("--ai-output")
+    illustrator_roundtrip_parser.add_argument("-o", "--output")
+    illustrator_roundtrip_parser.set_defaults(handler=_test_illustrator_roundtrip)
     return parser
 
 

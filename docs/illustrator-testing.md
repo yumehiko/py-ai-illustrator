@@ -31,6 +31,13 @@ uv run py-ai test-illustrator-export --fixture rgb-rectangle
 uv run py-ai test-illustrator-export --fixture cmyk-curve
 ```
 
+完全往復（Python生成AIをIllustratorでAI8再保存し、Python IRへ戻す）:
+
+```bash
+uv run py-ai test-illustrator-roundtrip examples/rectangle.ai
+uv run py-ai test-illustrator-roundtrip examples/cmyk-curve.ai
+```
+
 調査用にIllustrator生成AIを残す場合は、既存ファイルではない出力先を指定します。上書きは拒否されます。
 
 ```bash
@@ -67,6 +74,18 @@ uv run py-ai test-illustrator examples/rectangle.ai \
 
 レポートにはartboard、anchor座標、Bézier方向点、stroke幅、RGB/CMYK colorも含めます。今後fixtureが増えたとき、数の一致だけでなく属性ごとの許容差比較へ拡張します。
 
+完全往復では次を意味属性として比較します。
+
+- layer数・名前・visibility
+- path数、anchor数、open/closed、fill/strokeの有無
+- anchor間の相対座標と、anchorに対するBézier handleの相対座標
+- stroke width
+- RGB/CMYK process color
+
+Illustratorはlegacy AIを開く際にdocument原点を移動することがあるため、path全体の平行移動は正規化します。RGBはIllustratorの8-bit値への量子化を許容します。
+
+現在、独自DSCコメントで保持しているdocument metadata、layer/pathの安定ID、path名はIllustratorのAI8再保存で除去されます。また、document titleとboundsは保存先名とartwork boundsに変わります。これらは既知のlossとしてレポートの意味合格判定から除外しています。
+
 ## 確認済み環境
 
 2026-08-15にIllustrator 30.7.0で次のfixtureが`passed`になりました。
@@ -82,5 +101,7 @@ uv run py-ai test-illustrator examples/rectangle.ai \
 | --- | --- |
 | `rgb-rectangle` | legacy AI検出、1 layer、4 anchors、closed、RGB fill/stroke、stroke width 3 |
 | `cmyk-curve` | legacy AI検出、1 layer、2 anchors、open、Bézier方向点、CMYK stroke、stroke width 4 |
+
+完全往復も両fixtureで`passed`です。RGB矩形は全体が平行移動しRGB値が8-bitへ量子化されましたが、正規化後のpath geometryとpaint属性は一致しました。CMYK Bézierはanchor・handle・CMYK値・stroke widthが保持されました。
 
 これは記載したfixtureと機能subsetの適合結果です。任意のAI7ファイルや未対応機能の互換性を保証するものではありません。

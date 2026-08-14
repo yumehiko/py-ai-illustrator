@@ -5,9 +5,12 @@ from py_ai_illustrator import illustrator
 from py_ai_illustrator.illustrator import (
     _build_export_javascript,
     _build_javascript,
+    _build_roundtrip_javascript,
+    _compare_roundtrip_semantics,
     _compare_structure,
     _expected_structure,
 )
+from py_ai_illustrator.model import Color, ControlPoint, Document, Point
 
 
 def test_javascript_closes_only_its_document_without_saving(tmp_path: Path) -> None:
@@ -24,6 +27,19 @@ def test_javascript_closes_only_its_document_without_saving(tmp_path: Path) -> N
 def test_export_javascript_creates_and_closes_only_its_cmyk_fixture(tmp_path: Path) -> None:
     javascript = _build_export_javascript(tmp_path / 'native "curve".ai', "cmyk-curve")
     assert "app.documents.add(DocumentColorSpace.CMYK, 200, 200)" in javascript
+    assert "Compatibility.ILLUSTRATOR8" in javascript
+    assert "documentRef.saveAs(destination, options)" in javascript
+    assert "documentRef.close(SaveOptions.DONOTSAVECHANGES)" in javascript
+    assert "current document" not in javascript
+    assert "\\" not in javascript
+
+
+def test_roundtrip_javascript_resaves_and_closes_only_its_document(tmp_path: Path) -> None:
+    javascript = _build_roundtrip_javascript(
+        tmp_path / 'source "quoted".ai',
+        tmp_path / 'resaved "quoted".ai',
+    )
+    assert "documentRef = app.open(source)" in javascript
     assert "Compatibility.ILLUSTRATOR8" in javascript
     assert "documentRef.saveAs(destination, options)" in javascript
     assert "documentRef.close(SaveOptions.DONOTSAVECHANGES)" in javascript
@@ -116,3 +132,52 @@ def test_export_runner_rejects_unknown_fixture(monkeypatch) -> None:
     monkeypatch.setattr(illustrator.platform, "system", lambda: "Darwin")
     result = illustrator.run_illustrator_export_test(fixture="unknown")
     assert result == {"status": "invalid-input", "error": "Unknown fixture: unknown"}
+
+
+def test_roundtrip_comparison_allows_document_translation() -> None:
+    source = Path(__file__).parents[1] / "examples" / "cmyk-curve.ai"
+    expected = illustrator.load_ai7(source)
+    actual = Document.from_dict(expected.to_dict())
+    for path in [path for layer in actual.layers for path in layer.paths]:
+        path.points = [
+            Point(
+                point.x + 100,
+                point.y - 50,
+                in_handle=(
+                    ControlPoint(point.in_handle.x + 100, point.in_handle.y - 50)
+                    if point.in_handle is not None
+                    else None
+                ),
+                out_handle=(
+                    ControlPoint(point.out_handle.x + 100, point.out_handle.y - 50)
+                    if point.out_handle is not None
+                    else None
+                ),
+                smooth=point.smooth,
+            )
+            for point in path.points
+        ]
+    checks = _compare_roundtrip_semantics(expected, actual)
+    assert all(checks.values())
+
+
+def test_roundtrip_comparison_reports_color_changes() -> None:
+    source = Path(__file__).parents[1] / "examples" / "rectangle.ai"
+    expected = illustrator.load_ai7(source)
+    actual = Document.from_dict(expected.to_dict())
+    actual.layers[0].paths[0].fill = Color(0.0, 0.0, 0.0)
+    checks = _compare_roundtrip_semantics(expected, actual)
+    assert checks["fill_colors"] is False
+    assert checks["path_geometry"] is True
+
+
+def test_roundtrip_runner_refuses_to_overwrite_existing_output(
+    monkeypatch, tmp_path: Path
+) -> None:
+    source = Path(__file__).parents[1] / "examples" / "rectangle.ai"
+    output = tmp_path / "existing.ai"
+    output.write_bytes(b"user data")
+    monkeypatch.setattr(illustrator.platform, "system", lambda: "Darwin")
+    result = illustrator.run_illustrator_roundtrip_test(source, output=output)
+    assert result["status"] == "invalid-input"
+    assert output.read_bytes() == b"user data"

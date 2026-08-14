@@ -39,8 +39,8 @@ legacy .ai bytes
 
 ## 次の検証ゲート
 
-1. Python生成fixtureをIllustratorで再保存し、再保存前後の意味差分を取る。
-2. compound path / clippingのIllustrator生成fixtureを追加する。
+1. compound path / clippingのIllustrator生成fixtureを追加する。
+2. Illustrator再保存をまたぐ安定ID・metadata保持方式を調査する。
 3. fixtureが揃った段階で、lossless token/CST 層と `inkai` adapter の境界を決める。
 4. 検証対象とするIllustratorバージョンの範囲を広げる。
 
@@ -58,5 +58,7 @@ legacy .ai bytes
 | `cmyk-curve.ai` | pass | 1 layer、1 open path、2 anchors、Bézier方向点、CMYK 100/25/0/10、stroke width 4 |
 
 逆方向ではIllustrator自身にRGB矩形とCMYK Bézier曲線を作らせ、AI8互換で一時保存したファイルをPython readerへ読み戻しました。両fixtureともlayer/path/anchor、開閉、paint style、stroke width、RGB/CMYK、Bézier handleの照合に合格しています。この過程で、Illustrator標準AI8が出力する7成分`Xa/XA` paint style、同じ行に並ぶ`w` operator、埋め込みprocset内の`%%Title`をreaderで正しく扱うよう修正しました。
+
+さらにPython生成fixtureをIllustratorでAI8再保存し、再びPython IRへ戻す完全往復を実施しました。RGB矩形とCMYK Bézierはいずれも、平行移動とRGB量子化を正規化した意味比較に合格しています。独自DSCコメント由来の安定ID、path名、metadata、元のdocument title/boundsはIllustrator再保存では保持されないことも確認し、既知のlossとして明示しました。
 
 最初の試験では閉じた矩形が3 anchorsとして読まれました。AI7の閉じパスに開始点へ戻る明示的な最終segmentを出力するようwriterを修正し、4 anchorsで再試験に合格しています。また、日本語環境でExtendScript内のreverse solidusが円記号として解釈される問題を避けるため、検査用JSXは該当文字とファイルパスを文字コードから構築します。詳細は [Illustrator 適合試験](illustrator-testing.md) を参照してください。
