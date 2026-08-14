@@ -20,10 +20,11 @@
 - Python から生成した AI8 ファイルを現行 Illustrator で開ける
 - reader の採用方針とライセンス方針を決定できる
 
-進捗（2026-08-14）:
+進捗（2026-08-15）:
 
-- 完了: 依存ゼロの形式判定、最小Python IR、legacy AIサブセットreader/writer、JSON往復、CLI、自動テスト
-- 未完了: Illustratorでの適合試験、現代AI fixtureのPrivateData dump、`inkai`比較環境、最終ライセンス決定
+- 完了: 依存ゼロの形式判定、最小Python IR、legacy AIサブセットreader/writer、JSON往復、CLI、自動テスト、Illustrator 30.7.0実機適合試験、MITライセンス決定
+- 実証済みsubset: RGB/CMYK、直線/Bézier、compound、clipping、異種itemのstacking order、path ID・名前のAI8再保存保持
+- 未完了: 現代AI fixtureのPrivateData dump、`inkai`比較環境、lossless token model、text/image/artboard
 - 詳細: [Phase 0 の実装状況](phase0-status.md)
 
 ## Phase 1: Reader + IR + inspection CLI
@@ -117,4 +118,4 @@
 
 ## 推奨する次の一手
 
-Phase 0 を先に行い、`inkai` を fork するか adapter として使うかを決めます。新規パーサーを先に書き始めるより、既存実装で 10〜20 個の代表 fixture を読み、欠落情報と writer に必要なデータを測る方が判断材料になります。
+Phase 0のlegacy縦切りとIllustrator実機試験は成立しました。次は未知operatorを保持するlossless token/CSTの小さな試作を作り、同じfixture群を`inkai`でも読んだ差分から、forkではなく隔離adapterとして使う価値があるかを判断します。

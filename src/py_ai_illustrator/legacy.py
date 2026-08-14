@@ -15,6 +15,7 @@ from .model import (
     ControlPoint,
     Document,
     Layer,
+    LayerItemRef,
     Path,
     Point,
     ProcessColor,
@@ -139,12 +140,8 @@ def _serialized_path(path: Path, *, locked: bool) -> list[str]:
     if path.fill is not None:
         lines.append(_color_operator(path.fill, stroke=False))
     if path.stroke is not None:
-        lines.extend(
-            [
-                _color_operator(path.stroke, stroke=True),
-                f"{_number(path.stroke_width)} w",
-            ]
-        )
+        lines.append(_color_operator(path.stroke, stroke=True))
+    lines.append(f"{_number(path.stroke_width)} w")
     lines.extend(_path_geometry(path))
     render = {
         (True, True, True): "b",
@@ -219,45 +216,48 @@ def dumps_ai7(document: Document) -> bytes:
                 f"({layer_name}) Ln",
             ]
         )
-        for path in layer.paths:
-            lines.extend(_serialized_path(path, locked=layer.locked))
-        for compound in layer.compound_paths:
-            lines.extend(
-                [
-                    f"%%py-ai-compound-id: ({_escape_postscript_string(compound.id)})",
-                    *(
-                        [
-                            "%%py-ai-compound-name: "
-                            f"({_escape_postscript_string(compound.name)})"
-                        ]
-                        if compound.name is not None
-                        else []
-                    ),
-                    "*u",
-                ]
-            )
-            for path in compound.paths:
-                lines.extend(_serialized_path(path, locked=layer.locked))
-            lines.append("*U")
-        for group in layer.clipping_groups:
-            lines.extend(
-                [
-                    f"%%py-ai-clipping-id: ({_escape_postscript_string(group.id)})",
-                    *(
-                        [
-                            "%%py-ai-clipping-name: "
-                            f"({_escape_postscript_string(group.name)})"
-                        ]
-                        if group.name is not None
-                        else []
-                    ),
-                    "q",
-                ]
-            )
-            lines.extend(_serialized_clipping_path(group.clipping_path, locked=layer.locked))
-            for path in group.paths:
-                lines.extend(_serialized_path(path, locked=layer.locked))
-            lines.append("Q")
+        for item in layer.ordered_items():
+            if isinstance(item, Path):
+                lines.extend(_serialized_path(item, locked=layer.locked))
+            elif isinstance(item, CompoundPath):
+                lines.extend(
+                    [
+                        f"%%py-ai-compound-id: ({_escape_postscript_string(item.id)})",
+                        *(
+                            [
+                                "%%py-ai-compound-name: "
+                                f"({_escape_postscript_string(item.name)})"
+                            ]
+                            if item.name is not None
+                            else []
+                        ),
+                        "*u",
+                    ]
+                )
+                for path in item.paths:
+                    lines.extend(_serialized_path(path, locked=layer.locked))
+                lines.append("*U")
+            else:
+                lines.extend(
+                    [
+                        f"%%py-ai-clipping-id: ({_escape_postscript_string(item.id)})",
+                        *(
+                            [
+                                "%%py-ai-clipping-name: "
+                                f"({_escape_postscript_string(item.name)})"
+                            ]
+                            if item.name is not None
+                            else []
+                        ),
+                        "q",
+                    ]
+                )
+                lines.extend(
+                    _serialized_clipping_path(item.clipping_path, locked=layer.locked)
+                )
+                for path in item.paths:
+                    lines.extend(_serialized_path(path, locked=layer.locked))
+                lines.append("Q")
         lines.extend(["LB", "%AI5_EndLayer"])
 
     lines.extend(["%%Trailer", "%%EOF", ""])
@@ -362,15 +362,18 @@ def loads_ai7(data: bytes) -> Document:
             if current_layer is None:
                 current_layer = Layer(id="layer-1", name="Layer 1")
             if len(current_compound_paths) >= 2:
-                current_layer.compound_paths.append(
-                    CompoundPath(
-                        id=current_compound_id or f"compound-{len(layers) + 1}",
-                        name=current_compound_name,
-                        paths=current_compound_paths,
-                    )
+                compound = CompoundPath(
+                    id=current_compound_id or f"compound-{len(layers) + 1}",
+                    name=current_compound_name,
+                    paths=current_compound_paths,
                 )
+                current_layer.compound_paths.append(compound)
+                current_layer.item_order.append(LayerItemRef("compound_path", compound.id))
             else:
                 current_layer.paths.extend(current_compound_paths)
+                current_layer.item_order.extend(
+                    LayerItemRef("path", path.id) for path in current_compound_paths
+                )
             current_compound_paths = None
             current_compound_id = None
             current_compound_name = None
@@ -396,18 +399,24 @@ def loads_ai7(data: bytes) -> Document:
             if current_layer is None:
                 current_layer = Layer(id="layer-1", name="Layer 1")
             if current_clipping_path is not None and current_clipping_paths:
-                current_layer.clipping_groups.append(
-                    ClippingGroup(
-                        id=current_clipping_id or f"clipping-{len(layers) + 1}",
-                        name=current_clipping_name,
-                        clipping_path=current_clipping_path,
-                        paths=current_clipping_paths,
-                    )
+                group = ClippingGroup(
+                    id=current_clipping_id or f"clipping-{len(layers) + 1}",
+                    name=current_clipping_name,
+                    clipping_path=current_clipping_path,
+                    paths=current_clipping_paths,
                 )
+                current_layer.clipping_groups.append(group)
+                current_layer.item_order.append(LayerItemRef("clipping_group", group.id))
             else:
                 if current_clipping_path is not None:
                     current_layer.paths.append(current_clipping_path)
+                    current_layer.item_order.append(
+                        LayerItemRef("path", current_clipping_path.id)
+                    )
                 current_layer.paths.extend(current_clipping_paths)
+                current_layer.item_order.extend(
+                    LayerItemRef("path", path.id) for path in current_clipping_paths
+                )
             current_clipping_paths = None
             current_clipping_path = None
             current_clipping_id = None
@@ -562,6 +571,7 @@ def loads_ai7(data: bytes) -> Document:
                 current_clipping_paths.append(parsed_path)
             else:
                 current_layer.paths.append(parsed_path)
+                current_layer.item_order.append(LayerItemRef("path", parsed_path.id))
             current_points = []
             pending_id = None
             pending_name = None

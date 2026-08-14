@@ -28,6 +28,7 @@ legacy .ai bytes
 | CMYK fill / stroke | 対応 | 対応 | `k`, `K` |
 | compound path | 対応 | 対応 | `*u` / `*U`、subpath polarity `D` |
 | clipping group | 対応 | 対応 | `q` / `Q`、maskの`h/H`・`W` |
+| mixed item stacking | 対応 | 対応 | `item_order`はAI描画順、Illustrator DOMは逆順のtop-to-bottomとして照合 |
 | text / image | 未対応 | 未対応 | fixture調査後 |
 | PDF-compatible AI semantic data | 未対応 | 未対応 | 現在は形式判定のみ |
 
@@ -42,8 +43,8 @@ legacy .ai bytes
 ## 次の検証ゲート
 
 1. Illustrator再保存をまたぐlayer/container IDとdocument metadataの保持方式を調査する。
-2. 通常path、compound、clippingのstacking orderを保持する共通item列を設計する。
-3. lossless token/CST 層と `inkai` adapter の境界を決める。
+2. lossless token/CST 層と `inkai` adapter の境界を決める。
+3. text/image/nested groupの次期feature profileを決める。
 4. 検証対象とするIllustratorバージョンの範囲を広げる。
 
 終了条件のうち、Python内の `IR -> AI7 -> IR` と、Illustrator 30.7.0でfixtureを開いた際の編集構造検査は完了しました。対応範囲はまだ小さいため、AI7 writer全体の位置付けは引き続き experimental です。
@@ -68,5 +69,7 @@ legacy .ai bytes
 compound pathはIllustrator生成AI8から`*u` / `*U` containerと`D` polarityを採取し、専用IR、reader、writerを追加しました。Python生成fixtureはIllustrator 30.7.0で2 componentを持つ1つの`CompoundPathItem`として認識され、Illustrator再保存後の完全往復でもcontainer、polarity、geometry、RGB fillが保持されました。
 
 clipping groupは`q` / `Q` container、mask pathの`h/H`・`W`、後続content pathを専用IRへ分離します。Python生成fixtureはIllustrator 30.7.0で1つのclipped `GroupItem`として認識され、完全往復でもgroup、mask/content数、geometry、RGB fillが保持されました。
+
+通常path、compound、clippingを別配列に保持しつつ、Layerの`item_order`で異種itemのAI描画順を参照するようにしました。古いJSONにこのfieldがなければ従来の配列順から自動導出します。混在fixtureはIllustrator DOMでtop-to-bottomの`CompoundPathItem → PathItem → GroupItem`として認識され、AI8再保存後も逆向きのAI描画順`clipping_group → path → compound_path`が保持されました。
 
 最初の試験では閉じた矩形が3 anchorsとして読まれました。AI7の閉じパスに開始点へ戻る明示的な最終segmentを出力するようwriterを修正し、4 anchorsで再試験に合格しています。また、日本語環境でExtendScript内のreverse solidusが円記号として解釈される問題を避けるため、検査用JSXは該当文字とファイルパスを文字コードから構築します。詳細は [Illustrator 適合試験](illustrator-testing.md) を参照してください。

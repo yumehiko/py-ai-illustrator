@@ -38,6 +38,7 @@ uv run py-ai test-illustrator-roundtrip examples/rectangle.ai
 uv run py-ai test-illustrator-roundtrip examples/cmyk-curve.ai
 uv run py-ai test-illustrator-roundtrip examples/compound-path.ai
 uv run py-ai test-illustrator-roundtrip examples/clipping-group.ai
+uv run py-ai test-illustrator-roundtrip examples/mixed-stack.ai
 ```
 
 調査用にIllustrator生成AIを残す場合は、既存ファイルではない出力先を指定します。上書きは拒否されます。
@@ -79,6 +80,7 @@ uv run py-ai test-illustrator examples/rectangle.ai \
 完全往復では次を意味属性として比較します。
 
 - layer数・名前・visibility
+- layer内の異種item種別順（通常path・compound・clipping）
 - path数、anchor数、open/closed、fill/strokeの有無
 - pathの安定IDと名前
 - anchor間の相対座標と、anchorに対するBézier handleの相対座標
@@ -101,6 +103,7 @@ pathの安定IDと名前はAI7仕様の`%AI3_Note` path属性へ`py-ai:`接頭�
 | `examples/cmyk-curve.ai` | 1 layer / 1 path / 2 anchors | open、Bézier方向点、CMYK stroke、stroke width 4 |
 | `examples/compound-path.ai` | 1 layer / 1 compound / 2 component paths | 8 anchors、正負polarity、RGB fill |
 | `examples/clipping-group.ai` | 1 layer / 1 clipped group / mask + content | mask 4 anchors、content 4 anchors、RGB fill |
+| `examples/mixed-stack.ai` | clipping / path / compoundの混在 | DOM top-to-bottom順、5 paths、3 container種別 |
 
 逆方向も同じ環境で確認済みです。
 
@@ -114,5 +117,7 @@ pathの安定IDと名前はAI7仕様の`%AI3_Note` path属性へ`py-ai:`接頭�
 compound pathも完全往復で`passed`です。比較器はcontainer数、component数、各subpathのpolarityも照合します。
 
 clipping groupも完全往復で`passed`です。比較器はclipping container数、content数、maskとcontent双方のgeometry・paint属性を照合します。
+
+mixed stackも完全往復で`passed`です。IRの`item_order`はAIのback-to-front描画順を保持し、Illustrator DOMのpage item列は逆向きのtop-to-bottom順として照合します。AI8再保存後もcontainer種別順が一致しました。
 
 これは記載したfixtureと機能subsetの適合結果です。任意のAI7ファイルや未対応機能の互換性を保証するものではありません。

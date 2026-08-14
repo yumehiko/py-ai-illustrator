@@ -10,6 +10,7 @@ from py_ai_illustrator.model import (
     ControlPoint,
     Document,
     Layer,
+    LayerItemRef,
     Point,
 )
 from py_ai_illustrator.model import Path as AIPath
@@ -100,6 +101,15 @@ def test_generated_clipping_group_matches_its_json_source() -> None:
         json.loads((examples / "clipping-group.json").read_text(encoding="utf-8"))
     )
     generated = load_ai7(examples / "clipping-group.ai")
+    assert generated.to_dict() == source.to_dict()
+
+
+def test_generated_mixed_stack_matches_its_json_source() -> None:
+    examples = Path(__file__).parents[1] / "examples"
+    source = Document.from_dict(
+        json.loads((examples / "mixed-stack.json").read_text(encoding="utf-8"))
+    )
+    generated = load_ai7(examples / "mixed-stack.ai")
     assert generated.to_dict() == source.to_dict()
 
 
@@ -334,3 +344,46 @@ def test_clipping_group_roundtrip_preserves_mask_and_content() -> None:
     assert b"Q" in serialized
     restored = loads_ai7(serialized)
     assert restored.to_dict() == original.to_dict()
+
+
+def test_mixed_layer_item_order_is_serialized_and_read_in_file_order() -> None:
+    examples = Path(__file__).parents[1] / "examples"
+    compound = Document.from_dict(
+        json.loads((examples / "compound-path.json").read_text(encoding="utf-8"))
+    ).layers[0].compound_paths[0]
+    clipping = Document.from_dict(
+        json.loads((examples / "clipping-group.json").read_text(encoding="utf-8"))
+    ).layers[0].clipping_groups[0]
+    path = sample_document().layers[0].paths[0]
+    original = Document(
+        width=320,
+        height=300,
+        layers=[
+            Layer(
+                id="mixed",
+                name="Mixed",
+                paths=[path],
+                compound_paths=[compound],
+                clipping_groups=[clipping],
+                item_order=[
+                    LayerItemRef("clipping_group", clipping.id),
+                    LayerItemRef("path", path.id),
+                    LayerItemRef("compound_path", compound.id),
+                ],
+            )
+        ],
+    )
+
+    serialized = dumps_ai7(original)
+    assert serialized.index(b"%%py-ai-clipping-id:") < serialized.index(
+        b"%AI7_Tag: (rectangle)"
+    ) < serialized.index(b"%%py-ai-compound-id:")
+    restored = loads_ai7(serialized)
+    assert restored.to_dict() == original.to_dict()
+
+
+def test_layer_derives_legacy_grouped_item_order_when_field_is_missing() -> None:
+    data = sample_document().to_dict()
+    del data["layers"][0]["item_order"]
+    document = Document.from_dict(data)
+    assert document.layers[0].item_order == [LayerItemRef("path", "rectangle")]

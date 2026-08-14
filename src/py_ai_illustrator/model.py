@@ -183,6 +183,20 @@ class ClippingGroup:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class LayerItemRef:
+    kind: str
+    id: str
+
+    def __post_init__(self) -> None:
+        if self.kind not in {"path", "compound_path", "clipping_group"}:
+            raise ValueError(f"Unsupported layer item kind: {self.kind}")
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> LayerItemRef:
+        return cls(kind=str(data["kind"]), id=str(data["id"]))
+
+
 @dataclass(slots=True)
 class Layer:
     id: str
@@ -190,9 +204,41 @@ class Layer:
     paths: list[Path] = field(default_factory=list)
     compound_paths: list[CompoundPath] = field(default_factory=list)
     clipping_groups: list[ClippingGroup] = field(default_factory=list)
+    item_order: list[LayerItemRef] = field(default_factory=list)
     visible: bool = True
     locked: bool = False
     unknown: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.item_order:
+            self.item_order = [
+                *(LayerItemRef("path", path.id) for path in self.paths),
+                *(
+                    LayerItemRef("compound_path", compound.id)
+                    for compound in self.compound_paths
+                ),
+                *(
+                    LayerItemRef("clipping_group", group.id)
+                    for group in self.clipping_groups
+                ),
+            ]
+
+    def ordered_items(self) -> list[Path | CompoundPath | ClippingGroup]:
+        typed_items: list[tuple[str, Path | CompoundPath | ClippingGroup]] = [
+            *(("path", path) for path in self.paths),
+            *(("compound_path", compound) for compound in self.compound_paths),
+            *(("clipping_group", group) for group in self.clipping_groups),
+        ]
+        remaining = list(typed_items)
+        ordered: list[Path | CompoundPath | ClippingGroup] = []
+        for reference in self.item_order:
+            for index, (kind, item) in enumerate(remaining):
+                if kind == reference.kind and item.id == reference.id:
+                    ordered.append(item)
+                    remaining.pop(index)
+                    break
+        ordered.extend(item for _, item in remaining)
+        return ordered
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Layer:
@@ -205,6 +251,10 @@ class Layer:
             ],
             clipping_groups=[
                 ClippingGroup.from_dict(group) for group in data.get("clipping_groups", [])
+            ],
+            item_order=[
+                LayerItemRef.from_dict(reference)
+                for reference in data.get("item_order", [])
             ],
             visible=bool(data.get("visible", True)),
             locked=bool(data.get("locked", False)),

@@ -53,6 +53,7 @@ def test_expected_structure_comes_from_legacy_reader() -> None:
     assert expected == {
         "layer_count": 1,
         "layer_names": ["Artwork"],
+        "layer_page_item_types": [["PathItem"]],
         "path_item_count": 1,
         "point_counts": [4],
         "closed_count": 1,
@@ -67,6 +68,7 @@ def test_structure_comparison_reports_individual_mismatches() -> None:
     expected = {
         "layer_count": 1,
         "layer_names": ["Artwork"],
+        "layer_page_item_types": [["PathItem"]],
         "path_item_count": 1,
         "point_counts": [4],
         "closed_count": 1,
@@ -88,6 +90,7 @@ def test_runner_reports_a_successful_illustrator_import(monkeypatch) -> None:
         "illustrator_version": "30.7.0",
         "layer_count": 1,
         "layer_names": ["Artwork"],
+        "layer_page_item_types": [["PathItem"]],
         "path_item_count": 1,
         "point_counts": [4],
         "closed_count": 1,
@@ -209,6 +212,16 @@ def test_roundtrip_comparison_reports_clipping_group_removal() -> None:
     checks = _compare_roundtrip_semantics(expected, actual)
     assert checks["path_item_count"] is True
     assert checks["clipping_group_count"] is False
+
+
+def test_roundtrip_comparison_reports_mixed_item_type_reordering() -> None:
+    source = Path(__file__).parents[1] / "examples" / "mixed-stack.ai"
+    expected = illustrator.load_ai7(source)
+    actual = Document.from_dict(expected.to_dict())
+    actual.layers[0].item_order.reverse()
+    checks = _compare_roundtrip_semantics(expected, actual)
+    assert checks["layer_item_types"] is False
+    assert checks["path_geometry"] is True
 
 
 def test_roundtrip_runner_refuses_to_overwrite_existing_output(

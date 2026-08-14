@@ -46,6 +46,17 @@ def _expected_structure(source: Path) -> dict[str, Any] | None:
     return {
         "layer_count": len(document.layers),
         "layer_names": [layer.name for layer in document.layers],
+        "layer_page_item_types": [
+            [
+                {
+                    "path": "PathItem",
+                    "compound_path": "CompoundPathItem",
+                    "clipping_group": "GroupItem",
+                }[reference.kind]
+                for reference in reversed(layer.item_order)
+            ]
+            for layer in document.layers
+        ],
         "path_item_count": len(paths),
         "point_counts": sorted(len(path.points) for path in paths),
         "closed_count": sum(path.closed for path in paths),
@@ -123,11 +134,16 @@ def _build_javascript(source: Path) -> str:
         var layers = [];
         for (var layerIndex = 0; layerIndex < documentRef.layers.length; layerIndex++) {{
             var layer = documentRef.layers[layerIndex];
+            var pageItemTypes = [];
+            for (var pageItemIndex = 0; pageItemIndex < layer.pageItems.length; pageItemIndex++) {{
+                pageItemTypes.push(layer.pageItems[pageItemIndex].typename);
+            }}
             layers.push({{
                 name: layer.name,
                 visible: layer.visible,
                 locked: layer.locked,
-                page_item_count: layer.pageItems.length
+                page_item_count: layer.pageItems.length,
+                page_item_types: pageItemTypes
             }});
         }}
 
@@ -176,8 +192,10 @@ def _build_javascript(source: Path) -> str:
         }}
 
         var layerNames = [];
+        var layerPageItemTypes = [];
         for (var layerNameIndex = 0; layerNameIndex < layers.length; layerNameIndex++) {{
             layerNames.push(layers[layerNameIndex].name);
+            layerPageItemTypes.push(layers[layerNameIndex].page_item_types);
         }}
         var pointCounts = [];
         var closedCount = 0;
@@ -207,6 +225,7 @@ def _build_javascript(source: Path) -> str:
             compound_path_item_count: documentRef.compoundPathItems.length,
             clipping_group_count: clippingGroupCount,
             layer_names: layerNames,
+            layer_page_item_types: layerPageItemTypes,
             point_counts: pointCounts,
             closed_count: closedCount,
             filled_count: filledCount,
@@ -434,6 +453,7 @@ def _compare_structure(expected: dict[str, Any], actual: dict[str, Any]) -> dict
     keys = (
         "layer_count",
         "layer_names",
+        "layer_page_item_types",
         "path_item_count",
         "point_counts",
         "closed_count",
@@ -534,6 +554,10 @@ def _compare_roundtrip_semantics(
         == [layer.name for layer in actual.layers],
         "layer_visibility": [layer.visible for layer in expected.layers]
         == [layer.visible for layer in actual.layers],
+        "layer_item_types": [
+            [reference.kind for reference in layer.item_order] for layer in expected.layers
+        ]
+        == [[reference.kind for reference in layer.item_order] for layer in actual.layers],
         "path_item_count": same_path_count,
         "path_ids": same_path_count
         and all(left.id == right.id for left, right in paired_paths),
