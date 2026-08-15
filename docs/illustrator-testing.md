@@ -45,6 +45,16 @@ uv run py-ai test-illustrator examples/japanese-table.ai
 uv run py-ai test-illustrator-roundtrip examples/japanese-table.ai
 ```
 
+現行Illustratorで再編集可能なnative TextFrameを持つ現代AIへ変換する場合:
+
+```bash
+uv run py-ai materialize-native examples/styled-table.ai \
+  -o examples/styled-table.native.ai
+uv run py-ai test-illustrator examples/styled-table.native.ai
+```
+
+`materialize-native`はAI7の`Ta`段落属性を含むlegacy textを`convertToNative()`で現代TextFrameへ変換します。出力はPDF-compatible AIで、既存出力の上書きを拒否します。
+
 調査用にIllustrator生成AIを残す場合は、既存ファイルではない出力先を指定します。上書きは拒否されます。
 
 ```bash
@@ -67,6 +77,7 @@ uv run py-ai test-illustrator examples/rectangle.ai \
 - `current document`や既存ドキュメントを操作しない。
 - 検査対象は`DONOTSAVECHANGES`で閉じる。
 - 逆方向試験は新規ドキュメントを作り、指定した一時出力だけへ保存する。
+- native化は入力の一時コピーだけを開き、明示した新規出力へ保存する。
 - `--ai-output`が既存ファイルを指す場合は上書きしない。
 - Illustratorが応答しない場合はタイムアウトし、互換性失敗ではなく`environment-unavailable`を返す。
 
@@ -99,7 +110,7 @@ pathの安定IDと名前はAI7仕様の`%AI3_Note` path属性へ`py-ai:`接頭�
 
 現在、独自DSCコメントだけで保持しているdocument metadata、layer ID、compound/clipping containerのID・名前はIllustratorのAI8再保存で除去されます。また、document titleとboundsは保存先名とartwork boundsに変わります。これらは既知のlossとしてレポートの意味合格判定から除外しています。
 
-legacy point textではfont名が環境既定へ置換され、paragraph alignmentがleftへ正規化されることを確認しています。この2項目は`advisory_checks`へ分離し、文字内容・size・fill・相対配置は必須判定に残します。表rendererは中央・右揃えをpoint textの原点位置へ展開します。
+AI8互換のlegacy再保存ではfont名の置換やparagraph alignmentの正規化が起こり得るため、この経路では2項目を`advisory_checks`へ分離します。一方、native materialization経路ではAI7 `Ta`をnative paragraph justificationへ変換し、現代AIを再度開いた後もLEFT/CENTER/RIGHTが保持されることを必須の実機確認にしています。
 
 ## 確認済み環境
 
@@ -115,6 +126,17 @@ legacy point textではfont名が環境既定へ置換され、paragraph alignme
 | `examples/point-text.ai` | 1 layer / 1 point text | TextFrame、内容、size 14、RGB fill |
 | `examples/styled-table.ai` | 1 layer / 16 paths / 20 point texts | 5背景、11罫線、20セル、612×360 artboard |
 | `examples/japanese-table.ai` | 1 layer / 15 paths / 18 point texts | CP932日本語、折り返し、自動行高、560×380 artboard |
+| `examples/conference-badges.ai` | 1 layer / 16 paths / 20 point texts | 4名札、role variant、楕円avatar、左右中央揃え |
+| `examples/event-poster.ai` | 1 layer / 4 paths / 9 point texts | 日本語階層、折り返し、装飾Bézier楕円 |
+
+native materializationも同じ環境で確認済みです。
+
+| native fixture | 変換結果 | 再オープン後 |
+| --- | --- | --- |
+| `styled-table.native.ai` | 20 legacy → 20 native TextFrames | LEFT/CENTER/RIGHT、内容、配置を保持 |
+| `japanese-table.native.ai` | 18 legacy → 18 native TextFrames | 日本語内容と3種の揃えを保持 |
+| `conference-badges.native.ai` | 20 legacy → 20 native TextFrames | 名前・role・番号と3種の揃えを保持 |
+| `event-poster.native.ai` | 9 legacy → 9 native TextFrames | 日本語階層・折り返しと3種の揃えを保持 |
 
 逆方向も同じ環境で確認済みです。
 
@@ -135,6 +157,6 @@ mixed stackも完全往復で`passed`です。IRの`item_order`はAIのback-to-f
 
 styled tableも必須項目の完全往復で`passed`です。文字font名とalignmentのadvisory lossを除き、16 paths、20 texts、内容、size、fill、相対配置、罫線geometry、RGB色、stackingが一致しました。
 
-japanese tableも完全往復で`passed`です。18 textsすべての日本語内容、RKSJ font、size、fill、相対配置と、15 pathsのgeometry・paint・stackingが一致しました。IllustratorからPDF/PNG化したpreviewでも文字化け、セル越境、行の重なりがないことを確認しました。
+japanese tableも完全往復で`passed`です。18 textsすべての日本語内容、RKSJ font、size、fill、相対配置と、15 pathsのgeometry・paint・stackingが一致しました。表・名札・ポスターのnative AIをPDF/PNG化したpreviewでも、文字化け、セル越境、行の重なりがないことを確認しました。
 
 これは記載したfixtureと機能subsetの適合結果です。任意のAI7ファイルや未対応機能の互換性を保証するものではありません。

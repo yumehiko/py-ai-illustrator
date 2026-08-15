@@ -50,6 +50,7 @@ _TEXT_POSITION_RE = re.compile(
 _TEXT_FONT_RE = re.compile(rf"^/(\S+)\s+({_NUMBER})\s+{_NUMBER}\s+{_NUMBER}\s+Tf$")
 _TEXT_ALIGNMENT_RE = re.compile(r"^([0-4])\s+Ta$")
 _TEXT_CONTENT_RE = re.compile(r"^\((.*)\)\s+Tx(?:\s+.*)?$")
+_TEXT_ALIGNMENT_CODES = {"left": 0, "center": 1, "right": 2}
 _POSTSCRIPT_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 _PATH_NOTE_PREFIX = "py-ai:"
 
@@ -291,6 +292,7 @@ def _serialized_text_frame(text: TextFrame, *, locked: bool) -> list[str]:
             "0 Tr",
             _color_operator(text.fill, stroke=False),
             f"/{text.font_name} {_number(text.font_size)} 0 0 Tf",
+            f"{_TEXT_ALIGNMENT_CODES[text.alignment]} Ta",
             f"({_escape_postscript_text(text.text, font_name=text.font_name)}) Tx",
             "TO",
         ]

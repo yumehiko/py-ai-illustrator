@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from py_ai_illustrator.format import FileFormat, inspect_file
 from py_ai_illustrator.legacy import load_ai7
 
 
@@ -29,3 +30,56 @@ def test_generated_japanese_table_preserves_wrapped_unicode_text() -> None:
     assert "".join(text.text for text in layer.text_frames[5:7]) == (
         "受付を開始します。資料を受け取って会場へお進みください。"
     )
+
+
+def test_conference_badges_are_independent_semantic_components() -> None:
+    example = Path(__file__).parents[1] / "examples" / "conference-badges.ai"
+    document = load_ai7(example)
+    layer = document.layers[0]
+
+    assert document.metadata["component"] == "ConferenceBadge"
+    assert len(layer.paths) == 16
+    assert len(layer.text_frames) == 20
+    assert {text.text for text in layer.text_frames if text.id.endswith("role.line-0")} == {
+        "SPEAKER",
+        "GUEST",
+        "STAFF",
+    }
+    assert all(
+        text.alignment == "right"
+        for text in layer.text_frames
+        if text.id.endswith("number.line-0")
+    )
+
+
+def test_event_poster_preserves_hierarchy_and_wrapped_japanese() -> None:
+    example = Path(__file__).parents[1] / "examples" / "event-poster.ai"
+    document = load_ai7(example)
+    layer = document.layers[0]
+
+    assert document.metadata["component"] == "EventPoster"
+    assert len(layer.paths) == 4
+    assert any(text.text == "創造とコード" for text in layer.text_frames)
+    statement = [
+        text for text in layer.text_frames if text.id.startswith("poster.statement.line-")
+    ]
+    assert len(statement) > 1
+    assert "".join(text.text for text in statement) == (
+        "データを座標へ置き換えるだけではなく、文脈と規則を再利用できる形にします。"
+        "PythonとIllustratorを往復しながら、編集できる紙面を一緒につくります。"
+    )
+
+
+def test_materialized_examples_are_pdf_compatible_native_ai() -> None:
+    examples = Path(__file__).parents[1] / "examples"
+    native_examples = (
+        "styled-table.native.ai",
+        "japanese-table.native.ai",
+        "conference-badges.native.ai",
+        "event-poster.native.ai",
+    )
+
+    for name in native_examples:
+        report = inspect_file(examples / name)
+        assert report.format is FileFormat.PDF_COMPATIBLE_AI
+        assert "AIPrivateData" in report.illustrator_markers

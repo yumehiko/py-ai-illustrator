@@ -60,6 +60,41 @@ def test_ai7_roundtrip_preserves_supported_semantics() -> None:
     assert restored.to_dict() == original.to_dict()
 
 
+def test_text_alignment_is_written_as_native_paragraph_attribute() -> None:
+    document = Document(
+        width=200,
+        height=100,
+        layers=[
+            Layer(
+                id="text",
+                name="Text",
+                text_frames=[
+                    TextFrame(
+                        id="centered",
+                        text="Centered",
+                        x=100,
+                        y=50,
+                        alignment="center",
+                    ),
+                    TextFrame(
+                        id="right-aligned",
+                        text="Right",
+                        x=180,
+                        y=30,
+                        alignment="right",
+                    ),
+                ],
+            )
+        ],
+    )
+
+    serialized = dumps_ai7(document)
+
+    assert b"1 Ta\n(Centered) Tx" in serialized
+    assert b"2 Ta\n(Right) Tx" in serialized
+    assert loads_ai7(serialized).to_dict() == document.to_dict()
+
+
 def test_standard_path_note_recovers_id_and_name_without_private_comments() -> None:
     serialized = dumps_ai7(sample_document())
     illustrator_style = b"\n".join(

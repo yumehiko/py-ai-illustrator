@@ -198,6 +198,7 @@ TP
 0 Tr
 1 1 1 Xa
 /Helvetica-Bold 12 0 0 Tf
+0 Ta
 (Plan) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.header.category)
@@ -205,12 +206,13 @@ TO
 %%py-ai-text-name: (Header: Type)
 0 A
 0 To
-1 0 0 1 279.62 277.4 0 Tp
+1 0 0 1 293 277.4 0 Tp
 TP
-1 0 0 1 279.62 277.4 Tm
+1 0 0 1 293 277.4 Tm
 0 Tr
 1 1 1 Xa
 /Helvetica-Bold 12 0 0 Tf
+1 Ta
 (Type) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.header.seats)
@@ -218,12 +220,13 @@ TO
 %%py-ai-text-name: (Header: Seats)
 0 A
 0 To
-1 0 0 1 395.64 277.4 0 Tp
+1 0 0 1 426 277.4 0 Tp
 TP
-1 0 0 1 395.64 277.4 Tm
+1 0 0 1 426 277.4 Tm
 0 Tr
 1 1 1 Xa
 /Helvetica-Bold 12 0 0 Tf
+2 Ta
 (Seats) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.header.monthly)
@@ -231,12 +234,13 @@ TO
 %%py-ai-text-name: (Header: Monthly)
 0 A
 0 To
-1 0 0 1 509.64 277.4 0 Tp
+1 0 0 1 552 277.4 0 Tp
 TP
-1 0 0 1 509.64 277.4 Tm
+1 0 0 1 552 277.4 Tm
 0 Tr
 1 1 1 Xa
 /Helvetica-Bold 12 0 0 Tf
+2 Ta
 (Monthly) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-0.plan)
@@ -250,6 +254,7 @@ TP
 0 Tr
 0.12 0.15 0.2 Xa
 /Helvetica 11 0 0 Tf
+0 Ta
 (Starter) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-0.category)
@@ -257,12 +262,13 @@ TO
 %%py-ai-text-name: (Row 1: Type)
 0 A
 0 To
-1 0 0 1 279.085 236.7 0 Tp
+1 0 0 1 293 236.7 0 Tp
 TP
-1 0 0 1 279.085 236.7 Tm
+1 0 0 1 293 236.7 Tm
 0 Tr
 0.12 0.15 0.2 Xa
 /Helvetica 11 0 0 Tf
+1 Ta
 (Basic) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-0.seats)
@@ -270,12 +276,13 @@ TO
 %%py-ai-text-name: (Row 1: Seats)
 0 A
 0 To
-1 0 0 1 419.84 236.7 0 Tp
+1 0 0 1 426 236.7 0 Tp
 TP
-1 0 0 1 419.84 236.7 Tm
+1 0 0 1 426 236.7 Tm
 0 Tr
 0.12 0.15 0.2 Xa
 /Helvetica 11 0 0 Tf
+2 Ta
 (3) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-0.monthly)
@@ -283,12 +290,13 @@ TO
 %%py-ai-text-name: (Row 1: Monthly)
 0 A
 0 To
-1 0 0 1 533.52 236.7 0 Tp
+1 0 0 1 552 236.7 0 Tp
 TP
-1 0 0 1 533.52 236.7 Tm
+1 0 0 1 552 236.7 Tm
 0 Tr
 0.12 0.15 0.2 Xa
 /Helvetica 11 0 0 Tf
+2 Ta
 ($29) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-1.plan)
@@ -302,6 +310,7 @@ TP
 0 Tr
 0.12 0.15 0.2 Xa
 /Helvetica 11 0 0 Tf
+0 Ta
 (Studio) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-1.category)
@@ -309,12 +318,13 @@ TO
 %%py-ai-text-name: (Row 2: Type)
 0 A
 0 To
-1 0 0 1 274.575 192.7 0 Tp
+1 0 0 1 293 192.7 0 Tp
 TP
-1 0 0 1 274.575 192.7 Tm
+1 0 0 1 293 192.7 Tm
 0 Tr
 0.12 0.15 0.2 Xa
 /Helvetica 11 0 0 Tf
+1 Ta
 (Popular) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-1.seats)
@@ -322,12 +332,13 @@ TO
 %%py-ai-text-name: (Row 2: Seats)
 0 A
 0 To
-1 0 0 1 413.68 192.7 0 Tp
+1 0 0 1 426 192.7 0 Tp
 TP
-1 0 0 1 413.68 192.7 Tm
+1 0 0 1 426 192.7 Tm
 0 Tr
 0.12 0.15 0.2 Xa
 /Helvetica 11 0 0 Tf
+2 Ta
 (12) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-1.monthly)
@@ -335,12 +346,13 @@ TO
 %%py-ai-text-name: (Row 2: Monthly)
 0 A
 0 To
-1 0 0 1 533.52 192.7 0 Tp
+1 0 0 1 552 192.7 0 Tp
 TP
-1 0 0 1 533.52 192.7 Tm
+1 0 0 1 552 192.7 Tm
 0 Tr
 0.12 0.15 0.2 Xa
 /Helvetica 11 0 0 Tf
+2 Ta
 ($89) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-2.plan)
@@ -354,6 +366,7 @@ TP
 0 Tr
 0.12 0.15 0.2 Xa
 /Helvetica 11 0 0 Tf
+0 Ta
 (Agency) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-2.category)
@@ -361,12 +374,13 @@ TO
 %%py-ai-text-name: (Row 3: Type)
 0 A
 0 To
-1 0 0 1 284.805 148.7 0 Tp
+1 0 0 1 293 148.7 0 Tp
 TP
-1 0 0 1 284.805 148.7 Tm
+1 0 0 1 293 148.7 Tm
 0 Tr
 0.12 0.15 0.2 Xa
 /Helvetica 11 0 0 Tf
+1 Ta
 (Pro) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-2.seats)
@@ -374,12 +388,13 @@ TO
 %%py-ai-text-name: (Row 3: Seats)
 0 A
 0 To
-1 0 0 1 413.68 148.7 0 Tp
+1 0 0 1 426 148.7 0 Tp
 TP
-1 0 0 1 413.68 148.7 Tm
+1 0 0 1 426 148.7 Tm
 0 Tr
 0.12 0.15 0.2 Xa
 /Helvetica 11 0 0 Tf
+2 Ta
 (30) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-2.monthly)
@@ -387,12 +402,13 @@ TO
 %%py-ai-text-name: (Row 3: Monthly)
 0 A
 0 To
-1 0 0 1 527.36 148.7 0 Tp
+1 0 0 1 552 148.7 0 Tp
 TP
-1 0 0 1 527.36 148.7 Tm
+1 0 0 1 552 148.7 Tm
 0 Tr
 0.12 0.15 0.2 Xa
 /Helvetica 11 0 0 Tf
+2 Ta
 ($199) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-3.plan)
@@ -406,6 +422,7 @@ TP
 0 Tr
 0.18 0.12 0.03 Xa
 /Helvetica 11 0 0 Tf
+0 Ta
 (Annual total) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-3.category)
@@ -413,12 +430,13 @@ TO
 %%py-ai-text-name: (Row 4: Type)
 0 A
 0 To
-1 0 0 1 277.435 104.7 0 Tp
+1 0 0 1 293 104.7 0 Tp
 TP
-1 0 0 1 277.435 104.7 Tm
+1 0 0 1 293 104.7 Tm
 0 Tr
 0.18 0.12 0.03 Xa
 /Helvetica 11 0 0 Tf
+1 Ta
 (Studio) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-3.seats)
@@ -426,12 +444,13 @@ TO
 %%py-ai-text-name: (Row 4: Seats)
 0 A
 0 To
-1 0 0 1 413.68 104.7 0 Tp
+1 0 0 1 426 104.7 0 Tp
 TP
-1 0 0 1 413.68 104.7 Tm
+1 0 0 1 426 104.7 Tm
 0 Tr
 0.18 0.12 0.03 Xa
 /Helvetica 11 0 0 Tf
+2 Ta
 (12) Tx
 TO
 %%py-ai-text-id: (subscription-comparison.row-3.monthly)
@@ -439,12 +458,13 @@ TO
 %%py-ai-text-name: (Row 4: Monthly)
 0 A
 0 To
-1 0 0 1 517.9 104.7 0 Tp
+1 0 0 1 552 104.7 0 Tp
 TP
-1 0 0 1 517.9 104.7 Tm
+1 0 0 1 552 104.7 Tm
 0 Tr
 0.18 0.12 0.03 Xa
 /Helvetica 11 0 0 Tf
+2 Ta
 ($1,068) Tx
 TO
 LB

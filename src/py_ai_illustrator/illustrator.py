@@ -8,6 +8,7 @@ import platform
 import shutil
 import subprocess
 import tempfile
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -502,6 +503,61 @@ def _build_roundtrip_javascript(source: Path, destination: Path) -> str:
 """
 
 
+def _build_native_materialization_javascript(source: Path, destination: Path) -> str:
+    source_literal = _character_code_expression(source)
+    destination_literal = _character_code_expression(destination)
+    return f"""#target illustrator
+(function () {{
+    var source = new File({source_literal});
+    var destination = new File({destination_literal});
+    var documentRef = null;
+    var previousInteractionLevel = app.userInteractionLevel;
+
+    try {{
+        app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
+        if (!source.exists) throw new Error("Temporary fixture does not exist");
+        documentRef = app.open(source);
+        var legacyTextCount = documentRef.legacyTextItems.length;
+        var converted = legacyTextCount === 0
+            ? true
+            : documentRef.legacyTextItems.convertToNative();
+        var nativeTextCount = documentRef.textFrames.length;
+        var justifications = [];
+        for (var index = 0; index < documentRef.textFrames.length; index++) {{
+            try {{
+                justifications.push(String(
+                    documentRef.textFrames[index].textRange.paragraphAttributes.justification
+                ));
+            }} catch (attributeError) {{
+                justifications.push("unavailable");
+            }}
+        }}
+
+        var options = new IllustratorSaveOptions();
+        options.pdfCompatible = true;
+        options.embedLinkedFiles = false;
+        options.flattenOutput = OutputFlattening.PRESERVEAPPEARANCE;
+        documentRef.saveAs(destination, options);
+        return [
+            "ok",
+            app.version,
+            legacyTextCount,
+            nativeTextCount,
+            converted,
+            justifications.join(",")
+        ].join(":");
+    }} catch (error) {{
+        return "error:" + String(error) + ":line:" + String(error.line || "");
+    }} finally {{
+        if (documentRef !== null) {{
+            documentRef.close(SaveOptions.DONOTSAVECHANGES);
+        }}
+        app.userInteractionLevel = previousInteractionLevel;
+    }}
+}}());
+"""
+
+
 def _execute_javascript(
     javascript: str,
     directory: Path,
@@ -812,6 +868,100 @@ def run_illustrator_test(
         "expected": expected,
         "checks": checks,
         "illustrator": actual,
+    }
+
+
+def materialize_native_ai(
+    source: str | Path,
+    destination: str | Path,
+    *,
+    timeout: float = 90.0,
+    application_name: str = "Adobe Illustrator",
+) -> dict[str, Any]:
+    """Convert a legacy AI copy to a modern AI with native editable text."""
+
+    source_path = Path(source).resolve()
+    destination_path = Path(destination).resolve()
+    if platform.system() != "Darwin":
+        return {
+            "status": "environment-unavailable",
+            "error": "Native AI materialization is currently supported on macOS only.",
+        }
+    if not source_path.is_file():
+        return {"status": "invalid-input", "error": f"File does not exist: {source_path}"}
+    if destination_path.exists():
+        return {
+            "status": "invalid-input",
+            "error": f"Refusing to overwrite existing output: {destination_path}",
+        }
+    if timeout <= 0:
+        return {"status": "invalid-input", "error": "timeout must be positive"}
+    if inspect_file(source_path).format is not FileFormat.LEGACY_AI:
+        return {
+            "status": "invalid-input",
+            "error": "Native materialization currently accepts legacy AI input only.",
+        }
+    source_document = load_ai7(source_path)
+    expected_justifications = Counter(
+        f"Justification.{text.alignment.upper()}"
+        for text in _document_text_frames(source_document)
+    )
+
+    destination_path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="py-ai-illustrator-native-") as temp_directory:
+        temp_path = Path(temp_directory)
+        input_copy = temp_path / "python-generated.ai"
+        shutil.copy2(source_path, input_copy)
+        try:
+            completed = _execute_javascript(
+                _build_native_materialization_javascript(input_copy, destination_path),
+                temp_path,
+                timeout=timeout,
+                application_name=application_name,
+            )
+        except subprocess.TimeoutExpired:
+            return {
+                "status": "environment-unavailable",
+                "error": f"Illustrator did not answer within {timeout:g} seconds.",
+            }
+
+    if completed.returncode != 0:
+        return {
+            "status": "environment-unavailable",
+            "error": completed.stderr.strip() or "Illustrator AppleScript failed.",
+        }
+    response = completed.stdout.strip()
+    if not response.startswith("ok:"):
+        return {"status": "failed", "illustrator_response": response}
+    if not destination_path.is_file():
+        return {
+            "status": "failed",
+            "error": "Illustrator reported success but did not create the native AI file.",
+        }
+
+    parts = response.split(":", 5)
+    if len(parts) != 6:
+        return {"status": "failed", "illustrator_response": response}
+    _, version, legacy_count, native_count, converted, justifications = parts
+    legacy_text_count = int(legacy_count)
+    native_text_count = int(native_count)
+    native_justifications = justifications.split(",") if justifications else []
+    checks = {
+        "legacy_conversion_succeeded": converted == "true",
+        "text_frame_count": native_text_count == legacy_text_count,
+        "paragraph_justifications": Counter(native_justifications)
+        == expected_justifications,
+    }
+    return {
+        "status": "passed" if all(checks.values()) else "mismatch",
+        "input": str(source_path),
+        "output": str(destination_path),
+        "illustrator_version": version,
+        "legacy_text_count": legacy_text_count,
+        "native_text_count": native_text_count,
+        "native_justifications": native_justifications,
+        "checks": checks,
+        "format": inspect_file(destination_path).to_dict(),
     }
 
 

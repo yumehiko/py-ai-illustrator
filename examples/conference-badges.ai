@@ -1,0 +1,517 @@
+%!PS-Adobe-3.0
+%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)
+%%Title: (Semantic conference badge sheet)
+%%BoundingBox: 0 0 612 400
+%%HiResBoundingBox: 0 0 612 400
+%%DocumentProcessColors: Cyan Magenta Yellow Black
+%AI5_FileFormat 3.0
+%AI3_ColorUsage: Color
+%AI3_TemplateBox: 306 600 306 600
+%AI3_DocumentPreview: None
+%AI5_ArtSize: 612 400
+%AI5_RulerUnits: 2
+%AI5_ArtFlags: 0 0 0 1 0 0 1 0 0
+%AI5_NumLayers: 1
+%%PageOrigin:0 0
+%%py-ai-metadata: eyJzb3VyY2UiOiJleGFtcGxlcy9jb25mZXJlbmNlX2JhZGdlcy5weSIsImNvbXBvbmVudCI6IkNvbmZlcmVuY2VCYWRnZSJ9
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+%%EndSetup
+%AI5_BeginLayer
+%%py-ai-layer-id: (badge-sheet)
+1 1 1 1 0 0 0 79 128 255 Lb
+(Conference badges) Ln
+%AI7_Tag: (badge-1.background)
+%%py-ai-path-name: (Badge: Avery Chen)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTEuYmFja2dyb3VuZCIsIm5hbWUiOiJCYWRnZTogQXZlcnkgQ2hlbiJ9
+1 1 1 Xa
+0.72 0.75 0.8 XA
+0.8 w
+44 216 m
+296 216 L
+296 358 L
+44 358 L
+44 216 L
+b
+%AI7_Tag: (badge-1.accent)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTEuYWNjZW50In0=
+0.94 0.32 0.25 Xa
+1 w
+44 348 m
+296 348 L
+296 358 L
+44 358 L
+44 348 L
+f
+%AI7_Tag: (badge-1.avatar)
+%%py-ai-path-name: (Avatar: Avery Chen)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTEuYXZhdGFyIiwibmFtZSI6IkF2YXRhcjogQXZlcnkgQ2hlbiJ9
+0.93 0.95 0.98 Xa
+0.94 0.32 0.25 XA
+2 w
+111 297 m
+111 310.807119 99.807119 322 86 322 c
+72.192881 322 61 310.807119 61 297 c
+61 283.192881 72.192881 272 86 272 c
+99.807119 272 111 283.192881 111 297 c
+b
+%%py-ai-text-id: (badge-1.initial.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (badge-1.initial)
+0 A
+0 To
+1 0 0 1 86 294.8 0 Tp
+TP
+1 0 0 1 86 294.8 Tm
+0 Tr
+0.94 0.32 0.25 Xa
+/Helvetica 14 0 0 Tf
+1 Ta
+(AC) Tx
+TO
+%%py-ai-text-id: (badge-1.name.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Attendee name)
+0 A
+0 To
+1 0 0 1 120 306.4 0 Tp
+TP
+1 0 0 1 120 306.4 Tm
+0 Tr
+0 0 0 Xa
+/Helvetica-Bold 17 0 0 Tf
+0 Ta
+(Avery Chen) Tx
+TO
+%%py-ai-text-id: (badge-1.organization.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Organization)
+0 A
+0 To
+1 0 0 1 120 284 0 Tp
+TP
+1 0 0 1 120 284 Tm
+0 Tr
+0.28 0.32 0.4 Xa
+/Helvetica 10 0 0 Tf
+0 Ta
+(Open Tools Lab) Tx
+TO
+%AI7_Tag: (badge-1.role-background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTEucm9sZS1iYWNrZ3JvdW5kIn0=
+0.94 0.32 0.25 Xa
+1 w
+120 243 m
+198 243 L
+198 267 L
+120 267 L
+120 243 L
+f
+%%py-ai-text-id: (badge-1.role.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Role)
+0 A
+0 To
+1 0 0 1 159 253.8 0 Tp
+TP
+1 0 0 1 159 253.8 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 9 0 0 Tf
+1 Ta
+(SPEAKER) Tx
+TO
+%%py-ai-text-id: (badge-1.number.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Badge number)
+0 A
+0 To
+1 0 0 1 284 233.8 0 Tp
+TP
+1 0 0 1 284 233.8 Tm
+0 Tr
+0.38 0.42 0.5 Xa
+/Helvetica 9 0 0 Tf
+2 Ta
+(NO. 001) Tx
+TO
+%AI7_Tag: (badge-2.background)
+%%py-ai-path-name: (Badge: Mina Patel)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTIuYmFja2dyb3VuZCIsIm5hbWUiOiJCYWRnZTogTWluYSBQYXRlbCJ9
+1 1 1 Xa
+0.72 0.75 0.8 XA
+0.8 w
+316 216 m
+568 216 L
+568 358 L
+316 358 L
+316 216 L
+b
+%AI7_Tag: (badge-2.accent)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTIuYWNjZW50In0=
+0.2 0.42 0.78 Xa
+1 w
+316 348 m
+568 348 L
+568 358 L
+316 358 L
+316 348 L
+f
+%AI7_Tag: (badge-2.avatar)
+%%py-ai-path-name: (Avatar: Mina Patel)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTIuYXZhdGFyIiwibmFtZSI6IkF2YXRhcjogTWluYSBQYXRlbCJ9
+0.93 0.95 0.98 Xa
+0.2 0.42 0.78 XA
+2 w
+383 297 m
+383 310.807119 371.807119 322 358 322 c
+344.192881 322 333 310.807119 333 297 c
+333 283.192881 344.192881 272 358 272 c
+371.807119 272 383 283.192881 383 297 c
+b
+%%py-ai-text-id: (badge-2.initial.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (badge-2.initial)
+0 A
+0 To
+1 0 0 1 358 294.8 0 Tp
+TP
+1 0 0 1 358 294.8 Tm
+0 Tr
+0.2 0.42 0.78 Xa
+/Helvetica 14 0 0 Tf
+1 Ta
+(MP) Tx
+TO
+%%py-ai-text-id: (badge-2.name.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Attendee name)
+0 A
+0 To
+1 0 0 1 392 306.4 0 Tp
+TP
+1 0 0 1 392 306.4 Tm
+0 Tr
+0 0 0 Xa
+/Helvetica-Bold 17 0 0 Tf
+0 Ta
+(Mina Patel) Tx
+TO
+%%py-ai-text-id: (badge-2.organization.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Organization)
+0 A
+0 To
+1 0 0 1 392 284 0 Tp
+TP
+1 0 0 1 392 284 Tm
+0 Tr
+0.28 0.32 0.4 Xa
+/Helvetica 10 0 0 Tf
+0 Ta
+(Design Systems Co.) Tx
+TO
+%AI7_Tag: (badge-2.role-background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTIucm9sZS1iYWNrZ3JvdW5kIn0=
+0.2 0.42 0.78 Xa
+1 w
+392 243 m
+470 243 L
+470 267 L
+392 267 L
+392 243 L
+f
+%%py-ai-text-id: (badge-2.role.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Role)
+0 A
+0 To
+1 0 0 1 431 253.8 0 Tp
+TP
+1 0 0 1 431 253.8 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 9 0 0 Tf
+1 Ta
+(GUEST) Tx
+TO
+%%py-ai-text-id: (badge-2.number.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Badge number)
+0 A
+0 To
+1 0 0 1 556 233.8 0 Tp
+TP
+1 0 0 1 556 233.8 Tm
+0 Tr
+0.38 0.42 0.5 Xa
+/Helvetica 9 0 0 Tf
+2 Ta
+(NO. 002) Tx
+TO
+%AI7_Tag: (badge-3.background)
+%%py-ai-path-name: (Badge: Leo Martin)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTMuYmFja2dyb3VuZCIsIm5hbWUiOiJCYWRnZTogTGVvIE1hcnRpbiJ9
+1 1 1 Xa
+0.72 0.75 0.8 XA
+0.8 w
+44 54 m
+296 54 L
+296 196 L
+44 196 L
+44 54 L
+b
+%AI7_Tag: (badge-3.accent)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTMuYWNjZW50In0=
+0.15 0.55 0.43 Xa
+1 w
+44 186 m
+296 186 L
+296 196 L
+44 196 L
+44 186 L
+f
+%AI7_Tag: (badge-3.avatar)
+%%py-ai-path-name: (Avatar: Leo Martin)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTMuYXZhdGFyIiwibmFtZSI6IkF2YXRhcjogTGVvIE1hcnRpbiJ9
+0.93 0.95 0.98 Xa
+0.15 0.55 0.43 XA
+2 w
+111 135 m
+111 148.807119 99.807119 160 86 160 c
+72.192881 160 61 148.807119 61 135 c
+61 121.192881 72.192881 110 86 110 c
+99.807119 110 111 121.192881 111 135 c
+b
+%%py-ai-text-id: (badge-3.initial.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (badge-3.initial)
+0 A
+0 To
+1 0 0 1 86 132.8 0 Tp
+TP
+1 0 0 1 86 132.8 Tm
+0 Tr
+0.15 0.55 0.43 Xa
+/Helvetica 14 0 0 Tf
+1 Ta
+(LM) Tx
+TO
+%%py-ai-text-id: (badge-3.name.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Attendee name)
+0 A
+0 To
+1 0 0 1 120 144.4 0 Tp
+TP
+1 0 0 1 120 144.4 Tm
+0 Tr
+0 0 0 Xa
+/Helvetica-Bold 17 0 0 Tf
+0 Ta
+(Leo Martin) Tx
+TO
+%%py-ai-text-id: (badge-3.organization.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Organization)
+0 A
+0 To
+1 0 0 1 120 122 0 Tp
+TP
+1 0 0 1 120 122 Tm
+0 Tr
+0.28 0.32 0.4 Xa
+/Helvetica 10 0 0 Tf
+0 Ta
+(Community Studio) Tx
+TO
+%AI7_Tag: (badge-3.role-background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTMucm9sZS1iYWNrZ3JvdW5kIn0=
+0.15 0.55 0.43 Xa
+1 w
+120 81 m
+198 81 L
+198 105 L
+120 105 L
+120 81 L
+f
+%%py-ai-text-id: (badge-3.role.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Role)
+0 A
+0 To
+1 0 0 1 159 91.8 0 Tp
+TP
+1 0 0 1 159 91.8 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 9 0 0 Tf
+1 Ta
+(STAFF) Tx
+TO
+%%py-ai-text-id: (badge-3.number.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Badge number)
+0 A
+0 To
+1 0 0 1 284 71.8 0 Tp
+TP
+1 0 0 1 284 71.8 Tm
+0 Tr
+0.38 0.42 0.5 Xa
+/Helvetica 9 0 0 Tf
+2 Ta
+(NO. 003) Tx
+TO
+%AI7_Tag: (badge-4.background)
+%%py-ai-path-name: (Badge: Sofia Rossi)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTQuYmFja2dyb3VuZCIsIm5hbWUiOiJCYWRnZTogU29maWEgUm9zc2kifQ==
+1 1 1 Xa
+0.72 0.75 0.8 XA
+0.8 w
+316 54 m
+568 54 L
+568 196 L
+316 196 L
+316 54 L
+b
+%AI7_Tag: (badge-4.accent)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTQuYWNjZW50In0=
+0.94 0.32 0.25 Xa
+1 w
+316 186 m
+568 186 L
+568 196 L
+316 196 L
+316 186 L
+f
+%AI7_Tag: (badge-4.avatar)
+%%py-ai-path-name: (Avatar: Sofia Rossi)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTQuYXZhdGFyIiwibmFtZSI6IkF2YXRhcjogU29maWEgUm9zc2kifQ==
+0.93 0.95 0.98 Xa
+0.94 0.32 0.25 XA
+2 w
+383 135 m
+383 148.807119 371.807119 160 358 160 c
+344.192881 160 333 148.807119 333 135 c
+333 121.192881 344.192881 110 358 110 c
+371.807119 110 383 121.192881 383 135 c
+b
+%%py-ai-text-id: (badge-4.initial.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (badge-4.initial)
+0 A
+0 To
+1 0 0 1 358 132.8 0 Tp
+TP
+1 0 0 1 358 132.8 Tm
+0 Tr
+0.94 0.32 0.25 Xa
+/Helvetica 14 0 0 Tf
+1 Ta
+(SR) Tx
+TO
+%%py-ai-text-id: (badge-4.name.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Attendee name)
+0 A
+0 To
+1 0 0 1 392 144.4 0 Tp
+TP
+1 0 0 1 392 144.4 Tm
+0 Tr
+0 0 0 Xa
+/Helvetica-Bold 17 0 0 Tf
+0 Ta
+(Sofia Rossi) Tx
+TO
+%%py-ai-text-id: (badge-4.organization.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Organization)
+0 A
+0 To
+1 0 0 1 392 122 0 Tp
+TP
+1 0 0 1 392 122 Tm
+0 Tr
+0.28 0.32 0.4 Xa
+/Helvetica 10 0 0 Tf
+0 Ta
+(Type & Form) Tx
+TO
+%AI7_Tag: (badge-4.role-background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTQucm9sZS1iYWNrZ3JvdW5kIn0=
+0.94 0.32 0.25 Xa
+1 w
+392 81 m
+470 81 L
+470 105 L
+392 105 L
+392 81 L
+f
+%%py-ai-text-id: (badge-4.role.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Role)
+0 A
+0 To
+1 0 0 1 431 91.8 0 Tp
+TP
+1 0 0 1 431 91.8 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 9 0 0 Tf
+1 Ta
+(SPEAKER) Tx
+TO
+%%py-ai-text-id: (badge-4.number.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Badge number)
+0 A
+0 To
+1 0 0 1 556 71.8 0 Tp
+TP
+1 0 0 1 556 71.8 Tm
+0 Tr
+0.38 0.42 0.5 Xa
+/Helvetica 9 0 0 Tf
+2 Ta
+(NO. 004) Tx
+TO
+LB
+%AI5_EndLayer
+%%Trailer
+%%EOF

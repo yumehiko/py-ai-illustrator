@@ -10,6 +10,7 @@ from typing import Any
 
 from .format import FileFormat, inspect_file
 from .illustrator import (
+    materialize_native_ai,
     run_illustrator_export_test,
     run_illustrator_roundtrip_test,
     run_illustrator_test,
@@ -102,6 +103,17 @@ def _test_illustrator(args: argparse.Namespace) -> int:
     return 0 if result["status"] == "passed" else 1
 
 
+def _materialize_native(args: argparse.Namespace) -> int:
+    result = materialize_native_ai(
+        args.input,
+        args.output,
+        timeout=args.timeout,
+        application_name=args.application,
+    )
+    _write_json(result, None)
+    return 0 if result["status"] == "passed" else 1
+
+
 def _test_illustrator_export(args: argparse.Namespace) -> int:
     result = run_illustrator_export_test(
         fixture=args.fixture,
@@ -154,6 +166,16 @@ def build_parser() -> argparse.ArgumentParser:
     illustrator_parser.add_argument("--application", default="Adobe Illustrator")
     illustrator_parser.add_argument("-o", "--output")
     illustrator_parser.set_defaults(handler=_test_illustrator)
+
+    native_parser = subparsers.add_parser(
+        "materialize-native",
+        help="convert legacy AI text to native editable text and save a modern AI",
+    )
+    native_parser.add_argument("input")
+    native_parser.add_argument("-o", "--output", required=True)
+    native_parser.add_argument("--timeout", type=float, default=90.0)
+    native_parser.add_argument("--application", default="Adobe Illustrator")
+    native_parser.set_defaults(handler=_materialize_native)
 
     illustrator_export_parser = subparsers.add_parser(
         "test-illustrator-export",

@@ -1,0 +1,211 @@
+%!PS-Adobe-3.0
+%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)
+%%Title: (Semantic Japanese event poster)
+%%BoundingBox: 0 0 560 720
+%%HiResBoundingBox: 0 0 560 720
+%%DocumentProcessColors: Cyan Magenta Yellow Black
+%AI5_FileFormat 3.0
+%AI3_ColorUsage: Color
+%AI3_TemplateBox: 280 1080 280 1080
+%AI3_DocumentPreview: None
+%AI5_ArtSize: 560 720
+%AI5_RulerUnits: 2
+%AI5_ArtFlags: 0 0 0 1 0 0 1 0 0
+%AI5_NumLayers: 1
+%%PageOrigin:0 0
+%%py-ai-metadata: eyJzb3VyY2UiOiJleGFtcGxlcy9ldmVudF9wb3N0ZXIucHkiLCJjb21wb25lbnQiOiJFdmVudFBvc3RlciIsImVuY29kaW5nIjoiY3A5MzIifQ==
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+%AI3_BeginEncoding: _KozGoPr6N-Regular-83pv-RKSJ-H KozGoPr6N-Regular-83pv-RKSJ-H
+[/_KozGoPr6N-Regular-83pv-RKSJ-H/KozGoPr6N-Regular-83pv-RKSJ-H 0 1 0 TZ
+%AI3_EndEncoding AdobeType
+%%EndSetup
+%AI5_BeginLayer
+%%py-ai-layer-id: (poster)
+1 1 1 1 0 0 0 79 128 255 Lb
+(Event poster) Ln
+%AI7_Tag: (poster.background)
+%%py-ai-path-name: (Paper background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InBvc3Rlci5iYWNrZ3JvdW5kIiwibmFtZSI6IlBhcGVyIGJhY2tncm91bmQifQ==
+0.97 0.95 0.9 Xa
+1 w
+0 0 m
+560 0 L
+560 720 L
+0 720 L
+0 0 L
+f
+%AI7_Tag: (poster.blue-orbit)
+%%py-ai-path-name: (Blue orbit)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InBvc3Rlci5ibHVlLW9yYml0IiwibmFtZSI6IkJsdWUgb3JiaXQifQ==
+0.12 0.42 0.82 Xa
+1 w
+576 616 m
+576 681.1696 523.1696 734 458 734 c
+392.8304 734 340 681.1696 340 616 c
+340 550.8304 392.8304 498 458 498 c
+523.1696 498 576 550.8304 576 616 c
+f
+%AI7_Tag: (poster.coral-orbit)
+%%py-ai-path-name: (Coral orbit)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InBvc3Rlci5jb3JhbC1vcmJpdCIsIm5hbWUiOiJDb3JhbCBvcmJpdCJ9
+0.96 0.35 0.28 Xa
+1 w
+150 142 m
+150 174.032515 124.032515 200 92 200 c
+59.967485 200 34 174.032515 34 142 c
+34 109.967485 59.967485 84 92 84 c
+124.032515 84 150 109.967485 150 142 c
+f
+%%py-ai-text-id: (poster.series.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Series label)
+0 A
+0 To
+1 0 0 1 510 665.2 0 Tp
+TP
+1 0 0 1 510 665.2 Tm
+0 Tr
+0.05 0.1 0.2 Xa
+/Helvetica-Bold 11 0 0 Tf
+2 Ta
+(DESIGN + CODE 2026) Tx
+TO
+%%py-ai-text-id: (poster.title.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Event title)
+0 A
+0 To
+1 0 0 1 280 517.6 0 Tp
+TP
+1 0 0 1 280 517.6 Tm
+0 Tr
+0.05 0.1 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 38 0 0 Tf
+1 Ta
+(\221n\221\242\202\306\203R\201[\203h) Tx
+TO
+%%py-ai-text-id: (poster.subtitle.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Subtitle)
+0 A
+0 To
+1 0 0 1 280 473.2 0 Tp
+TP
+1 0 0 1 280 473.2 Tm
+0 Tr
+0.12 0.42 0.82 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 16 0 0 Tf
+1 Ta
+(\210\323\226\241\202\251\202\347\203f\203U\203C\203\223\202\360\221g\202\335\227\247\202\304\202\351\210\352\223\372) Tx
+TO
+%AI7_Tag: (poster.statement-background)
+%%py-ai-path-name: (Statement panel)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InBvc3Rlci5zdGF0ZW1lbnQtYmFja2dyb3VuZCIsIm5hbWUiOiJTdGF0ZW1lbnQgcGFuZWwifQ==
+1 1 1 Xa
+0.82 0.8 0.75 XA
+0.8 w
+72 280 m
+488 280 L
+488 422 L
+72 422 L
+72 280 L
+b
+%%py-ai-text-id: (poster.statement.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Event statement)
+0 A
+0 To
+1 0 0 1 106 379.6 0 Tp
+TP
+1 0 0 1 106 379.6 Tm
+0 Tr
+0.05 0.1 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 13 0 0 Tf
+0 Ta
+(\203f\201[\203^\202\360\215\300\225W\202\326\222u\202\253\212\267\202\246\202\351\202\276\202\257\202\305\202\315\202\310\202\255\201A\225\266\226\254\202\306\213K\221\245\202\360\215\304) Tx
+TO
+%%py-ai-text-id: (poster.statement.line-1)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Event statement)
+0 A
+0 To
+1 0 0 1 106 358.15 0 Tp
+TP
+1 0 0 1 106 358.15 Tm
+0 Tr
+0.05 0.1 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 13 0 0 Tf
+0 Ta
+(\227\230\227p\202\305\202\253\202\351\214`\202\311\202\265\202\334\202\267\201BPython\202\306Illustrator\202\360\211\235\225\234\202\265\202\310\202\252\202\347) Tx
+TO
+%%py-ai-text-id: (poster.statement.line-2)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Event statement)
+0 A
+0 To
+1 0 0 1 106 336.7 0 Tp
+TP
+1 0 0 1 106 336.7 Tm
+0 Tr
+0.05 0.1 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 13 0 0 Tf
+0 Ta
+(\201A\225\322\217W\202\305\202\253\202\351\216\206\226\312\202\360\210\352\217\217\202\311\202\302\202\255\202\350\202\334\202\267\201B) Tx
+TO
+%%py-ai-text-id: (poster.date.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Date)
+0 A
+0 To
+1 0 0 1 280 217.6 0 Tp
+TP
+1 0 0 1 280 217.6 Tm
+0 Tr
+0.05 0.1 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 18 0 0 Tf
+1 Ta
+(9\214\21618\223\372\201i\213\340\201j 10:00-17:00) Tx
+TO
+%%py-ai-text-id: (poster.venue.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Venue)
+0 A
+0 To
+1 0 0 1 280 187.2 0 Tp
+TP
+1 0 0 1 280 187.2 Tm
+0 Tr
+0.05 0.1 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+1 Ta
+(\223\214\213\236\201E\212C\212\335\203X\203^\203W\203I / \223\374\217\352\226\263\227\277\201E\227v\227\\\226\361) Tx
+TO
+%%py-ai-text-id: (poster.footer.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Registration URL)
+0 A
+0 To
+1 0 0 1 510 66 0 Tp
+TP
+1 0 0 1 510 66 Tm
+0 Tr
+0.05 0.1 0.2 Xa
+/Helvetica 10 0 0 Tf
+2 Ta
+(example.org/design-code) Tx
+TO
+LB
+%AI5_EndLayer
+%%Trailer
+%%EOF

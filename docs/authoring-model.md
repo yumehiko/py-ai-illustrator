@@ -60,9 +60,28 @@ price_table = Table(
 layer = price_table.render_layer(x=40, top=300)
 ```
 
-現在の`Table.render_layer()`は列幅、header/body/variantの配色、formatter、中央・右揃え、余白、罫線に加え、列単位の折り返し、明示改行、東アジア文字幅、複数行に応じた行高を解決します。結果は汎用グラフィックIRの`Layer`、`TextFrame`、`Path`へ決定的に展開されます。コアIRが`PriceTable`等のあらゆる業務概念を直接知る必要はありません。ページ分割と複合cell componentは今後の拡張です。
+現在の`Table.render()`は列幅、header/body/variantの配色、formatter、Illustratorのネイティブ中央・右揃え、余白、罫線に加え、列単位の折り返し、明示改行、東アジア文字幅、複数行に応じた行高を解決します。結果は`RenderedComponent`となり、汎用グラフィックIRの`TextFrame`、`Path`へ決定的に展開されます。単体layerが必要な場合は互換APIの`render_layer()`を使えます。コアIRが`PriceTable`等のあらゆる業務概念を直接知る必要はありません。ページ分割と複合cell componentは今後の拡張です。
 
 `formatter`や`accessor`にはPython関数を渡せます。したがって、単なるJSON schemaでは表しにくい制作物固有の計算や文脈依存の表示も、表コンポーネントの入力境界で扱えます。実行可能な例は[`examples/styled_table.py`](../examples/styled_table.py)と、日本語・自動行高を扱う[`examples/japanese_table.py`](../examples/japanese_table.py)です。
+
+## 表以外のcomponent
+
+表は最初のstress testであり、authoring modelの中心ではありません。現在は次の共通境界を使います。
+
+- `RenderedComponent`: componentが生成したpath、text、描画順、寸法
+- `LayerBuilder`: 複数componentを安定ID付きで一つのlayerへ合成
+- `TextBlock` / `TextStyle`: 折り返し、文字階層、ネイティブ段落揃え
+- `rectangle_path` / `ellipse_path`: domainに依存しない編集可能な図形primitive
+
+[`examples/conference_badges.py`](../examples/conference_badges.py)では、`Attendee`とrole variantから4枚の`ConferenceBadge`を生成します。[`examples/event_poster.py`](../examples/event_poster.py)では、同じprimitiveから日本語の告知ポスターを生成します。前者は反復・variant・識別番号、後者は文字階層・折り返し・装飾図形が主題です。いずれも表のrow/column modelへ押し込めていません。
+
+この形なら、今後の商品カード、値札、名刺、図解、カタログページ等も、それぞれの文脈を持つPython componentとして追加できます。低水準IRとAI writerは特定componentを知りません。
+
+## legacy AIと再編集可能なnative AI
+
+AI7は公開仕様に基づく往復・検査形式として有用ですが、現行IllustratorではAI7 textがlegacy textとして読み込まれます。writerは`Ta` operatorへLEFT/CENTER/RIGHTを出力しますが、現代の編集可能なTextFrameにするには変換が必要です。
+
+`py-ai materialize-native`は入力を一時コピーし、Illustratorの`legacyTextItems.convertToNative()`を使ってnative TextFrameへ変換し、PDF-compatible AIとして別名保存します。これにより、純Pythonの決定的なAI7経路と、Illustrator環境を使う高編集性の現代AI経路を分離します。
 
 ## 三つの層の責務
 

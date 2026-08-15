@@ -8,9 +8,12 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 - 基本的な document / layer / path / Bézier handle / RGB・CMYK process color の Python IR
 - 複数subpathとpolarityを保持するcompound path IR
 - mask pathとcontent pathsを保持するclipping group IR
-- editable point textの内容・位置・サイズ・色・整列要求を持つtext IR
+- point textの内容・位置・サイズ・色・ネイティブ段落揃えを持つtext IR
 - 通常path・compound・clippingの混在した描画順を保持するlayer `item_order`
 - Pythonの行データ・列・formatter・variant・共有styleから表をrenderする`Table`
+- 表・名札・ポスターを同じ境界で合成する`RenderedComponent` / `LayerBuilder`
+- 意味的な文字ブロック、再利用可能な文字style、矩形・Bézier楕円のauthoring primitives
+- AI7のlegacy textを現代Illustratorの編集可能なTextFrameへ変換するnative materialization
 - 未知行や非UTF-8 byteを変更せず、物理行のbyte spanを索引化するlossless source prototype
 - 公開仕様に沿った Illustrator 7 互換サブセットと JSON IR の往復変換
 - `inspect` / `export` / `validate` / `test-illustrator` CLI
@@ -26,9 +29,11 @@ JSONはIllustratorファイルを作るための唯一の記述言語ではあ�
 
 パラメトリック制作ではPython sourceと入力データ、既存ファイル編集では元の`.ai`をsource of truthとします。また、geometry等を保つ「グラフィック往復」と、表や商品カードの役割まで保つ「意味の往復」を区別します。詳細は[オーサリングモデル](docs/authoring-model.md)を参照してください。
 
-スタイル付き表の実装例は [examples/styled_table.py](examples/styled_table.py) です。JSONを手書きせず、行の`kind`、金額formatter、列幅、整列、header/body/variant配色、余白、罫線、書体要求をPythonで定義します。
+スタイル付き表の実装例は [examples/styled_table.py](examples/styled_table.py) です。JSONを手書きせず、行の`kind`、金額formatter、列幅、Illustratorのネイティブ段落揃え、header/body/variant配色、余白、罫線、書体要求をPythonで定義します。
 
 日本語と長文折り返しの例は [examples/japanese_table.py](examples/japanese_table.py) です。列ごとの`wrap`、東アジア文字幅、複数行の自動行高、CP932/RKSJ font resourceを使います。
+
+表以外の例として、[examples/conference_badges.py](examples/conference_badges.py) は参加者・役割variantから4枚の名札を合成し、[examples/event_poster.py](examples/event_poster.py) は日本語の文字階層、折り返し、装飾図形から告知ポスターを組み立てます。これらは`Table`を使わず、同じ汎用IRとcomponent境界へrenderします。
 
 ```bash
 uv run python examples/styled_table.py
@@ -36,6 +41,12 @@ uv run py-ai test-illustrator examples/styled-table.ai
 uv run py-ai test-illustrator-roundtrip examples/styled-table.ai
 uv run python examples/japanese_table.py
 uv run py-ai test-illustrator-roundtrip examples/japanese-table.ai
+uv run python examples/conference_badges.py
+uv run python examples/event_poster.py
+
+# Illustratorを使い、legacy textを編集可能なnative TextFrameへ変換
+uv run py-ai materialize-native examples/styled-table.ai \
+  -o examples/styled-table.native.ai
 ```
 
 ## セットアップ
@@ -113,13 +124,16 @@ uv run py-ai test-illustrator examples/styled-table.ai
 uv run py-ai test-illustrator-roundtrip examples/styled-table.ai
 uv run py-ai test-illustrator examples/japanese-table.ai
 uv run py-ai test-illustrator-roundtrip examples/japanese-table.ai
+uv run py-ai test-illustrator examples/styled-table.native.ai
+uv run py-ai test-illustrator examples/conference-badges.native.ai
+uv run py-ai test-illustrator examples/event-poster.native.ai
 ```
 
 同梱fixtureをIllustratorで開く方向に加え、Illustrator自身が作成・AI8保存したfixtureをPython IRへ読む方向も確認済みです。layer/path/anchor、開閉、塗り・線、Bézier方向点、RGB/CMYK属性、point textを照合します。これは現在の限定subsetに対する結果で、任意のAIファイルの完全互換を意味しません。
 
 完全往復ではIllustratorによるdocument原点の移動を正規化し、RGBの8-bit量子化を許容して意味属性を比較します。pathの安定IDと名前は標準の`%AI3_Note` path属性へ埋め込み、Illustrator 30.7.0でのAI8再保存後も照合します。layer/containerのID・名前とdocument metadataはまだ比較対象外です。
 
-legacy point textはASCIIに加え、`RKSJ-H` / `RKSJ-V` fontを明示した日本語CP932の読み書きに対応します。内容・サイズ・色・配置はIllustrator再保存後も保持されます。font環境による置換と、point textのparagraph alignmentがleftへ正規化される場合があるため、この2項目はadvisoryです。表rendererは中央・右揃えを文字原点へ展開し、見た目の配置を保持します。
+legacy point textはASCIIに加え、`RKSJ-H` / `RKSJ-V` fontを明示した日本語CP932の読み書きに対応します。writerは`Ta` operatorと揃え基準のanchorを出力します。ただし現行IllustratorでAI7 textを直接開いた状態はlegacy textであり、現代のTextFrameへ変換するまで再編集できません。`materialize-native`は一時コピーだけを開いて全legacy textをnativeへ変換し、PDF-compatible AIとして保存します。Illustrator 30.7.0で、文字内容とLEFT/CENTER/RIGHT段落揃えが保存後も保持されることを確認済みです。
 
 初期 reader は、直線・3次Bézierからなる基本 path を対象にしています。compound pathやclippingを含む任意のlegacy AIを完全に読める段階ではありません。入力は上書きせず、出力先を明示してください。
 

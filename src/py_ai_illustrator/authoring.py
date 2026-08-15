@@ -7,10 +7,258 @@ from dataclasses import dataclass, field
 from typing import Any
 from unicodedata import east_asian_width
 
-from .model import Color, Layer, LayerItemRef, Path, Point, ProcessColor, TextFrame
+from .model import Color, ControlPoint, Layer, LayerItemRef, Path, Point, ProcessColor, TextFrame
 
 CellFormatter = Callable[[Any], str]
 CellAccessor = Callable[[Mapping[str, Any]], Any]
+
+
+@dataclass(slots=True)
+class RenderedComponent:
+    """A component result that can be composed before becoming an IR layer."""
+
+    width: float
+    height: float
+    paths: list[Path] = field(default_factory=list)
+    text_frames: list[TextFrame] = field(default_factory=list)
+    item_order: list[LayerItemRef] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if self.width < 0 or self.height < 0:
+            raise ValueError("Rendered component dimensions must not be negative")
+        if not self.item_order:
+            self.item_order = [
+                *(LayerItemRef("path", path.id) for path in self.paths),
+                *(LayerItemRef("text", text.id) for text in self.text_frames),
+            ]
+
+    def as_layer(self, *, layer_id: str, layer_name: str) -> Layer:
+        return Layer(
+            id=layer_id,
+            name=layer_name,
+            paths=list(self.paths),
+            text_frames=list(self.text_frames),
+            item_order=list(self.item_order),
+        )
+
+
+@dataclass(slots=True)
+class LayerBuilder:
+    """Compose independently rendered semantic components into one editable layer."""
+
+    id: str
+    name: str
+    _paths: list[Path] = field(default_factory=list, init=False, repr=False)
+    _text_frames: list[TextFrame] = field(default_factory=list, init=False, repr=False)
+    _item_order: list[LayerItemRef] = field(default_factory=list, init=False, repr=False)
+    _ids: set[str] = field(default_factory=set, init=False, repr=False)
+
+    def _claim(self, item_id: str) -> None:
+        if item_id in self._ids:
+            raise ValueError(f"Duplicate item id in layer {self.id!r}: {item_id!r}")
+        self._ids.add(item_id)
+
+    def add_path(self, path: Path) -> None:
+        self._claim(path.id)
+        self._paths.append(path)
+        self._item_order.append(LayerItemRef("path", path.id))
+
+    def add_text(self, text: TextFrame) -> None:
+        self._claim(text.id)
+        self._text_frames.append(text)
+        self._item_order.append(LayerItemRef("text", text.id))
+
+    def add(self, component: RenderedComponent) -> None:
+        paths = {path.id: path for path in component.paths}
+        text_frames = {text.id: text for text in component.text_frames}
+        for reference in component.item_order:
+            if reference.kind == "path":
+                self.add_path(paths[reference.id])
+            elif reference.kind == "text":
+                self.add_text(text_frames[reference.id])
+            else:
+                raise ValueError(
+                    f"Rendered components do not yet support {reference.kind!r} items"
+                )
+
+    def build(self) -> Layer:
+        return Layer(
+            id=self.id,
+            name=self.name,
+            paths=list(self._paths),
+            text_frames=list(self._text_frames),
+            item_order=list(self._item_order),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class TextStyle:
+    """Reusable typography for semantic text blocks."""
+
+    font_size: float = 12.0
+    font_name: str = "Helvetica"
+    fill: ProcessColor = field(default_factory=lambda: Color(0.0, 0.0, 0.0))
+    line_height_ratio: float = 1.25
+
+    def __post_init__(self) -> None:
+        if self.font_size <= 0 or self.line_height_ratio <= 0:
+            raise ValueError("Text size and line height must be positive")
+
+
+@dataclass(frozen=True, slots=True)
+class TextBlock:
+    """Meaningful text that wraps into editable, natively aligned point text."""
+
+    id: str
+    text: str
+    width: float
+    style: TextStyle = field(default_factory=TextStyle)
+    alignment: str = "left"
+    wrap: bool = True
+    name: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.id:
+            raise ValueError("A text block id must not be empty")
+        if self.width <= 0:
+            raise ValueError("A text block width must be positive")
+        if self.alignment not in {"left", "center", "right"}:
+            raise ValueError("alignment must be 'left', 'center', or 'right'")
+
+    @property
+    def lines(self) -> tuple[str, ...]:
+        if self.wrap:
+            return _wrap_text(
+                self.text,
+                max_width=self.width,
+                font_size=self.style.font_size,
+            )
+        return tuple(
+            self.text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+        )
+
+    @property
+    def height(self) -> float:
+        return self.style.font_size + (len(self.lines) - 1) * (
+            self.style.font_size * self.style.line_height_ratio
+        )
+
+    def render(self, *, x: float, top: float) -> RenderedComponent:
+        if self.alignment == "right":
+            anchor_x = x + self.width
+        elif self.alignment == "center":
+            anchor_x = x + self.width / 2
+        else:
+            anchor_x = x
+        line_height = self.style.font_size * self.style.line_height_ratio
+        frames = [
+            TextFrame(
+                id=f"{self.id}.line-{index}",
+                name=self.name or self.id,
+                text=value,
+                x=anchor_x,
+                y=top - self.style.font_size * 0.8 - index * line_height,
+                font_size=self.style.font_size,
+                font_name=self.style.font_name,
+                fill=self.style.fill,
+                alignment=self.alignment,
+            )
+            for index, value in enumerate(self.lines)
+        ]
+        return RenderedComponent(
+            width=self.width,
+            height=self.height,
+            text_frames=frames,
+        )
+
+
+def rectangle_path(
+    item_id: str,
+    *,
+    x: float,
+    top: float,
+    width: float,
+    height: float,
+    fill: ProcessColor | None,
+    stroke: ProcessColor | None = None,
+    stroke_width: float = 1.0,
+    name: str | None = None,
+) -> Path:
+    """Create an editable rectangle using top-left page coordinates."""
+
+    if width <= 0 or height <= 0:
+        raise ValueError("Rectangle dimensions must be positive")
+    return Path(
+        id=item_id,
+        name=name,
+        points=[
+            Point(x, top - height),
+            Point(x + width, top - height),
+            Point(x + width, top),
+            Point(x, top),
+        ],
+        fill=fill,
+        stroke=stroke,
+        stroke_width=stroke_width,
+    )
+
+
+def ellipse_path(
+    item_id: str,
+    *,
+    center_x: float,
+    center_y: float,
+    radius_x: float,
+    radius_y: float,
+    fill: ProcessColor | None,
+    stroke: ProcessColor | None = None,
+    stroke_width: float = 1.0,
+    name: str | None = None,
+) -> Path:
+    """Create an editable four-segment cubic Bézier ellipse."""
+
+    if radius_x <= 0 or radius_y <= 0:
+        raise ValueError("Ellipse radii must be positive")
+    kappa = 0.5522847498307936
+    x_handle = radius_x * kappa
+    y_handle = radius_y * kappa
+    return Path(
+        id=item_id,
+        name=name,
+        points=[
+            Point(
+                center_x + radius_x,
+                center_y,
+                in_handle=ControlPoint(center_x + radius_x, center_y - y_handle),
+                out_handle=ControlPoint(center_x + radius_x, center_y + y_handle),
+                smooth=True,
+            ),
+            Point(
+                center_x,
+                center_y + radius_y,
+                in_handle=ControlPoint(center_x + x_handle, center_y + radius_y),
+                out_handle=ControlPoint(center_x - x_handle, center_y + radius_y),
+                smooth=True,
+            ),
+            Point(
+                center_x - radius_x,
+                center_y,
+                in_handle=ControlPoint(center_x - radius_x, center_y + y_handle),
+                out_handle=ControlPoint(center_x - radius_x, center_y - y_handle),
+                smooth=True,
+            ),
+            Point(
+                center_x,
+                center_y - radius_y,
+                in_handle=ControlPoint(center_x - x_handle, center_y - radius_y),
+                out_handle=ControlPoint(center_x + x_handle, center_y - radius_y),
+                smooth=True,
+            ),
+        ],
+        fill=fill,
+        stroke=stroke,
+        stroke_width=stroke_width,
+    )
 
 
 def _character_width_units(character: str) -> float:
@@ -210,15 +458,13 @@ class Table:
         layout = self._layout()
         return layout.header_height + sum(layout.row_heights)
 
-    def render_layer(
+    def render(
         self,
         *,
         x: float,
         top: float,
-        layer_id: str | None = None,
-        layer_name: str = "Table",
-    ) -> Layer:
-        """Compile the table into paths, point text, and explicit stacking order."""
+    ) -> RenderedComponent:
+        """Compile the table into composable paths and point text."""
 
         layout = self._layout()
         paths: list[Path] = []
@@ -308,16 +554,13 @@ class Table:
         def text_x(
             column_index: int,
             alignment: str,
-            value: str,
-            font_size: float,
         ) -> float:
             left = column_edges[column_index]
             right = column_edges[column_index + 1]
-            width = _estimated_text_width(value, font_size)
             if alignment == "right":
-                return right - self.style.padding_x - width
+                return right - self.style.padding_x
             if alignment == "center":
-                return (left + right - width) / 2
+                return (left + right) / 2
             return left + self.style.padding_x
 
         def baselines(
@@ -350,8 +593,6 @@ class Table:
                     x=text_x(
                         column_index,
                         column.alignment,
-                        value,
-                        self.style.header_font_size,
                     ),
                     y=line_y,
                     font_size=self.style.header_font_size,
@@ -388,8 +629,6 @@ class Table:
                         x=text_x(
                             column_index,
                             column.alignment,
-                            value,
-                            self.style.body_font_size,
                         ),
                         y=line_y,
                         font_size=self.style.body_font_size,
@@ -400,10 +639,25 @@ class Table:
                     text_frames.append(text)
                     order.append(LayerItemRef("text", text.id))
 
-        return Layer(
-            id=layer_id or f"{self.id}.layer",
-            name=layer_name,
+        return RenderedComponent(
+            width=self.width,
+            height=self.height,
             paths=paths,
             text_frames=text_frames,
             item_order=order,
+        )
+
+    def render_layer(
+        self,
+        *,
+        x: float,
+        top: float,
+        layer_id: str | None = None,
+        layer_name: str = "Table",
+    ) -> Layer:
+        """Compile the table into a standalone editable IR layer."""
+
+        return self.render(x=x, top=top).as_layer(
+            layer_id=layer_id or f"{self.id}.layer",
+            layer_name=layer_name,
         )

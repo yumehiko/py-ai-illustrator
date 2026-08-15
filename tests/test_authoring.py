@@ -1,4 +1,15 @@
-from py_ai_illustrator.authoring import Table, TableColumn, TableStyle
+import pytest
+
+from py_ai_illustrator.authoring import (
+    LayerBuilder,
+    Table,
+    TableColumn,
+    TableStyle,
+    TextBlock,
+    TextStyle,
+    ellipse_path,
+    rectangle_path,
+)
 from py_ai_illustrator.model import Color
 
 
@@ -36,6 +47,7 @@ def test_table_compiles_semantics_to_editable_paths_and_text() -> None:
     assert layer.item_order[-1].kind == "text"
     assert layer.text_frames[3].text == "$19"
     assert layer.text_frames[3].alignment == "right"
+    assert layer.text_frames[3].x == 230
     assert layer.paths[2].fill == Color(1.0, 0.95, 0.8)
 
 
@@ -91,3 +103,68 @@ def test_explicit_cell_lines_expand_without_enabling_wrap() -> None:
         "Second line",
     ]
     assert table.height > table.style.header_height + table.style.row_height
+
+
+def test_text_block_wraps_and_uses_alignment_anchor() -> None:
+    block = TextBlock(
+        id="summary",
+        text="Reusable semantic text wraps deterministically",
+        width=110,
+        alignment="right",
+        style=TextStyle(font_size=10, line_height_ratio=1.4),
+    )
+
+    rendered = block.render(x=20, top=100)
+
+    assert len(rendered.text_frames) > 1
+    assert all(frame.x == 130 for frame in rendered.text_frames)
+    assert all(frame.alignment == "right" for frame in rendered.text_frames)
+    assert rendered.text_frames[1].y == pytest.approx(
+        rendered.text_frames[0].y - 14
+    )
+
+
+def test_layer_builder_composes_components_and_rejects_duplicate_ids() -> None:
+    builder = LayerBuilder(id="page", name="Page")
+    background = rectangle_path(
+        "background", x=0, top=100, width=120, height=80, fill=Color(1, 1, 1)
+    )
+    marker = ellipse_path(
+        "marker",
+        center_x=20,
+        center_y=70,
+        radius_x=8,
+        radius_y=8,
+        fill=Color(0.2, 0.4, 0.8),
+    )
+    text = TextBlock(id="label", text="Label", width=80).render(x=32, top=78)
+
+    builder.add_path(background)
+    builder.add_path(marker)
+    builder.add(text)
+    layer = builder.build()
+
+    assert [reference.id for reference in layer.item_order] == [
+        "background",
+        "marker",
+        "label.line-0",
+    ]
+    assert layer.paths[1].points[0].out_handle is not None
+    with pytest.raises(ValueError, match="Duplicate item id"):
+        builder.add_path(background)
+
+
+def test_table_can_render_as_a_composable_component() -> None:
+    table = Table(
+        id="small",
+        columns=[TableColumn("name", "Name", 100)],
+        rows=[{"name": "One"}],
+    )
+
+    rendered = table.render(x=10, top=100)
+    builder = LayerBuilder(id="page", name="Page")
+    builder.add(rendered)
+
+    assert rendered.width == 100
+    assert rendered.height == table.height
+    assert len(builder.build().item_order) == len(rendered.item_order)

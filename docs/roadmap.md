@@ -24,9 +24,10 @@
 
 - 完了: 依存ゼロの形式判定、最小Python IR、legacy AIサブセットreader/writer、JSON往復、CLI、自動テスト、Illustrator 30.7.0実機適合試験、MITライセンス決定
 - 実証済みsubset: RGB/CMYK、直線/Bézier、compound、clipping、ASCII/CP932 point text、異種itemのstacking order、path ID・名前のAI8再保存保持
-- 意味モデル実装済み: Python `Table`のcolumn/row/formatter/variant/shared style、日英文字幅、折り返し、自動行高からpath + text IRへのdeterministic render
+- 意味モデル実装済み: Python `Table`、共通`RenderedComponent` / `LayerBuilder`、`TextBlock`、名札・ポスター作例からpath + text IRへのdeterministic render
+- native出力実証済み: AI7 `Ta`段落揃えを含むlegacy textをIllustrator経由でnative TextFrameへ変換し、PDF-compatible AIとして保存
 - 基盤実装済み: legacy元bytes・物理行改行・operator byte spanを保持するlossless source map、resource limit、非重複local patch primitive
-- 未完了: 現代AI fixtureのPrivateData dump、`inkai`比較環境、node-level CSTとtyped patch、CP932以外のtext/image/multiple artboards
+- 未完了: 現代AI fixtureのPrivateData semantic reader、`inkai`比較環境、node-level CSTとtyped patch、CP932以外のtext/image/multiple artboards/nested groups
 - 詳細: [Phase 0 の実装状況](phase0-status.md)
 
 ## Phase 1: Reader + IR + inspection CLI
@@ -123,4 +124,4 @@
 
 ## 推奨する次の一手
 
-Phase 0のlegacy縦切りとIllustrator実機試験は成立しました。次は未知operatorを保持するlossless token/CSTの小さな試作を作り、同じfixture群を`inkai`でも読んだ差分から、forkではなく隔離adapterとして使う価値があるかを判断します。
+Phase 0のlegacy縦切り、semantic component合成、Illustratorによるnative materializationが成立しました。次は表・名札・ポスターとは異なる画像配置またはnested groupを含む作例を追加しながら、未知operatorを保持するlossless token/CSTをtyped editへ接続します。

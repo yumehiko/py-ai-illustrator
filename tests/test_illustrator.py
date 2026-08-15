@@ -5,6 +5,7 @@ from py_ai_illustrator import illustrator
 from py_ai_illustrator.illustrator import (
     _build_export_javascript,
     _build_javascript,
+    _build_native_materialization_javascript,
     _build_roundtrip_javascript,
     _compare_roundtrip_semantics,
     _compare_structure,
@@ -41,6 +42,21 @@ def test_roundtrip_javascript_resaves_and_closes_only_its_document(tmp_path: Pat
     )
     assert "documentRef = app.open(source)" in javascript
     assert "Compatibility.ILLUSTRATOR8" in javascript
+    assert "documentRef.saveAs(destination, options)" in javascript
+    assert "documentRef.close(SaveOptions.DONOTSAVECHANGES)" in javascript
+    assert "current document" not in javascript
+    assert "\\" not in javascript
+
+
+def test_native_materialization_converts_legacy_text_and_closes_its_copy(
+    tmp_path: Path,
+) -> None:
+    javascript = _build_native_materialization_javascript(
+        tmp_path / 'source "quoted".ai',
+        tmp_path / 'native "quoted".ai',
+    )
+    assert "documentRef.legacyTextItems.convertToNative()" in javascript
+    assert "options.pdfCompatible = true" in javascript
     assert "documentRef.saveAs(destination, options)" in javascript
     assert "documentRef.close(SaveOptions.DONOTSAVECHANGES)" in javascript
     assert "current document" not in javascript
@@ -136,6 +152,20 @@ def test_export_runner_refuses_to_overwrite_existing_output(
     output.write_bytes(b"user data")
     monkeypatch.setattr(illustrator.platform, "system", lambda: "Darwin")
     result = illustrator.run_illustrator_export_test(output=output)
+    assert result["status"] == "invalid-input"
+    assert output.read_bytes() == b"user data"
+
+
+def test_native_materialization_refuses_to_overwrite_existing_output(
+    monkeypatch, tmp_path: Path
+) -> None:
+    source = Path(__file__).parents[1] / "examples" / "styled-table.ai"
+    output = tmp_path / "existing.ai"
+    output.write_bytes(b"user data")
+    monkeypatch.setattr(illustrator.platform, "system", lambda: "Darwin")
+
+    result = illustrator.materialize_native_ai(source, output)
+
     assert result["status"] == "invalid-input"
     assert output.read_bytes() == b"user data"
 
