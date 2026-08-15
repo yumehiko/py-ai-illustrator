@@ -12,6 +12,7 @@ from py_ai_illustrator.model import (
     Layer,
     LayerItemRef,
     Point,
+    TextFrame,
 )
 from py_ai_illustrator.model import Path as AIPath
 
@@ -46,6 +47,8 @@ def test_ai7_roundtrip_preserves_supported_semantics() -> None:
     serialized = dumps_ai7(original)
     assert b"40 200 L\n40 40 L\nb" in serialized
     assert b"%AI3_Note:py-ai:" in serialized
+    assert b"%AI5_ArtSize: 320 240" in serialized
+    assert b"%AI3_TemplateBox: 160 360 160 360" in serialized
     restored = loads_ai7(serialized)
     assert restored.to_dict() == original.to_dict()
 
@@ -387,3 +390,66 @@ def test_layer_derives_legacy_grouped_item_order_when_field_is_missing() -> None
     del data["layers"][0]["item_order"]
     document = Document.from_dict(data)
     assert document.layers[0].item_order == [LayerItemRef("path", "rectangle")]
+
+
+def test_point_text_roundtrip_preserves_editable_text_semantics() -> None:
+    original = Document(
+        width=320,
+        height=240,
+        layers=[
+            Layer(
+                id="table",
+                name="Table",
+                text_frames=[
+                    TextFrame(
+                        id="header",
+                        name="Header label",
+                        text="Table (Header)",
+                        x=40,
+                        y=180,
+                        font_name="Helvetica-Bold",
+                        font_size=14,
+                        fill=Color(0.1, 0.2, 0.3),
+                        alignment="center",
+                    )
+                ],
+            )
+        ],
+    )
+
+    serialized = dumps_ai7(original)
+    assert b"0 To" in serialized
+    assert b"/Helvetica-Bold 14 0 0 Tf" in serialized
+    assert b"(Table \\(Header\\)) Tx" in serialized
+    assert loads_ai7(serialized).to_dict() == original.to_dict()
+
+
+def test_reads_illustrator_native_octal_text_body() -> None:
+    source = br"""%!PS-Adobe-3.0
+%%BoundingBox: 0 0 320 240
+%AI5_FileFormat 3.0
+%AI5_BeginLayer
+1 1 1 1 0 0 1 0 79 128 255 0 50 Lb
+(Native Text) Ln
+0 To
+1 0 0 1 40 180 0 Tp
+TP
+0.1 0.2 0.3 Xa
+/Helvetica 14 0 0 Tf
+(\124) Tx 1 20 Tk
+TO
+0 To
+1 0 0 1 47.1 180 0 Tp
+TP
+(\141\142\154\145\040\110\145\141\144\145\162) Tx 1 0 Tk
+TO
+LB
+%AI5_EndLayer
+%%EOF
+"""
+
+    texts = loads_ai7(source).layers[0].text_frames
+    assert "".join(text.text for text in texts) == "Table Header"
+    assert (texts[0].x, texts[0].y, texts[0].font_size) == (40.0, 180.0, 14.0)
+    assert texts[1].font_size == 14.0
+    assert texts[0].fill == Color(0.1, 0.2, 0.3)

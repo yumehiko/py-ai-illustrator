@@ -1,0 +1,28 @@
+{
+  "width": 320,
+  "height": 240,
+  "title": "Editable point text",
+  "layers": [
+    {
+      "id": "text-layer",
+      "name": "Text",
+      "text_frames": [
+        {
+          "id": "table-header",
+          "name": "Table Header",
+          "text": "Table Header",
+          "x": 40,
+          "y": 180,
+          "font_size": 14,
+          "font_name": "Helvetica",
+          "fill": {
+            "red": 0.1,
+            "green": 0.2,
+            "blue": 0.3
+          },
+          "alignment": "left"
+        }
+      ]
+    }
+  ]
+}

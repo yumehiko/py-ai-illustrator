@@ -1,5 +1,6 @@
 """Python tools for inspecting and translating Adobe Illustrator files."""
 
+from .authoring import Table, TableColumn, TableStyle
 from .format import FileFormat, FormatReport, inspect_file
 from .lossless import (
     LegacyLineToken,
@@ -19,6 +20,7 @@ from .model import (
     LayerItemRef,
     Path,
     Point,
+    TextFrame,
 )
 
 __all__ = [
@@ -36,8 +38,12 @@ __all__ = [
     "LegacySource",
     "Path",
     "Point",
+    "TextFrame",
     "SourceLimitExceeded",
     "SourceReplacement",
+    "Table",
+    "TableColumn",
+    "TableStyle",
     "inspect_file",
     "tokenize_legacy",
 ]

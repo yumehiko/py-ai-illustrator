@@ -1,0 +1,40 @@
+%!PS-Adobe-3.0
+%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)
+%%Title: (Editable point text)
+%%BoundingBox: 0 0 320 240
+%%HiResBoundingBox: 0 0 320 240
+%%DocumentProcessColors: Cyan Magenta Yellow Black
+%AI5_FileFormat 3.0
+%AI3_ColorUsage: Color
+%AI3_TemplateBox: 160 120 160 120
+%AI3_DocumentPreview: None
+%AI5_ArtSize: 320 240
+%AI5_RulerUnits: 2
+%AI5_NumLayers: 1
+%%py-ai-metadata: e30=
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+%%EndSetup
+%AI5_BeginLayer
+%%py-ai-layer-id: (text-layer)
+1 1 1 1 0 0 0 79 128 255 Lb
+(Text) Ln
+%%py-ai-text-id: (table-header)
+%%py-ai-text-name: (Table Header)
+0 A
+0 To
+1 0 0 1 40 180 0 Tp
+TP
+1 0 0 1 40 180 Tm
+0 Tr
+0.1 0.2 0.3 Xa
+/Helvetica 14 0 0 Tf
+0 Ta
+(Table Header) Tx
+TO
+LB
+%AI5_EndLayer
+%%Trailer
+%%EOF

@@ -20,6 +20,7 @@ from .model import (
     Path,
     Point,
     ProcessColor,
+    TextFrame,
 )
 
 _NUMBER = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
@@ -40,6 +41,15 @@ _POLARITY_RE = re.compile(r"^([01])\s+D$")
 _BOUNDS_RE = re.compile(r"^%%(?:HiRes)?BoundingBox:\s+(.+)$")
 _LAYER_NAME_RE = re.compile(r"^\((.*)\)\s+Ln$")
 _LAYER_RE = re.compile(r"^([01])\s+1\s+([01])\s+1\s+0\s+0\s+.+\s+Lb$")
+_TEXT_BEGIN_RE = re.compile(r"^0\s+To$")
+_TEXT_POSITION_RE = re.compile(
+    rf"^{_NUMBER}\s+{_NUMBER}\s+{_NUMBER}\s+{_NUMBER}\s+"
+    rf"({_NUMBER})\s+({_NUMBER})\s+{_NUMBER}\s+Tp$"
+)
+_TEXT_FONT_RE = re.compile(rf"^/(\S+)\s+({_NUMBER})\s+{_NUMBER}\s+{_NUMBER}\s+Tf$")
+_TEXT_ALIGNMENT_RE = re.compile(r"^([0-4])\s+Ta$")
+_TEXT_CONTENT_RE = re.compile(r"^\((.*)\)\s+Tx(?:\s+.*)?$")
+_POSTSCRIPT_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 _PATH_NOTE_PREFIX = "py-ai:"
 
 
@@ -57,6 +67,54 @@ def _escape_postscript_string(value: str) -> str:
 
 def _unescape_postscript_string(value: str) -> str:
     return value.replace("\\)", ")").replace("\\(", "(").replace("\\\\", "\\")
+
+
+def _escape_postscript_text(value: str) -> str:
+    if not value.isascii():
+        raise UnsupportedLegacyFeature(
+            "AI7 text output currently supports ASCII only; Unicode text remains valid in the IR"
+        )
+    return _escape_postscript_string(value.replace("\r\n", "\r").replace("\n", "\r"))
+
+
+def _unescape_postscript_text(value: str) -> str:
+    output = bytearray()
+    index = 0
+    simple_escapes = {
+        "n": b"\n",
+        "r": b"\r",
+        "t": b"\t",
+        "b": b"\b",
+        "f": b"\f",
+        "(": b"(",
+        ")": b")",
+        "\\": b"\\",
+    }
+    while index < len(value):
+        character = value[index]
+        if character != "\\":
+            output.extend(character.encode("latin-1"))
+            index += 1
+            continue
+        index += 1
+        if index >= len(value):
+            break
+        escaped = value[index]
+        if escaped in simple_escapes:
+            output.extend(simple_escapes[escaped])
+            index += 1
+            continue
+        if escaped in "01234567":
+            octal = escaped
+            index += 1
+            while index < len(value) and len(octal) < 3 and value[index] in "01234567":
+                octal += value[index]
+                index += 1
+            output.append(int(octal, 8))
+            continue
+        output.extend(escaped.encode("latin-1"))
+        index += 1
+    return output.decode("latin-1")
 
 
 def _path_note(path: Path) -> str | None:
@@ -178,12 +236,44 @@ def _serialized_clipping_path(path: Path, *, locked: bool) -> list[str]:
     return lines
 
 
+def _serialized_text_frame(text: TextFrame, *, locked: bool) -> list[str]:
+    if not _POSTSCRIPT_NAME_RE.fullmatch(text.font_name):
+        raise UnsupportedLegacyFeature(
+            f"Invalid PostScript font name for AI7 text: {text.font_name!r}"
+        )
+    lines = [
+        f"%%py-ai-text-id: ({_escape_postscript_string(text.id)})",
+        f"%%py-ai-text-alignment: ({text.alignment})",
+    ]
+    if text.name is not None:
+        lines.append(f"%%py-ai-text-name: ({_escape_postscript_string(text.name)})")
+    lines.extend(
+        [
+            "1 A" if locked else "0 A",
+            "0 To",
+            f"1 0 0 1 {_number(text.x)} {_number(text.y)} 0 Tp",
+            "TP",
+            f"1 0 0 1 {_number(text.x)} {_number(text.y)} Tm",
+            "0 Tr",
+            _color_operator(text.fill, stroke=False),
+            f"/{text.font_name} {_number(text.font_size)} 0 0 Tf",
+            f"({_escape_postscript_text(text.text)}) Tx",
+            "TO",
+        ]
+    )
+    return lines
+
+
 def dumps_ai7(document: Document) -> bytes:
     """Serialize the supported IR subset as editable legacy Illustrator data."""
 
     width = _number(document.width)
     height = _number(document.height)
     title = _escape_postscript_string(document.title)
+    # Current Illustrator places header-only AI7 artboards in negative global Y.
+    # The TemplateBox establishes the ruler origin; this offset keeps the IR's
+    # conventional positive-up 0..height coordinates inside that artboard.
+    template_center_y = _number(document.height * 1.5)
     lines = [
         "%!PS-Adobe-3.0",
         "%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)",
@@ -193,7 +283,14 @@ def dumps_ai7(document: Document) -> bytes:
         "%%DocumentProcessColors: Cyan Magenta Yellow Black",
         "%AI5_FileFormat 3.0",
         "%AI3_ColorUsage: Color",
+        f"%AI3_TemplateBox: {_number(document.width / 2)} "
+        f"{template_center_y} {_number(document.width / 2)} {template_center_y}",
         "%AI3_DocumentPreview: None",
+        f"%AI5_ArtSize: {width} {height}",
+        "%AI5_RulerUnits: 2",
+        "%AI5_ArtFlags: 0 0 0 1 0 0 1 0 0",
+        f"%AI5_NumLayers: {len(document.layers)}",
+        "%%PageOrigin:0 0",
         "%%py-ai-metadata: "
         + base64.b64encode(
             json.dumps(document.metadata, ensure_ascii=False, separators=(",", ":")).encode()
@@ -220,6 +317,8 @@ def dumps_ai7(document: Document) -> bytes:
         for item in layer.ordered_items():
             if isinstance(item, Path):
                 lines.extend(_serialized_path(item, locked=layer.locked))
+            elif isinstance(item, TextFrame):
+                lines.extend(_serialized_text_frame(item, locked=layer.locked))
             elif isinstance(item, CompoundPath):
                 lines.extend(
                     [
@@ -238,7 +337,7 @@ def dumps_ai7(document: Document) -> bytes:
                 for path in item.paths:
                     lines.extend(_serialized_path(path, locked=layer.locked))
                 lines.append("*U")
-            else:
+            elif isinstance(item, ClippingGroup):
                 lines.extend(
                     [
                         f"%%py-ai-clipping-id: ({_escape_postscript_string(item.id)})",
@@ -302,6 +401,17 @@ def loads_ai7(data: bytes) -> Document:
     pending_clipping_name: str | None = None
     polarity = "positive"
     path_counter = 0
+    text_counter = 0
+    in_text = False
+    text_parts: list[str] = []
+    text_x = 0.0
+    text_y = 0.0
+    text_font_name = "Helvetica"
+    text_font_size = 12.0
+    text_alignment = "left"
+    pending_text_id: str | None = None
+    pending_text_name: str | None = None
+    pending_text_alignment: str | None = None
     metadata: dict[str, object] = {}
 
     for token in source.lines:
@@ -438,6 +548,69 @@ def loads_ai7(data: bytes) -> Document:
             if note_name is not None:
                 pending_name = note_name
             continue
+        if line.startswith("%%py-ai-text-id: (") and line.endswith(")"):
+            value = line.removeprefix("%%py-ai-text-id: (")[:-1]
+            pending_text_id = _unescape_postscript_string(value)
+            continue
+        if line.startswith("%%py-ai-text-name: (") and line.endswith(")"):
+            value = line.removeprefix("%%py-ai-text-name: (")[:-1]
+            pending_text_name = _unescape_postscript_string(value)
+            continue
+        if line.startswith("%%py-ai-text-alignment: (") and line.endswith(")"):
+            value = line.removeprefix("%%py-ai-text-alignment: (")[:-1]
+            candidate = _unescape_postscript_string(value)
+            if candidate in {"left", "center", "right"}:
+                pending_text_alignment = candidate
+            continue
+        if _TEXT_BEGIN_RE.match(line):
+            in_text = True
+            text_parts = []
+            text_x = 0.0
+            text_y = 0.0
+            continue
+        if in_text:
+            text_position_match = _TEXT_POSITION_RE.match(line)
+            if text_position_match:
+                text_x = float(text_position_match.group(1))
+                text_y = float(text_position_match.group(2))
+                continue
+            text_font_match = _TEXT_FONT_RE.match(line)
+            if text_font_match:
+                text_font_name = text_font_match.group(1)
+                text_font_size = float(text_font_match.group(2))
+                continue
+            text_alignment_match = _TEXT_ALIGNMENT_RE.match(line)
+            if text_alignment_match:
+                text_alignment = {"0": "left", "1": "center", "2": "right"}.get(
+                    text_alignment_match.group(1), "left"
+                )
+                continue
+            text_content_match = _TEXT_CONTENT_RE.match(line)
+            if text_content_match:
+                text_parts.append(_unescape_postscript_text(text_content_match.group(1)))
+                continue
+            if line == "TO":
+                if current_layer is None:
+                    current_layer = Layer(id="layer-1", name="Layer 1")
+                text_counter += 1
+                text_frame = TextFrame(
+                    id=pending_text_id or f"text-{text_counter}",
+                    name=pending_text_name,
+                    text="".join(text_parts),
+                    x=text_x,
+                    y=text_y,
+                    font_size=text_font_size,
+                    font_name=text_font_name,
+                    fill=fill or Color(0.0, 0.0, 0.0),
+                    alignment=pending_text_alignment or text_alignment,
+                )
+                current_layer.text_frames.append(text_frame)
+                current_layer.item_order.append(LayerItemRef("text", text_frame.id))
+                pending_text_id = None
+                pending_text_name = None
+                pending_text_alignment = None
+                in_text = False
+                continue
         ai8_rgb_match = _AI8_RGB_COLOR_RE.match(line)
         if ai8_rgb_match:
             color = Color(*(float(ai8_rgb_match.group(index)) for index in range(5, 8)))

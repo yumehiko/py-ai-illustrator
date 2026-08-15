@@ -140,6 +140,45 @@ class Path:
 
 
 @dataclass(slots=True)
+class TextFrame:
+    """Editable point text positioned in document coordinates."""
+
+    id: str
+    text: str
+    x: float
+    y: float
+    font_size: float = 12.0
+    font_name: str = "Helvetica"
+    fill: ProcessColor = field(default_factory=lambda: Color(0.0, 0.0, 0.0))
+    alignment: str = "left"
+    name: str | None = None
+    unknown: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if self.font_size <= 0:
+            raise ValueError("font_size must be positive")
+        if self.alignment not in {"left", "center", "right"}:
+            raise ValueError("alignment must be 'left', 'center', or 'right'")
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> TextFrame:
+        return cls(
+            id=str(data["id"]),
+            text=str(data["text"]),
+            x=float(data["x"]),
+            y=float(data["y"]),
+            font_size=float(data.get("font_size", 12.0)),
+            font_name=str(data.get("font_name", "Helvetica")),
+            fill=_process_color_from_dict(
+                data.get("fill", {"red": 0.0, "green": 0.0, "blue": 0.0})
+            ),
+            alignment=str(data.get("alignment", "left")),
+            name=data.get("name"),
+            unknown=dict(data.get("unknown", {})),
+        )
+
+
+@dataclass(slots=True)
 class CompoundPath:
     id: str
     paths: list[Path]
@@ -189,7 +228,7 @@ class LayerItemRef:
     id: str
 
     def __post_init__(self) -> None:
-        if self.kind not in {"path", "compound_path", "clipping_group"}:
+        if self.kind not in {"path", "text", "compound_path", "clipping_group"}:
             raise ValueError(f"Unsupported layer item kind: {self.kind}")
 
     @classmethod
@@ -202,6 +241,7 @@ class Layer:
     id: str
     name: str
     paths: list[Path] = field(default_factory=list)
+    text_frames: list[TextFrame] = field(default_factory=list)
     compound_paths: list[CompoundPath] = field(default_factory=list)
     clipping_groups: list[ClippingGroup] = field(default_factory=list)
     item_order: list[LayerItemRef] = field(default_factory=list)
@@ -213,6 +253,7 @@ class Layer:
         if not self.item_order:
             self.item_order = [
                 *(LayerItemRef("path", path.id) for path in self.paths),
+                *(LayerItemRef("text", text.id) for text in self.text_frames),
                 *(
                     LayerItemRef("compound_path", compound.id)
                     for compound in self.compound_paths
@@ -223,14 +264,17 @@ class Layer:
                 ),
             ]
 
-    def ordered_items(self) -> list[Path | CompoundPath | ClippingGroup]:
-        typed_items: list[tuple[str, Path | CompoundPath | ClippingGroup]] = [
+    def ordered_items(self) -> list[Path | TextFrame | CompoundPath | ClippingGroup]:
+        typed_items: list[
+            tuple[str, Path | TextFrame | CompoundPath | ClippingGroup]
+        ] = [
             *(("path", path) for path in self.paths),
+            *(("text", text) for text in self.text_frames),
             *(("compound_path", compound) for compound in self.compound_paths),
             *(("clipping_group", group) for group in self.clipping_groups),
         ]
         remaining = list(typed_items)
-        ordered: list[Path | CompoundPath | ClippingGroup] = []
+        ordered: list[Path | TextFrame | CompoundPath | ClippingGroup] = []
         for reference in self.item_order:
             for index, (kind, item) in enumerate(remaining):
                 if kind == reference.kind and item.id == reference.id:
@@ -246,6 +290,9 @@ class Layer:
             id=str(data["id"]),
             name=str(data["name"]),
             paths=[Path.from_dict(path) for path in data.get("paths", [])],
+            text_frames=[
+                TextFrame.from_dict(text) for text in data.get("text_frames", [])
+            ],
             compound_paths=[
                 CompoundPath.from_dict(path) for path in data.get("compound_paths", [])
             ],

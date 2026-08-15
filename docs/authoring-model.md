@@ -35,21 +35,34 @@ Illustrator上では、表は最終的にtext、path、fill、stroke、group等�
 Pythonでは、制作物固有の意味を持つcomponentとして表現できます。
 
 ```python
+from py_ai_illustrator import Color, Table, TableColumn, TableStyle
+
 price_table = Table(
-    rows=products,
+    id="price-list",
     columns=[
-        TextColumn("商品名", key="name"),
-        MoneyColumn("価格", key="price"),
-        BadgeColumn("状態", key="status"),
+        TableColumn("name", "Product", 180),
+        TableColumn(
+            "price",
+            "Price",
+            90,
+            alignment="right",
+            formatter=lambda value: f"${value:,.0f}",
+        ),
     ],
-    style=shared_table_style,
-    variant="catalog",
+    rows=products,
+    variant_key="kind",
+    style=TableStyle(
+        header_fill=Color(0.08, 0.16, 0.28),
+        variant_fills={"featured": Color(0.9, 0.95, 1.0)},
+    ),
 )
 
-page.place(price_table, x=20, y=40, width=170)
+layer = price_table.render_layer(x=40, top=300)
 ```
 
-`Table.render(context)`が列幅、折り返し、罫線、ページ分割等を解決し、汎用グラフィックIRの`Group`、`Text`、`Path`へ展開します。コアIRが`PriceTable`等のあらゆる業務概念を直接知る必要はありません。
+現在の`Table.render_layer()`は列幅、header/body/variantの配色、formatter、中央・右揃え、余白、行高、罫線を解決し、汎用グラフィックIRの`Layer`、`TextFrame`、`Path`へ決定的に展開します。コアIRが`PriceTable`等のあらゆる業務概念を直接知る必要はありません。折り返し、ページ分割、複合cell componentは今後の拡張です。
+
+`formatter`や`accessor`にはPython関数を渡せます。したがって、単なるJSON schemaでは表しにくい制作物固有の計算や文脈依存の表示も、表コンポーネントの入力境界で扱えます。実行可能な完全例は[`examples/styled_table.py`](../examples/styled_table.py)です。
 
 ## 三つの層の責務
 

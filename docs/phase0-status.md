@@ -29,7 +29,9 @@ legacy .ai bytes
 | compound path | 対応 | 対応 | `*u` / `*U`、subpath polarity `D` |
 | clipping group | 対応 | 対応 | `q` / `Q`、maskの`h/H`・`W` |
 | mixed item stacking | 対応 | 対応 | `item_order`はAI描画順、Illustrator DOMは逆順のtop-to-bottomとして照合 |
-| text / image | 未対応 | 未対応 | fixture調査後 |
+| point text | 対応 | 対応 | 内容・位置・size・RGB/CMYK fill・整列要求。writerは現在ASCII限定 |
+| semantic table | n/a | 対応 | Pythonのcolumn/row/formatter/variant/styleをpath + textへrender |
+| image | 未対応 | 未対応 | fixture調査後 |
 | PDF-compatible AI semantic data | 未対応 | 未対応 | 現在は形式判定のみ |
 
 ## 意図的な境界
@@ -47,8 +49,8 @@ legacy .ai bytes
 
 1. Illustrator再保存をまたぐlayer/container IDとdocument metadataの保持方式を調査する。
 2. 実装済みのoperator span/local patch primitiveをnode source spanとtyped editへ接続する。
-3. text/image/nested groupの次期feature profileを決める。
-4. Python componentからIRへの最小render protocolとsemantic metadata manifestを設計する。
+3. Unicode text/image/nested groupの次期feature profileを決める。
+4. 実装した`Table.render_layer()`を共通render protocolとsemantic metadata manifestへ一般化する。
 5. 検証対象とするIllustratorバージョンの範囲を広げる。
 
 終了条件のうち、Python内の `IR -> AI7 -> IR` と、Illustrator 30.7.0でfixtureを開いた際の編集構造検査は完了しました。対応範囲はまだ小さいため、AI7 writer全体の位置付けは引き続き experimental です。
@@ -69,6 +71,10 @@ legacy .ai bytes
 さらにPython生成fixtureをIllustratorでAI8再保存し、再びPython IRへ戻す完全往復を実施しました。RGB矩形とCMYK Bézierはいずれも、平行移動とRGB量子化を正規化した意味比較に合格しています。path ID・名前はAI7仕様の`%AI3_Note`属性へASCII payloadとして格納することで、Illustrator 30.7.0のDOMとAI8再保存の両方に保持されました。通常path、compound subpath、clipping mask/contentの全fixtureでID照合に合格しています。
 
 一方、独自DSCコメントだけに保存しているlayer ID、compound/clipping containerのID・名前、document metadataはIllustrator再保存で除去されます。元のdocument title/boundsも保存先名とartwork boundsへ変わるため、引き続き既知のlossです。
+
+point textのIRとAI7 reader/writerを追加し、Illustrator生成AI8の`To` / `Tp` / `Tf` / `Tx`を読み取れるようにしました。Python生成表は16個のpath（背景・罫線）と20個のTextFrameとしてIllustrator 30.7.0で認識され、612×360 artboard上の座標、stacking、paint、文字内容・size・配置を確認しています。AI8再保存ではfont名が環境既定へ置換され、point textのalignmentがleftへ正規化されるため、この2項目はadvisoryとして報告します。
+
+Python意味モデルの最初の実装として`Table` / `TableColumn` / `TableStyle`を追加しました。列formatter/accessor、行variant、header/body/alternate配色、文字色、列幅、余白、行高、罫線、font要求を共有・派生でき、低水準IRへ決定的にrenderします。[`examples/styled_table.py`](../examples/styled_table.py)がsource of truthで、生成AIはPython readerとIllustrator実機の両方で検査します。
 
 compound pathはIllustrator生成AI8から`*u` / `*U` containerと`D` polarityを採取し、専用IR、reader、writerを追加しました。Python生成fixtureはIllustrator 30.7.0で2 componentを持つ1つの`CompoundPathItem`として認識され、Illustrator再保存後の完全往復でもcontainer、polarity、geometry、RGB fillが保持されました。
 

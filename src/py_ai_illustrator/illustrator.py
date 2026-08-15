@@ -13,7 +13,7 @@ from typing import Any
 
 from .format import FileFormat, inspect_file
 from .legacy import load_ai7
-from .model import CmykColor, Color, Document, ProcessColor
+from .model import CmykColor, Color, Document, ProcessColor, TextFrame
 from .model import Path as AIPath
 
 
@@ -34,6 +34,10 @@ def _document_paths(document: Document) -> list[AIPath]:
     return paths
 
 
+def _document_text_frames(document: Document) -> list[TextFrame]:
+    return [text for layer in document.layers for text in layer.text_frames]
+
+
 def _expected_structure(source: Path) -> dict[str, Any] | None:
     report = inspect_file(source)
     if report.format is not FileFormat.LEGACY_AI:
@@ -43,6 +47,7 @@ def _expected_structure(source: Path) -> dict[str, Any] | None:
     except ValueError:
         return None
     paths = _document_paths(document)
+    text_frames = _document_text_frames(document)
     return {
         "layer_count": len(document.layers),
         "layer_names": [layer.name for layer in document.layers],
@@ -50,6 +55,7 @@ def _expected_structure(source: Path) -> dict[str, Any] | None:
             [
                 {
                     "path": "PathItem",
+                    "text": "TextFrame",
                     "compound_path": "CompoundPathItem",
                     "clipping_group": "GroupItem",
                 }[reference.kind]
@@ -58,6 +64,7 @@ def _expected_structure(source: Path) -> dict[str, Any] | None:
             for layer in document.layers
         ],
         "path_item_count": len(paths),
+        "text_frame_count": len(text_frames),
         "point_counts": sorted(len(path.points) for path in paths),
         "closed_count": sum(path.closed for path in paths),
         "filled_count": sum(path.fill is not None for path in paths),
@@ -94,6 +101,7 @@ def _build_javascript(source: Path) -> str:
 
     function toJson(value) {{
         if (value === null) return "null";
+        if (typeof value === "undefined") return "null";
         if (typeof value === "string") return quoteString(value);
         if (typeof value === "number" || typeof value === "boolean") return String(value);
         var parts = [];
@@ -191,6 +199,39 @@ def _build_javascript(source: Path) -> str:
             }});
         }}
 
+        var textFrames = [];
+        for (
+            var textLayerIndex = 0;
+            textLayerIndex < documentRef.layers.length;
+            textLayerIndex++
+        ) {{
+            var textLayer = documentRef.layers[textLayerIndex];
+            for (
+                var textFrameIndex = 0;
+                textFrameIndex < textLayer.pageItems.length;
+                textFrameIndex++
+            ) {{
+                var textFrame = textLayer.pageItems[textFrameIndex];
+                if (textFrame.typename !== "TextFrame") continue;
+                var textRange = textFrame.textRange;
+                var attributes = textRange ? textRange.characterAttributes : null;
+                var paragraphAttributes = textRange ? textRange.paragraphAttributes : null;
+                textFrames.push({{
+                    name: textFrame.name,
+                    contents: textFrame.contents,
+                    position: [textFrame.position[0], textFrame.position[1]],
+                    font_size: attributes && typeof attributes.size === "number"
+                        ? attributes.size
+                        : null,
+                    font_name: attributes && attributes.textFont ? attributes.textFont.name : null,
+                    fill_color: attributes ? colorToObject(attributes.fillColor) : null,
+                    justification: paragraphAttributes
+                        ? String(paragraphAttributes.justification)
+                        : null
+                }});
+            }}
+        }}
+
         var layerNames = [];
         var layerPageItemTypes = [];
         for (var layerNameIndex = 0; layerNameIndex < layers.length; layerNameIndex++) {{
@@ -220,6 +261,7 @@ def _build_javascript(source: Path) -> str:
             document_color_space: String(documentRef.documentColorSpace),
             layer_count: documentRef.layers.length,
             path_item_count: documentRef.pathItems.length,
+            text_frame_count: textFrames.length,
             page_item_count: documentRef.pageItems.length,
             artboard_count: documentRef.artboards.length,
             compound_path_item_count: documentRef.compoundPathItems.length,
@@ -232,6 +274,7 @@ def _build_javascript(source: Path) -> str:
             stroked_count: strokedCount,
             layers: layers,
             paths: paths,
+            text_frames: textFrames,
             artboards: artboards
         }});
     }} catch (error) {{
@@ -358,6 +401,24 @@ def _build_export_javascript(destination: Path, fixture: str) -> str:
         clip.clipping = true;
         group.clipped = true;
 """
+    elif fixture == "point-text":
+        fixture_javascript = """
+        documentRef = app.documents.add(DocumentColorSpace.RGB, 320, 240);
+        var layer = documentRef.layers[0];
+        layer.name = "Illustrator Native Text";
+
+        var text = layer.textFrames.add();
+        text.name = "Native Table Header";
+        text.contents = "Table Header";
+        text.position = [40, 180];
+        text.textRange.characterAttributes.size = 14;
+        text.textRange.paragraphAttributes.justification = Justification.CENTER;
+        var textFill = new RGBColor();
+        textFill.red = 26;
+        textFill.green = 51;
+        textFill.blue = 77;
+        text.textRange.characterAttributes.fillColor = textFill;
+"""
     else:
         raise ValueError(f"Unknown Illustrator fixture: {fixture}")
     return f"""#target illustrator
@@ -455,6 +516,7 @@ def _compare_structure(expected: dict[str, Any], actual: dict[str, Any]) -> dict
         "layer_names",
         "layer_page_item_types",
         "path_item_count",
+        "text_frame_count",
         "point_counts",
         "closed_count",
         "filled_count",
@@ -546,6 +608,10 @@ def _compare_roundtrip_semantics(
     actual_clipping_groups = [
         group for layer in actual.layers for group in layer.clipping_groups
     ]
+    expected_text = _document_text_frames(expected)
+    actual_text = _document_text_frames(actual)
+    paired_text = list(zip(expected_text, actual_text, strict=False))
+    same_text_count = len(expected_text) == len(actual_text)
     paired_paths = list(zip(expected_paths, actual_paths, strict=False))
     same_path_count = len(expected_paths) == len(actual_paths)
     return {
@@ -559,6 +625,47 @@ def _compare_roundtrip_semantics(
         ]
         == [[reference.kind for reference in layer.item_order] for layer in actual.layers],
         "path_item_count": same_path_count,
+        "text_frame_count": same_text_count,
+        "text_contents": same_text_count
+        and all(left.text == right.text for left, right in paired_text),
+        "text_font_sizes": same_text_count
+        and all(
+            math.isclose(
+                left.font_size,
+                right.font_size,
+                rel_tol=0.0,
+                abs_tol=tolerance,
+            )
+            for left, right in paired_text
+        ),
+        "text_font_names": same_text_count
+        and all(left.font_name == right.font_name for left, right in paired_text),
+        "text_alignments": same_text_count
+        and all(left.alignment == right.alignment for left, right in paired_text),
+        "text_fill_colors": same_text_count
+        and all(
+            _color_close(left.fill, right.fill, tolerance=tolerance)
+            for left, right in paired_text
+        ),
+        "text_positions": same_text_count
+        and (
+            not expected_text
+            or all(
+                math.isclose(
+                    left.x - expected_text[0].x,
+                    right.x - actual_text[0].x,
+                    rel_tol=0.0,
+                    abs_tol=tolerance,
+                )
+                and math.isclose(
+                    left.y - expected_text[0].y,
+                    right.y - actual_text[0].y,
+                    rel_tol=0.0,
+                    abs_tol=tolerance,
+                )
+                for left, right in paired_text
+            )
+        ),
         "path_ids": same_path_count
         and all(left.id == right.id for left, right in paired_paths),
         "path_names": same_path_count
@@ -710,6 +817,7 @@ def run_illustrator_export_test(
         "cmyk-curve",
         "compound-path",
         "clipping-group",
+        "point-text",
     }:
         return {"status": "invalid-input", "error": f"Unknown fixture: {fixture}"}
 
@@ -773,6 +881,7 @@ def run_illustrator_export_test(
             "cmyk-curve": "Illustrator Native Curves",
             "compound-path": "Illustrator Native Compound",
             "clipping-group": "Illustrator Native Clipping",
+            "point-text": "Illustrator Native Text",
         }[fixture]
         checks: dict[str, bool] = {
             "legacy_ai_detected": format_report.format is FileFormat.LEGACY_AI,
@@ -781,7 +890,13 @@ def run_illustrator_export_test(
             "layer_name": bool(document.layers)
             and document.layers[0].name == expected_layer_name,
             "path_item_count": len(paths)
-            == (2 if fixture in {"compound-path", "clipping-group"} else 1),
+            == (
+                2
+                if fixture in {"compound-path", "clipping-group"}
+                else 0
+                if fixture == "point-text"
+                else 1
+            ),
         }
         if fixture == "rgb-rectangle":
             checks.update(
@@ -825,7 +940,7 @@ def run_illustrator_export_test(
                     and all(path.stroke is None for path in compound.paths),
                 }
             )
-        else:
+        elif fixture == "clipping-group":
             clipping_groups = document.layers[0].clipping_groups if document.layers else []
             group = clipping_groups[0] if clipping_groups else None
             checks.update(
@@ -838,6 +953,19 @@ def run_illustrator_export_test(
                     and group.clipping_path.stroke is None,
                     "content_filled": group is not None
                     and group.paths[0].fill is not None,
+                }
+            )
+        elif fixture == "point-text":
+            text_frames = _document_text_frames(document)
+            checks.update(
+                {
+                    "text_frame_count": bool(text_frames),
+                    "text_contents": "".join(text.text for text in text_frames)
+                    == "Table Header",
+                    "font_size": all(text.font_size == 14.0 for text in text_frames),
+                    "rgb_fill": all(
+                        isinstance(text.fill, Color) for text in text_frames
+                    ),
                 }
             )
         passed = all(checks.values())
@@ -939,6 +1067,10 @@ def run_illustrator_roundtrip_test(
             }
 
         checks = _compare_roundtrip_semantics(expected, actual)
+        advisory_keys = {"text_font_names", "text_alignments"}
+        advisory_checks = {
+            key: checks.pop(key) for key in advisory_keys if key in checks
+        }
         passed = format_report.format is FileFormat.LEGACY_AI and all(checks.values())
         return {
             "status": "passed" if passed else "mismatch",
@@ -949,6 +1081,15 @@ def run_illustrator_roundtrip_test(
                 "legacy_ai_detected": format_report.format is FileFormat.LEGACY_AI,
                 **checks,
             },
+            "advisory_checks": advisory_checks,
+            "compatibility_notes": (
+                [
+                    "AI8 legacy point text may substitute font names and normalize "
+                    "paragraph alignment; visual placement remains a required check."
+                ]
+                if advisory_checks and not all(advisory_checks.values())
+                else []
+            ),
             "expected_ir": expected.to_dict(),
             "roundtrip_ir": actual.to_dict(),
             "output": str(output_path) if output_path is not None else None,

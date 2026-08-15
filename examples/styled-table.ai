@@ -1,0 +1,453 @@
+%!PS-Adobe-3.0
+%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)
+%%Title: (Python-authored styled table)
+%%BoundingBox: 0 0 612 360
+%%HiResBoundingBox: 0 0 612 360
+%%DocumentProcessColors: Cyan Magenta Yellow Black
+%AI5_FileFormat 3.0
+%AI3_ColorUsage: Color
+%AI3_TemplateBox: 306 540 306 540
+%AI3_DocumentPreview: None
+%AI5_ArtSize: 612 360
+%AI5_RulerUnits: 2
+%AI5_ArtFlags: 0 0 0 1 0 0 1 0 0
+%AI5_NumLayers: 1
+%%PageOrigin:0 0
+%%py-ai-metadata: eyJzb3VyY2UiOiJleGFtcGxlcy9zdHlsZWRfdGFibGUucHkiLCJjb21wb25lbnQiOiJUYWJsZSJ9
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+%%EndSetup
+%AI5_BeginLayer
+%%py-ai-layer-id: (subscription-comparison.layer)
+1 1 1 1 0 0 0 79 128 255 Lb
+(Subscription table) Ln
+%AI7_Tag: (subscription-comparison.background.header)
+%%py-ai-path-name: (subscription-comparison.background.header)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmJhY2tncm91bmQuaGVhZGVyIiwibmFtZSI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmJhY2tncm91bmQuaGVhZGVyIn0=
+0.06 0.12 0.23 Xa
+1 w
+48 262 m
+564 262 L
+564 300 L
+48 300 L
+48 262 L
+f
+%AI7_Tag: (subscription-comparison.background.row-0)
+%%py-ai-path-name: (subscription-comparison.background.row-0)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmJhY2tncm91bmQucm93LTAiLCJuYW1lIjoic3Vic2NyaXB0aW9uLWNvbXBhcmlzb24uYmFja2dyb3VuZC5yb3ctMCJ9
+1 1 1 Xa
+1 w
+48 218 m
+564 218 L
+564 262 L
+48 262 L
+48 218 L
+f
+%AI7_Tag: (subscription-comparison.background.row-1)
+%%py-ai-path-name: (subscription-comparison.background.row-1)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmJhY2tncm91bmQucm93LTEiLCJuYW1lIjoic3Vic2NyaXB0aW9uLWNvbXBhcmlzb24uYmFja2dyb3VuZC5yb3ctMSJ9
+0.9 0.95 1 Xa
+1 w
+48 174 m
+564 174 L
+564 218 L
+48 218 L
+48 174 L
+f
+%AI7_Tag: (subscription-comparison.background.row-2)
+%%py-ai-path-name: (subscription-comparison.background.row-2)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmJhY2tncm91bmQucm93LTIiLCJuYW1lIjoic3Vic2NyaXB0aW9uLWNvbXBhcmlzb24uYmFja2dyb3VuZC5yb3ctMiJ9
+1 1 1 Xa
+1 w
+48 130 m
+564 130 L
+564 174 L
+48 174 L
+48 130 L
+f
+%AI7_Tag: (subscription-comparison.background.row-3)
+%%py-ai-path-name: (subscription-comparison.background.row-3)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmJhY2tncm91bmQucm93LTMiLCJuYW1lIjoic3Vic2NyaXB0aW9uLWNvbXBhcmlzb24uYmFja2dyb3VuZC5yb3ctMyJ9
+1 0.91 0.68 Xa
+1 w
+48 86 m
+564 86 L
+564 130 L
+48 130 L
+48 86 L
+f
+%AI7_Tag: (subscription-comparison.grid.horizontal-0)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmdyaWQuaG9yaXpvbnRhbC0wIn0=
+0.68 0.72 0.79 XA
+0.9 w
+48 300 m
+564 300 L
+S
+%AI7_Tag: (subscription-comparison.grid.horizontal-1)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmdyaWQuaG9yaXpvbnRhbC0xIn0=
+0.68 0.72 0.79 XA
+0.9 w
+48 262 m
+564 262 L
+S
+%AI7_Tag: (subscription-comparison.grid.horizontal-2)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmdyaWQuaG9yaXpvbnRhbC0yIn0=
+0.68 0.72 0.79 XA
+0.9 w
+48 218 m
+564 218 L
+S
+%AI7_Tag: (subscription-comparison.grid.horizontal-3)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmdyaWQuaG9yaXpvbnRhbC0zIn0=
+0.68 0.72 0.79 XA
+0.9 w
+48 174 m
+564 174 L
+S
+%AI7_Tag: (subscription-comparison.grid.horizontal-4)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmdyaWQuaG9yaXpvbnRhbC00In0=
+0.68 0.72 0.79 XA
+0.9 w
+48 130 m
+564 130 L
+S
+%AI7_Tag: (subscription-comparison.grid.horizontal-5)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmdyaWQuaG9yaXpvbnRhbC01In0=
+0.68 0.72 0.79 XA
+0.9 w
+48 86 m
+564 86 L
+S
+%AI7_Tag: (subscription-comparison.grid.vertical-0)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmdyaWQudmVydGljYWwtMCJ9
+0.68 0.72 0.79 XA
+0.9 w
+48 300 m
+48 86 L
+S
+%AI7_Tag: (subscription-comparison.grid.vertical-1)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmdyaWQudmVydGljYWwtMSJ9
+0.68 0.72 0.79 XA
+0.9 w
+238 300 m
+238 86 L
+S
+%AI7_Tag: (subscription-comparison.grid.vertical-2)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmdyaWQudmVydGljYWwtMiJ9
+0.68 0.72 0.79 XA
+0.9 w
+348 300 m
+348 86 L
+S
+%AI7_Tag: (subscription-comparison.grid.vertical-3)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmdyaWQudmVydGljYWwtMyJ9
+0.68 0.72 0.79 XA
+0.9 w
+438 300 m
+438 86 L
+S
+%AI7_Tag: (subscription-comparison.grid.vertical-4)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InN1YnNjcmlwdGlvbi1jb21wYXJpc29uLmdyaWQudmVydGljYWwtNCJ9
+0.68 0.72 0.79 XA
+0.9 w
+564 300 m
+564 86 L
+S
+%%py-ai-text-id: (subscription-comparison.header.plan)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Header: Plan)
+0 A
+0 To
+1 0 0 1 60 277.4 0 Tp
+TP
+1 0 0 1 60 277.4 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 12 0 0 Tf
+(Plan) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.header.category)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Header: Type)
+0 A
+0 To
+1 0 0 1 279.62 277.4 0 Tp
+TP
+1 0 0 1 279.62 277.4 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 12 0 0 Tf
+(Type) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.header.seats)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Header: Seats)
+0 A
+0 To
+1 0 0 1 395.64 277.4 0 Tp
+TP
+1 0 0 1 395.64 277.4 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 12 0 0 Tf
+(Seats) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.header.monthly)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Header: Monthly)
+0 A
+0 To
+1 0 0 1 509.64 277.4 0 Tp
+TP
+1 0 0 1 509.64 277.4 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 12 0 0 Tf
+(Monthly) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-0.plan)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Row 1: Plan)
+0 A
+0 To
+1 0 0 1 60 236.7 0 Tp
+TP
+1 0 0 1 60 236.7 Tm
+0 Tr
+0.12 0.15 0.2 Xa
+/Helvetica 11 0 0 Tf
+(Starter) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-0.category)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Row 1: Type)
+0 A
+0 To
+1 0 0 1 279.085 236.7 0 Tp
+TP
+1 0 0 1 279.085 236.7 Tm
+0 Tr
+0.12 0.15 0.2 Xa
+/Helvetica 11 0 0 Tf
+(Basic) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-0.seats)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Row 1: Seats)
+0 A
+0 To
+1 0 0 1 419.84 236.7 0 Tp
+TP
+1 0 0 1 419.84 236.7 Tm
+0 Tr
+0.12 0.15 0.2 Xa
+/Helvetica 11 0 0 Tf
+(3) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-0.monthly)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Row 1: Monthly)
+0 A
+0 To
+1 0 0 1 533.52 236.7 0 Tp
+TP
+1 0 0 1 533.52 236.7 Tm
+0 Tr
+0.12 0.15 0.2 Xa
+/Helvetica 11 0 0 Tf
+($29) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-1.plan)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Row 2: Plan)
+0 A
+0 To
+1 0 0 1 60 192.7 0 Tp
+TP
+1 0 0 1 60 192.7 Tm
+0 Tr
+0.12 0.15 0.2 Xa
+/Helvetica 11 0 0 Tf
+(Studio) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-1.category)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Row 2: Type)
+0 A
+0 To
+1 0 0 1 274.575 192.7 0 Tp
+TP
+1 0 0 1 274.575 192.7 Tm
+0 Tr
+0.12 0.15 0.2 Xa
+/Helvetica 11 0 0 Tf
+(Popular) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-1.seats)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Row 2: Seats)
+0 A
+0 To
+1 0 0 1 413.68 192.7 0 Tp
+TP
+1 0 0 1 413.68 192.7 Tm
+0 Tr
+0.12 0.15 0.2 Xa
+/Helvetica 11 0 0 Tf
+(12) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-1.monthly)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Row 2: Monthly)
+0 A
+0 To
+1 0 0 1 533.52 192.7 0 Tp
+TP
+1 0 0 1 533.52 192.7 Tm
+0 Tr
+0.12 0.15 0.2 Xa
+/Helvetica 11 0 0 Tf
+($89) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-2.plan)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Row 3: Plan)
+0 A
+0 To
+1 0 0 1 60 148.7 0 Tp
+TP
+1 0 0 1 60 148.7 Tm
+0 Tr
+0.12 0.15 0.2 Xa
+/Helvetica 11 0 0 Tf
+(Agency) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-2.category)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Row 3: Type)
+0 A
+0 To
+1 0 0 1 284.805 148.7 0 Tp
+TP
+1 0 0 1 284.805 148.7 Tm
+0 Tr
+0.12 0.15 0.2 Xa
+/Helvetica 11 0 0 Tf
+(Pro) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-2.seats)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Row 3: Seats)
+0 A
+0 To
+1 0 0 1 413.68 148.7 0 Tp
+TP
+1 0 0 1 413.68 148.7 Tm
+0 Tr
+0.12 0.15 0.2 Xa
+/Helvetica 11 0 0 Tf
+(30) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-2.monthly)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Row 3: Monthly)
+0 A
+0 To
+1 0 0 1 527.36 148.7 0 Tp
+TP
+1 0 0 1 527.36 148.7 Tm
+0 Tr
+0.12 0.15 0.2 Xa
+/Helvetica 11 0 0 Tf
+($199) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-3.plan)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Row 4: Plan)
+0 A
+0 To
+1 0 0 1 60 104.7 0 Tp
+TP
+1 0 0 1 60 104.7 Tm
+0 Tr
+0.18 0.12 0.03 Xa
+/Helvetica 11 0 0 Tf
+(Annual total) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-3.category)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Row 4: Type)
+0 A
+0 To
+1 0 0 1 277.435 104.7 0 Tp
+TP
+1 0 0 1 277.435 104.7 Tm
+0 Tr
+0.18 0.12 0.03 Xa
+/Helvetica 11 0 0 Tf
+(Studio) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-3.seats)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Row 4: Seats)
+0 A
+0 To
+1 0 0 1 413.68 104.7 0 Tp
+TP
+1 0 0 1 413.68 104.7 Tm
+0 Tr
+0.18 0.12 0.03 Xa
+/Helvetica 11 0 0 Tf
+(12) Tx
+TO
+%%py-ai-text-id: (subscription-comparison.row-3.monthly)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Row 4: Monthly)
+0 A
+0 To
+1 0 0 1 517.9 104.7 0 Tp
+TP
+1 0 0 1 517.9 104.7 Tm
+0 Tr
+0.18 0.12 0.03 Xa
+/Helvetica 11 0 0 Tf
+($1,068) Tx
+TO
+LB
+%AI5_EndLayer
+%%Trailer
+%%EOF

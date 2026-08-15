@@ -39,6 +39,8 @@ uv run py-ai test-illustrator-roundtrip examples/cmyk-curve.ai
 uv run py-ai test-illustrator-roundtrip examples/compound-path.ai
 uv run py-ai test-illustrator-roundtrip examples/clipping-group.ai
 uv run py-ai test-illustrator-roundtrip examples/mixed-stack.ai
+uv run py-ai test-illustrator examples/styled-table.ai
+uv run py-ai test-illustrator-roundtrip examples/styled-table.ai
 ```
 
 調査用にIllustrator生成AIを残す場合は、既存ファイルではない出力先を指定します。上書きは拒否されます。
@@ -72,6 +74,7 @@ uv run py-ai test-illustrator examples/rectangle.ai \
 
 - layer数とlayer名
 - path item数
+- text frame数
 - 各pathのanchor数
 - closed / filled / strokedの個数
 
@@ -86,12 +89,15 @@ uv run py-ai test-illustrator examples/rectangle.ai \
 - anchor間の相対座標と、anchorに対するBézier handleの相対座標
 - stroke width
 - RGB/CMYK process color
+- point textの内容、size、fill、相対配置
 
 Illustratorはlegacy AIを開く際にdocument原点を移動することがあるため、path全体の平行移動は正規化します。RGBはIllustratorの8-bit値への量子化を許容します。
 
 pathの安定IDと名前はAI7仕様の`%AI3_Note` path属性へ`py-ai:`接頭辞付きのASCII payloadとして格納します。Illustrator 30.7.0では通常path、compound subpath、clipping mask/contentのDOMへ読み込まれ、AI8再保存後も復元・照合できました。仕様上noteは254文字までなので、payloadが上限を超える場合は従来の独自コメントだけへフォールバックします。
 
 現在、独自DSCコメントだけで保持しているdocument metadata、layer ID、compound/clipping containerのID・名前はIllustratorのAI8再保存で除去されます。また、document titleとboundsは保存先名とartwork boundsに変わります。これらは既知のlossとしてレポートの意味合格判定から除外しています。
+
+legacy point textではfont名が環境既定へ置換され、paragraph alignmentがleftへ正規化されることを確認しています。この2項目は`advisory_checks`へ分離し、文字内容・size・fill・相対配置は必須判定に残します。表rendererは中央・右揃えをpoint textの原点位置へ展開します。
 
 ## 確認済み環境
 
@@ -104,6 +110,8 @@ pathの安定IDと名前はAI7仕様の`%AI3_Note` path属性へ`py-ai:`接頭�
 | `examples/compound-path.ai` | 1 layer / 1 compound / 2 component paths | 8 anchors、正負polarity、RGB fill |
 | `examples/clipping-group.ai` | 1 layer / 1 clipped group / mask + content | mask 4 anchors、content 4 anchors、RGB fill |
 | `examples/mixed-stack.ai` | clipping / path / compoundの混在 | DOM top-to-bottom順、5 paths、3 container種別 |
+| `examples/point-text.ai` | 1 layer / 1 point text | TextFrame、内容、size 14、RGB fill |
+| `examples/styled-table.ai` | 1 layer / 16 paths / 20 point texts | 5背景、11罫線、20セル、612×360 artboard |
 
 逆方向も同じ環境で確認済みです。
 
@@ -111,6 +119,7 @@ pathの安定IDと名前はAI7仕様の`%AI3_Note` path属性へ`py-ai:`接頭�
 | --- | --- |
 | `rgb-rectangle` | legacy AI検出、1 layer、4 anchors、closed、RGB fill/stroke、stroke width 3 |
 | `cmyk-curve` | legacy AI検出、1 layer、2 anchors、open、Bézier方向点、CMYK stroke、stroke width 4 |
+| `point-text` | legacy AI検出、文字列、size 14、RGB fill |
 
 完全往復も両fixtureで`passed`です。RGB矩形は全体が平行移動しRGB値が8-bitへ量子化されましたが、正規化後のpath geometryとpaint属性は一致しました。CMYK Bézierはanchor・handle・CMYK値・stroke widthが保持されました。両方ともpath ID・名前も保持されました。
 
@@ -119,5 +128,7 @@ compound pathも完全往復で`passed`です。比較器はcontainer数、compo
 clipping groupも完全往復で`passed`です。比較器はclipping container数、content数、maskとcontent双方のgeometry・paint属性を照合します。
 
 mixed stackも完全往復で`passed`です。IRの`item_order`はAIのback-to-front描画順を保持し、Illustrator DOMのpage item列は逆向きのtop-to-bottom順として照合します。AI8再保存後もcontainer種別順が一致しました。
+
+styled tableも必須項目の完全往復で`passed`です。文字font名とalignmentのadvisory lossを除き、16 paths、20 texts、内容、size、fill、相対配置、罫線geometry、RGB色、stackingが一致しました。
 
 これは記載したfixtureと機能subsetの適合結果です。任意のAI7ファイルや未対応機能の互換性を保証するものではありません。

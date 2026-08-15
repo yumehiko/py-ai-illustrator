@@ -8,7 +8,9 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 - 基本的な document / layer / path / Bézier handle / RGB・CMYK process color の Python IR
 - 複数subpathとpolarityを保持するcompound path IR
 - mask pathとcontent pathsを保持するclipping group IR
+- editable point textの内容・位置・サイズ・色・整列要求を持つtext IR
 - 通常path・compound・clippingの混在した描画順を保持するlayer `item_order`
+- Pythonの行データ・列・formatter・variant・共有styleから表をrenderする`Table`
 - 未知行や非UTF-8 byteを変更せず、物理行のbyte spanを索引化するlossless source prototype
 - 公開仕様に沿った Illustrator 7 互換サブセットと JSON IR の往復変換
 - `inspect` / `export` / `validate` / `test-illustrator` CLI
@@ -23,6 +25,14 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 JSONはIllustratorファイルを作るための唯一の記述言語ではありません。複雑な制作物では、Pythonのcomponentやtemplateが意味・規則・再利用可能な体裁を表現し、JSON化可能なグラフィックIRへrenderします。JSON IRはfixture、debug、semantic diff、言語間交換のための中間表現です。
 
 パラメトリック制作ではPython sourceと入力データ、既存ファイル編集では元の`.ai`をsource of truthとします。また、geometry等を保つ「グラフィック往復」と、表や商品カードの役割まで保つ「意味の往復」を区別します。詳細は[オーサリングモデル](docs/authoring-model.md)を参照してください。
+
+スタイル付き表の実装例は [examples/styled_table.py](examples/styled_table.py) です。JSONを手書きせず、行の`kind`、金額formatter、列幅、整列、header/body/variant配色、余白、罫線、書体要求をPythonで定義します。
+
+```bash
+uv run python examples/styled_table.py
+uv run py-ai test-illustrator examples/styled-table.ai
+uv run py-ai test-illustrator-roundtrip examples/styled-table.ai
+```
 
 ## セットアップ
 
@@ -93,11 +103,16 @@ uv run py-ai test-illustrator examples/compound-path.ai
 uv run py-ai test-illustrator examples/clipping-group.ai
 uv run py-ai test-illustrator examples/mixed-stack.ai
 uv run py-ai test-illustrator-roundtrip examples/mixed-stack.ai
+uv run py-ai test-illustrator-export --fixture point-text
+uv run py-ai test-illustrator examples/styled-table.ai
+uv run py-ai test-illustrator-roundtrip examples/styled-table.ai
 ```
 
-同梱fixtureをIllustratorで開く方向に加え、Illustrator自身が作成・AI8保存したfixtureをPython IRへ読む方向も確認済みです。layer/path/anchor、開閉、塗り・線、Bézier方向点、RGB/CMYK属性を照合します。これは現在の限定subsetに対する結果で、任意のAIファイルの完全互換を意味しません。
+同梱fixtureをIllustratorで開く方向に加え、Illustrator自身が作成・AI8保存したfixtureをPython IRへ読む方向も確認済みです。layer/path/anchor、開閉、塗り・線、Bézier方向点、RGB/CMYK属性、point textを照合します。これは現在の限定subsetに対する結果で、任意のAIファイルの完全互換を意味しません。
 
 完全往復ではIllustratorによるdocument原点の移動を正規化し、RGBの8-bit量子化を許容して意味属性を比較します。pathの安定IDと名前は標準の`%AI3_Note` path属性へ埋め込み、Illustrator 30.7.0でのAI8再保存後も照合します。layer/containerのID・名前とdocument metadataはまだ比較対象外です。
+
+legacy point textは現在ASCII出力に限定しています。内容・サイズ・色・配置はIllustrator再保存後も保持されますが、現行IllustratorがAI8互換保存時にfont名を環境既定へ置換し、point textのparagraph alignmentをleftへ正規化するため、この2項目はadvisoryです。表rendererは中央・右揃えを文字原点へ展開し、見た目の配置を保持します。
 
 初期 reader は、直線・3次Bézierからなる基本 path を対象にしています。compound pathやclippingを含む任意のlegacy AIを完全に読める段階ではありません。入力は上書きせず、出力先を明示してください。
 
