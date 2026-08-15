@@ -66,11 +66,14 @@
 - dry-run と impact report
 - before/after semantic diff
 - プレビューを含む agent workflow
+- Python component / templateからIRへのdeterministic render境界
+- semantic metadataとsidecar manifest
 
 終了条件:
 
 - 「ロゴの色変更」「見出し差し替え」「レイヤー移動」などの標準シナリオを、自然言語から安全に実行できる
 - 同名 node が複数ある場合に誤編集せず停止できる
+- Pythonで定義した表やカードのvariantを、共有styleから再現可能に生成できる
 
 ## Phase 4: modern AI patch writer
 

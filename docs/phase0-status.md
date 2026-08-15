@@ -37,6 +37,9 @@ legacy .ai bytes
 - 形式判定は拡張子ではなく `%PDF-` / `%!PS-Adobe` と Illustrator marker を使う。
 - 大きな入力を無制限に読み込まないよう、形式判定の探索は先頭・末尾それぞれ 4 MiB に制限する。
 - JSON IR のpath ID・名前は独自コメントに加え、IllustratorがAI8再保存でも保持する標準`%AI3_Note` path属性へ格納する。
+- JSONはIRのserialization、fixture、debug、semantic diff、交換境界に使い、複雑なデザインの主たる手書き言語にはしない。
+- domain固有の意味や再利用規則はPython component/templateで表現し、汎用グラフィックIRへ決定的にrenderする。
+- 一般の`.ai`から「価格表」「商品カード」等の意味を根拠なく推測しない。意味往復には安定ID、metadata、sidecar、元Python sourceとの対応が必要。
 - layer/containerのID・名前とdocument metadataは、現時点では他のPostScript readerが無視できる独自DSCコメントだけで保持する。
 - 未対応の現代AIをPDF内容だけでJSON化したように見せず、CLIを失敗させる。
 
@@ -45,7 +48,8 @@ legacy .ai bytes
 1. Illustrator再保存をまたぐlayer/container IDとdocument metadataの保持方式を調査する。
 2. 実装済みのoperator span/local patch primitiveをnode source spanとtyped editへ接続する。
 3. text/image/nested groupの次期feature profileを決める。
-4. 検証対象とするIllustratorバージョンの範囲を広げる。
+4. Python componentからIRへの最小render protocolとsemantic metadata manifestを設計する。
+5. 検証対象とするIllustratorバージョンの範囲を広げる。
 
 終了条件のうち、Python内の `IR -> AI7 -> IR` と、Illustrator 30.7.0でfixtureを開いた際の編集構造検査は完了しました。対応範囲はまだ小さいため、AI7 writer全体の位置付けは引き続き experimental です。
 

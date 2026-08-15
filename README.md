@@ -18,6 +18,12 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 
 現代版 AI の意味解析と書き戻しはまだ実装していません。ファイル拡張子を変えただけの PDF を「AI writer」と呼ばず、対応範囲を明示して段階的に広げます。
 
+## オーサリング方針
+
+JSONはIllustratorファイルを作るための唯一の記述言語ではありません。複雑な制作物では、Pythonのcomponentやtemplateが意味・規則・再利用可能な体裁を表現し、JSON化可能なグラフィックIRへrenderします。JSON IRはfixture、debug、semantic diff、言語間交換のための中間表現です。
+
+パラメトリック制作ではPython sourceと入力データ、既存ファイル編集では元の`.ai`をsource of truthとします。また、geometry等を保つ「グラフィック往復」と、表や商品カードの役割まで保つ「意味の往復」を区別します。詳細は[オーサリングモデル](docs/authoring-model.md)を参照してください。
+
 ## セットアップ
 
 Python 3.11 以降と [uv](https://docs.astral.sh/uv/) を使います。
@@ -99,6 +105,7 @@ uv run py-ai test-illustrator-roundtrip examples/mixed-stack.ai
 
 - [実現可能性調査](docs/feasibility.md)
 - [推奨アーキテクチャ](docs/architecture.md)
+- [オーサリングモデル](docs/authoring-model.md)
 - [開発ロードマップ](docs/roadmap.md)
 - [調査ソース](docs/sources.md)
 - [Phase 0 の実装状況](docs/phase0-status.md)

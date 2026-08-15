@@ -7,17 +7,19 @@
 3. reader / model / writer / renderer / validator を分離する
 4. 「見た目を保つ」と「編集意味を保つ」を別々に検証する
 5. エージェントには低レベル token 操作ではなく、安全な高レベル操作を公開する
+6. Python意味モデル、JSON化可能なグラフィックIR、Illustrator sourceを分離する
+7. JSON手書きをすべてのオーサリングworkflowへ強制しない
+
+意味モデルとsource of truthの詳細は[オーサリングモデル](authoring-model.md)に定義します。
 
 ## レイヤー構成
 
 ```text
-.ai bytes
-  -> format detector
-  -> container reader (legacy PS/EPS or PDF)
-  -> private-data extractor
-  -> lossless syntax tree
-  -> Illustrator document IR
-  -> edit operations / agent tools
+Python design components + input data -> deterministic render --.
+                                                               +-> Illustrator document IR
+.ai bytes -> format/container reader -> lossless syntax tree --'          |
+                                                                          v
+  edit operations / agent tools
   -> writer(s)
        |- AI7/AI8 writer
        |- PDF/SVG writer
@@ -28,6 +30,7 @@
 ## Python IR
 
 最初の IR は Illustrator の全 API を模倣せず、安定した共通部分に絞ります。
+IRはJSONへserializeできますが、JSON自体を複雑なデザインの主たるオーサリング言語とはしません。domain固有のcomponentはPython側でIRへrenderします。
 
 ```python
 Document
