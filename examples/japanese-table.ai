@@ -1,0 +1,421 @@
+%!PS-Adobe-3.0
+%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)
+%%Title: (Python-authored Japanese schedule)
+%%BoundingBox: 0 0 560 380
+%%HiResBoundingBox: 0 0 560 380
+%%DocumentProcessColors: Cyan Magenta Yellow Black
+%AI5_FileFormat 3.0
+%AI3_ColorUsage: Color
+%AI3_TemplateBox: 280 570 280 570
+%AI3_DocumentPreview: None
+%AI5_ArtSize: 560 380
+%AI5_RulerUnits: 2
+%AI5_ArtFlags: 0 0 0 1 0 0 1 0 0
+%AI5_NumLayers: 1
+%%PageOrigin:0 0
+%%py-ai-metadata: eyJzb3VyY2UiOiJleGFtcGxlcy9qYXBhbmVzZV90YWJsZS5weSIsImNvbXBvbmVudCI6IlRhYmxlIiwiZW5jb2RpbmciOiJjcDkzMiJ9
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+%AI3_BeginEncoding: _KozGoPr6N-Regular-83pv-RKSJ-H KozGoPr6N-Regular-83pv-RKSJ-H
+[/_KozGoPr6N-Regular-83pv-RKSJ-H/KozGoPr6N-Regular-83pv-RKSJ-H 0 1 0 TZ
+%AI3_EndEncoding AdobeType
+%%EndSetup
+%AI5_BeginLayer
+%%py-ai-layer-id: (event-schedule.layer)
+1 1 1 1 0 0 0 79 128 255 Lb
+(Japanese schedule) Ln
+%AI7_Tag: (event-schedule.background.header)
+%%py-ai-path-name: (event-schedule.background.header)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmJhY2tncm91bmQuaGVhZGVyIiwibmFtZSI6ImV2ZW50LXNjaGVkdWxlLmJhY2tncm91bmQuaGVhZGVyIn0=
+0.12 0.15 0.25 Xa
+1 w
+40 294 m
+520 294 L
+520 330 L
+40 330 L
+40 294 L
+f
+%AI7_Tag: (event-schedule.background.row-0)
+%%py-ai-path-name: (event-schedule.background.row-0)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmJhY2tncm91bmQucm93LTAiLCJuYW1lIjoiZXZlbnQtc2NoZWR1bGUuYmFja2dyb3VuZC5yb3ctMCJ9
+1 1 1 Xa
+1 w
+40 252.15 m
+520 252.15 L
+520 294 L
+40 294 L
+40 252.15 L
+f
+%AI7_Tag: (event-schedule.background.row-1)
+%%py-ai-path-name: (event-schedule.background.row-1)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmJhY2tncm91bmQucm93LTEiLCJuYW1lIjoiZXZlbnQtc2NoZWR1bGUuYmFja2dyb3VuZC5yb3ctMSJ9
+0.89 0.95 1 Xa
+1 w
+40 210.3 m
+520 210.3 L
+520 252.15 L
+40 252.15 L
+40 210.3 L
+f
+%AI7_Tag: (event-schedule.background.row-2)
+%%py-ai-path-name: (event-schedule.background.row-2)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmJhY2tncm91bmQucm93LTIiLCJuYW1lIjoiZXZlbnQtc2NoZWR1bGUuYmFja2dyb3VuZC5yb3ctMiJ9
+1 1 1 Xa
+1 w
+40 168.45 m
+520 168.45 L
+520 210.3 L
+40 210.3 L
+40 168.45 L
+f
+%AI7_Tag: (event-schedule.background.row-3)
+%%py-ai-path-name: (event-schedule.background.row-3)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmJhY2tncm91bmQucm93LTMiLCJuYW1lIjoiZXZlbnQtc2NoZWR1bGUuYmFja2dyb3VuZC5yb3ctMyJ9
+1 0.94 0.75 Xa
+1 w
+40 130.45 m
+520 130.45 L
+520 168.45 L
+40 168.45 L
+40 130.45 L
+f
+%AI7_Tag: (event-schedule.grid.horizontal-0)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQuaG9yaXpvbnRhbC0wIn0=
+0.65 0.7 0.78 XA
+0.8 w
+40 330 m
+520 330 L
+S
+%AI7_Tag: (event-schedule.grid.horizontal-1)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQuaG9yaXpvbnRhbC0xIn0=
+0.65 0.7 0.78 XA
+0.8 w
+40 294 m
+520 294 L
+S
+%AI7_Tag: (event-schedule.grid.horizontal-2)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQuaG9yaXpvbnRhbC0yIn0=
+0.65 0.7 0.78 XA
+0.8 w
+40 252.15 m
+520 252.15 L
+S
+%AI7_Tag: (event-schedule.grid.horizontal-3)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQuaG9yaXpvbnRhbC0zIn0=
+0.65 0.7 0.78 XA
+0.8 w
+40 210.3 m
+520 210.3 L
+S
+%AI7_Tag: (event-schedule.grid.horizontal-4)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQuaG9yaXpvbnRhbC00In0=
+0.65 0.7 0.78 XA
+0.8 w
+40 168.45 m
+520 168.45 L
+S
+%AI7_Tag: (event-schedule.grid.horizontal-5)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQuaG9yaXpvbnRhbC01In0=
+0.65 0.7 0.78 XA
+0.8 w
+40 130.45 m
+520 130.45 L
+S
+%AI7_Tag: (event-schedule.grid.vertical-0)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQudmVydGljYWwtMCJ9
+0.65 0.7 0.78 XA
+0.8 w
+40 330 m
+40 130.45 L
+S
+%AI7_Tag: (event-schedule.grid.vertical-1)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQudmVydGljYWwtMSJ9
+0.65 0.7 0.78 XA
+0.8 w
+114 330 m
+114 130.45 L
+S
+%AI7_Tag: (event-schedule.grid.vertical-2)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQudmVydGljYWwtMiJ9
+0.65 0.7 0.78 XA
+0.8 w
+226 330 m
+226 130.45 L
+S
+%AI7_Tag: (event-schedule.grid.vertical-3)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQudmVydGljYWwtMyJ9
+0.65 0.7 0.78 XA
+0.8 w
+520 330 m
+520 130.45 L
+S
+%%py-ai-text-id: (event-schedule.header.time)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name-utf8: SGVhZGVyOiDmmYLliLs=
+0 A
+0 To
+1 0 0 1 79 308.4 0 Tp
+TP
+1 0 0 1 79 308.4 Tm
+0 Tr
+1 1 1 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 12 0 0 Tf
+(\216\236\215\217) Tx
+TO
+%%py-ai-text-id: (event-schedule.header.category)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name-utf8: SGVhZGVyOiDljLrliIY=
+0 A
+0 To
+1 0 0 1 158 308.4 0 Tp
+TP
+1 0 0 1 158 308.4 Tm
+0 Tr
+1 1 1 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 12 0 0 Tf
+(\213\346\225\252) Tx
+TO
+%%py-ai-text-id: (event-schedule.header.description)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name-utf8: SGVhZGVyOiDlhoXlrrk=
+0 A
+0 To
+1 0 0 1 237 308.4 0 Tp
+TP
+1 0 0 1 237 308.4 Tm
+0 Tr
+1 1 1 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 12 0 0 Tf
+(\223\340\227e) Tx
+TO
+%%py-ai-text-id: (event-schedule.row-0.time)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name-utf8: Um93IDE6IOaZguWIuw==
+0 A
+0 To
+1 0 0 1 75.06 269.775 0 Tp
+TP
+1 0 0 1 75.06 269.775 Tm
+0 Tr
+0.12 0.14 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+(09:00) Tx
+TO
+%%py-ai-text-id: (event-schedule.row-0.category)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name-utf8: Um93IDE6IOWMuuWIhg==
+0 A
+0 To
+1 0 0 1 159 269.775 0 Tp
+TP
+1 0 0 1 159 269.775 Tm
+0 Tr
+0.12 0.14 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+(\212J\217\352) Tx
+TO
+%%py-ai-text-id: (event-schedule.row-0.description.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name-utf8: Um93IDE6IOWGheWuuQ==
+0 A
+0 To
+1 0 0 1 237 277.2 0 Tp
+TP
+1 0 0 1 237 277.2 Tm
+0 Tr
+0.12 0.14 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+(\216\363\225t\202\360\212J\216n\202\265\202\334\202\267\201B\216\221\227\277\202\360\216\363\202\257\216\346\202\301\202\304\211\357\217\352\202\326\202\250\220i\202\335\202\255) Tx
+TO
+%%py-ai-text-id: (event-schedule.row-0.description.line-1)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name-utf8: Um93IDE6IOWGheWuuQ==
+0 A
+0 To
+1 0 0 1 237 262.35 0 Tp
+TP
+1 0 0 1 237 262.35 Tm
+0 Tr
+0.12 0.14 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+(\202\276\202\263\202\242\201B) Tx
+TO
+%%py-ai-text-id: (event-schedule.row-1.time)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name-utf8: Um93IDI6IOaZguWIuw==
+0 A
+0 To
+1 0 0 1 75.06 227.925 0 Tp
+TP
+1 0 0 1 75.06 227.925 Tm
+0 Tr
+0.12 0.14 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+(10:00) Tx
+TO
+%%py-ai-text-id: (event-schedule.row-1.category)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name-utf8: Um93IDI6IOWMuuWIhg==
+0 A
+0 To
+1 0 0 1 148 227.925 0 Tp
+TP
+1 0 0 1 148 227.925 Tm
+0 Tr
+0.12 0.14 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+(\212\356\222\262\215u\211\211) Tx
+TO
+%%py-ai-text-id: (event-schedule.row-1.description.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name-utf8: Um93IDI6IOWGheWuuQ==
+0 A
+0 To
+1 0 0 1 237 235.35 0 Tp
+TP
+1 0 0 1 237 235.35 Tm
+0 Tr
+0.12 0.14 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+(Python\202\306Illustrator\202\360\202\302\202\310\202\256\201A\225\266\226\254\202\360\216\235\202\301\202\275\203f\203U\203C\203\223\220\247) Tx
+TO
+%%py-ai-text-id: (event-schedule.row-1.description.line-1)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name-utf8: Um93IDI6IOWGheWuuQ==
+0 A
+0 To
+1 0 0 1 237 220.5 0 Tp
+TP
+1 0 0 1 237 220.5 Tm
+0 Tr
+0.12 0.14 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+(\215\354\202\314\215l\202\246\225\373) Tx
+TO
+%%py-ai-text-id: (event-schedule.row-2.time)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name-utf8: Um93IDM6IOaZguWIuw==
+0 A
+0 To
+1 0 0 1 75.06 186.075 0 Tp
+TP
+1 0 0 1 75.06 186.075 Tm
+0 Tr
+0.12 0.14 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+(13:30) Tx
+TO
+%%py-ai-text-id: (event-schedule.row-2.category)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name-utf8: Um93IDM6IOWMuuWIhg==
+0 A
+0 To
+1 0 0 1 131.5 186.075 0 Tp
+TP
+1 0 0 1 131.5 186.075 Tm
+0 Tr
+0.12 0.14 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+(\203\217\201[\203N\203V\203\207\203b\203v) Tx
+TO
+%%py-ai-text-id: (event-schedule.row-2.description.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name-utf8: Um93IDM6IOWGheWuuQ==
+0 A
+0 To
+1 0 0 1 237 193.5 0 Tp
+TP
+1 0 0 1 237 193.5 Tm
+0 Tr
+0.12 0.14 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+(\213\244\227L\203X\203^\203C\203\213\202\251\202\347\225\241\220\224\216\355\227\336\202\314\225\\\202\360\220\266\220\254\202\265\201A\214\213\211\312\202\360\224\344\212r) Tx
+TO
+%%py-ai-text-id: (event-schedule.row-2.description.line-1)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name-utf8: Um93IDM6IOWGheWuuQ==
+0 A
+0 To
+1 0 0 1 237 178.65 0 Tp
+TP
+1 0 0 1 237 178.65 Tm
+0 Tr
+0.12 0.14 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+(\202\265\202\334\202\267\201B) Tx
+TO
+%%py-ai-text-id: (event-schedule.row-3.time)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name-utf8: Um93IDQ6IOaZguWIuw==
+0 A
+0 To
+1 0 0 1 75.06 146.15 0 Tp
+TP
+1 0 0 1 75.06 146.15 Tm
+0 Tr
+0.12 0.14 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+(17:00) Tx
+TO
+%%py-ai-text-id: (event-schedule.row-3.category)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name-utf8: Um93IDQ6IOWMuuWIhg==
+0 A
+0 To
+1 0 0 1 159 146.15 0 Tp
+TP
+1 0 0 1 159 146.15 Tm
+0 Tr
+0.12 0.14 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+(\217I\227\271) Tx
+TO
+%%py-ai-text-id: (event-schedule.row-3.description)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name-utf8: Um93IDQ6IOWGheWuuQ==
+0 A
+0 To
+1 0 0 1 237 146.15 0 Tp
+TP
+1 0 0 1 237 146.15 Tm
+0 Tr
+0.12 0.14 0.2 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 11 0 0 Tf
+(\220\266\220\254\202\265\202\275AI\203f\201[\203^\202\315\216\251\227R\202\311\225\322\217W\202\265\202\304\216\235\202\277\213A\202\352\202\334\202\267\201B) Tx
+TO
+LB
+%AI5_EndLayer
+%%Trailer
+%%EOF

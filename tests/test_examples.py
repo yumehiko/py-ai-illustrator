@@ -15,3 +15,17 @@ def test_generated_styled_table_contains_editable_cells_and_visual_rules() -> No
     assert layer.text_frames[0].text == "Plan"
     assert layer.text_frames[-1].text == "$1,068"
     assert layer.text_frames[-1].alignment == "right"
+
+
+def test_generated_japanese_table_preserves_wrapped_unicode_text() -> None:
+    example = Path(__file__).parents[1] / "examples" / "japanese-table.ai"
+    document = load_ai7(example)
+    layer = document.layers[0]
+
+    assert document.metadata["encoding"] == "cp932"
+    assert len(layer.paths) == 15
+    assert len(layer.text_frames) == 18
+    assert [text.text for text in layer.text_frames[:3]] == ["時刻", "区分", "内容"]
+    assert "".join(text.text for text in layer.text_frames[5:7]) == (
+        "受付を開始します。資料を受け取って会場へお進みください。"
+    )

@@ -419,6 +419,25 @@ def _build_export_javascript(destination: Path, fixture: str) -> str:
         textFill.blue = 77;
         text.textRange.characterAttributes.fillColor = textFill;
 """
+    elif fixture == "unicode-text":
+        fixture_javascript = """
+        documentRef = app.documents.add(DocumentColorSpace.RGB, 420, 240);
+        var layer = documentRef.layers[0];
+        layer.name = "Illustrator Native Unicode";
+
+        var text = layer.textFrames.add();
+        text.name = "Native Japanese Table Header";
+        text.contents = String.fromCharCode(
+            26085, 26412, 35486, 12398, 34920, 35211, 20986, 12375
+        );
+        text.position = [40, 180];
+        text.textRange.characterAttributes.size = 16;
+        var textFill = new RGBColor();
+        textFill.red = 26;
+        textFill.green = 51;
+        textFill.blue = 77;
+        text.textRange.characterAttributes.fillColor = textFill;
+"""
     else:
         raise ValueError(f"Unknown Illustrator fixture: {fixture}")
     return f"""#target illustrator
@@ -818,6 +837,7 @@ def run_illustrator_export_test(
         "compound-path",
         "clipping-group",
         "point-text",
+        "unicode-text",
     }:
         return {"status": "invalid-input", "error": f"Unknown fixture: {fixture}"}
 
@@ -882,6 +902,7 @@ def run_illustrator_export_test(
             "compound-path": "Illustrator Native Compound",
             "clipping-group": "Illustrator Native Clipping",
             "point-text": "Illustrator Native Text",
+            "unicode-text": "Illustrator Native Unicode",
         }[fixture]
         checks: dict[str, bool] = {
             "legacy_ai_detected": format_report.format is FileFormat.LEGACY_AI,
@@ -894,7 +915,7 @@ def run_illustrator_export_test(
                 2
                 if fixture in {"compound-path", "clipping-group"}
                 else 0
-                if fixture == "point-text"
+                if fixture in {"point-text", "unicode-text"}
                 else 1
             ),
         }
@@ -955,14 +976,20 @@ def run_illustrator_export_test(
                     and group.paths[0].fill is not None,
                 }
             )
-        elif fixture == "point-text":
+        elif fixture in {"point-text", "unicode-text"}:
             text_frames = _document_text_frames(document)
+            expected_text = (
+                "Table Header" if fixture == "point-text" else "日本語の表見出し"
+            )
+            expected_size = 14.0 if fixture == "point-text" else 16.0
             checks.update(
                 {
                     "text_frame_count": bool(text_frames),
                     "text_contents": "".join(text.text for text in text_frames)
-                    == "Table Header",
-                    "font_size": all(text.font_size == 14.0 for text in text_frames),
+                    == expected_text,
+                    "font_size": all(
+                        text.font_size == expected_size for text in text_frames
+                    ),
                     "rgb_fill": all(
                         isinstance(text.fill, Color) for text in text_frames
                     ),

@@ -28,10 +28,14 @@ JSONはIllustratorファイルを作るための唯一の記述言語ではあ�
 
 スタイル付き表の実装例は [examples/styled_table.py](examples/styled_table.py) です。JSONを手書きせず、行の`kind`、金額formatter、列幅、整列、header/body/variant配色、余白、罫線、書体要求をPythonで定義します。
 
+日本語と長文折り返しの例は [examples/japanese_table.py](examples/japanese_table.py) です。列ごとの`wrap`、東アジア文字幅、複数行の自動行高、CP932/RKSJ font resourceを使います。
+
 ```bash
 uv run python examples/styled_table.py
 uv run py-ai test-illustrator examples/styled-table.ai
 uv run py-ai test-illustrator-roundtrip examples/styled-table.ai
+uv run python examples/japanese_table.py
+uv run py-ai test-illustrator-roundtrip examples/japanese-table.ai
 ```
 
 ## セットアップ
@@ -104,15 +108,18 @@ uv run py-ai test-illustrator examples/clipping-group.ai
 uv run py-ai test-illustrator examples/mixed-stack.ai
 uv run py-ai test-illustrator-roundtrip examples/mixed-stack.ai
 uv run py-ai test-illustrator-export --fixture point-text
+uv run py-ai test-illustrator-export --fixture unicode-text
 uv run py-ai test-illustrator examples/styled-table.ai
 uv run py-ai test-illustrator-roundtrip examples/styled-table.ai
+uv run py-ai test-illustrator examples/japanese-table.ai
+uv run py-ai test-illustrator-roundtrip examples/japanese-table.ai
 ```
 
 同梱fixtureをIllustratorで開く方向に加え、Illustrator自身が作成・AI8保存したfixtureをPython IRへ読む方向も確認済みです。layer/path/anchor、開閉、塗り・線、Bézier方向点、RGB/CMYK属性、point textを照合します。これは現在の限定subsetに対する結果で、任意のAIファイルの完全互換を意味しません。
 
 完全往復ではIllustratorによるdocument原点の移動を正規化し、RGBの8-bit量子化を許容して意味属性を比較します。pathの安定IDと名前は標準の`%AI3_Note` path属性へ埋め込み、Illustrator 30.7.0でのAI8再保存後も照合します。layer/containerのID・名前とdocument metadataはまだ比較対象外です。
 
-legacy point textは現在ASCII出力に限定しています。内容・サイズ・色・配置はIllustrator再保存後も保持されますが、現行IllustratorがAI8互換保存時にfont名を環境既定へ置換し、point textのparagraph alignmentをleftへ正規化するため、この2項目はadvisoryです。表rendererは中央・右揃えを文字原点へ展開し、見た目の配置を保持します。
+legacy point textはASCIIに加え、`RKSJ-H` / `RKSJ-V` fontを明示した日本語CP932の読み書きに対応します。内容・サイズ・色・配置はIllustrator再保存後も保持されます。font環境による置換と、point textのparagraph alignmentがleftへ正規化される場合があるため、この2項目はadvisoryです。表rendererは中央・右揃えを文字原点へ展開し、見た目の配置を保持します。
 
 初期 reader は、直線・3次Bézierからなる基本 path を対象にしています。compound pathやclippingを含む任意のlegacy AIを完全に読める段階ではありません。入力は上書きせず、出力先を明示してください。
 

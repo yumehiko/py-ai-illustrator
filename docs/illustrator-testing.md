@@ -41,6 +41,8 @@ uv run py-ai test-illustrator-roundtrip examples/clipping-group.ai
 uv run py-ai test-illustrator-roundtrip examples/mixed-stack.ai
 uv run py-ai test-illustrator examples/styled-table.ai
 uv run py-ai test-illustrator-roundtrip examples/styled-table.ai
+uv run py-ai test-illustrator examples/japanese-table.ai
+uv run py-ai test-illustrator-roundtrip examples/japanese-table.ai
 ```
 
 調査用にIllustrator生成AIを残す場合は、既存ファイルではない出力先を指定します。上書きは拒否されます。
@@ -112,6 +114,7 @@ legacy point textではfont名が環境既定へ置換され、paragraph alignme
 | `examples/mixed-stack.ai` | clipping / path / compoundの混在 | DOM top-to-bottom順、5 paths、3 container種別 |
 | `examples/point-text.ai` | 1 layer / 1 point text | TextFrame、内容、size 14、RGB fill |
 | `examples/styled-table.ai` | 1 layer / 16 paths / 20 point texts | 5背景、11罫線、20セル、612×360 artboard |
+| `examples/japanese-table.ai` | 1 layer / 15 paths / 18 point texts | CP932日本語、折り返し、自動行高、560×380 artboard |
 
 逆方向も同じ環境で確認済みです。
 
@@ -120,6 +123,7 @@ legacy point textではfont名が環境既定へ置換され、paragraph alignme
 | `rgb-rectangle` | legacy AI検出、1 layer、4 anchors、closed、RGB fill/stroke、stroke width 3 |
 | `cmyk-curve` | legacy AI検出、1 layer、2 anchors、open、Bézier方向点、CMYK stroke、stroke width 4 |
 | `point-text` | legacy AI検出、文字列、size 14、RGB fill |
+| `unicode-text` | RKSJ-H + CP932をUnicode日本語へ復号、size 16、RGB fill |
 
 完全往復も両fixtureで`passed`です。RGB矩形は全体が平行移動しRGB値が8-bitへ量子化されましたが、正規化後のpath geometryとpaint属性は一致しました。CMYK Bézierはanchor・handle・CMYK値・stroke widthが保持されました。両方ともpath ID・名前も保持されました。
 
@@ -130,5 +134,7 @@ clipping groupも完全往復で`passed`です。比較器はclipping container�
 mixed stackも完全往復で`passed`です。IRの`item_order`はAIのback-to-front描画順を保持し、Illustrator DOMのpage item列は逆向きのtop-to-bottom順として照合します。AI8再保存後もcontainer種別順が一致しました。
 
 styled tableも必須項目の完全往復で`passed`です。文字font名とalignmentのadvisory lossを除き、16 paths、20 texts、内容、size、fill、相対配置、罫線geometry、RGB色、stackingが一致しました。
+
+japanese tableも完全往復で`passed`です。18 textsすべての日本語内容、RKSJ font、size、fill、相対配置と、15 pathsのgeometry・paint・stackingが一致しました。IllustratorからPDF/PNG化したpreviewでも文字化け、セル越境、行の重なりがないことを確認しました。
 
 これは記載したfixtureと機能subsetの適合結果です。任意のAI7ファイルや未対応機能の互換性を保証するものではありません。

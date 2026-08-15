@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import re
+from contextlib import suppress
 from pathlib import Path as FilePath
 
 from .lossless import tokenize_legacy
@@ -69,15 +70,33 @@ def _unescape_postscript_string(value: str) -> str:
     return value.replace("\\)", ")").replace("\\(", "(").replace("\\\\", "\\")
 
 
-def _escape_postscript_text(value: str) -> str:
-    if not value.isascii():
+def _text_encoding(font_name: str) -> str:
+    return "cp932" if "RKSJ-" in font_name else "ascii"
+
+
+def _escape_postscript_text(value: str, *, font_name: str) -> str:
+    normalized = value.replace("\r\n", "\r").replace("\n", "\r")
+    encoding = _text_encoding(font_name)
+    try:
+        encoded = normalized.encode(encoding)
+    except UnicodeEncodeError as error:
         raise UnsupportedLegacyFeature(
-            "AI7 text output currently supports ASCII only; Unicode text remains valid in the IR"
-        )
-    return _escape_postscript_string(value.replace("\r\n", "\r").replace("\n", "\r"))
+            f"Text cannot be encoded for AI7 font {font_name!r}; "
+            "use an RKSJ-H/RKSJ-V font for Japanese text"
+        ) from error
+
+    output: list[str] = []
+    for byte in encoded:
+        if byte in {ord("("), ord(")"), ord("\\")}:
+            output.append("\\" + chr(byte))
+        elif 32 <= byte <= 126:
+            output.append(chr(byte))
+        else:
+            output.append(f"\\{byte:03o}")
+    return "".join(output)
 
 
-def _unescape_postscript_text(value: str) -> str:
+def _unescape_postscript_bytes(value: str) -> bytes:
     output = bytearray()
     index = 0
     simple_escapes = {
@@ -114,7 +133,16 @@ def _unescape_postscript_text(value: str) -> str:
             continue
         output.extend(escaped.encode("latin-1"))
         index += 1
-    return output.decode("latin-1")
+    return bytes(output)
+
+
+def _unescape_postscript_text(value: str, *, font_name: str) -> str:
+    raw = _unescape_postscript_bytes(value)
+    encoding = "cp932" if _text_encoding(font_name) == "cp932" else "latin-1"
+    try:
+        return raw.decode(encoding)
+    except UnicodeDecodeError:
+        return raw.decode("latin-1")
 
 
 def _path_note(path: Path) -> str | None:
@@ -241,12 +269,18 @@ def _serialized_text_frame(text: TextFrame, *, locked: bool) -> list[str]:
         raise UnsupportedLegacyFeature(
             f"Invalid PostScript font name for AI7 text: {text.font_name!r}"
         )
-    lines = [
-        f"%%py-ai-text-id: ({_escape_postscript_string(text.id)})",
-        f"%%py-ai-text-alignment: ({text.alignment})",
-    ]
+    lines = [f"%%py-ai-text-alignment: ({text.alignment})"]
+    if text.id.isascii():
+        lines.insert(0, f"%%py-ai-text-id: ({_escape_postscript_string(text.id)})")
+    else:
+        encoded_id = base64.b64encode(text.id.encode("utf-8")).decode("ascii")
+        lines.insert(0, f"%%py-ai-text-id-utf8: {encoded_id}")
     if text.name is not None:
-        lines.append(f"%%py-ai-text-name: ({_escape_postscript_string(text.name)})")
+        if text.name.isascii():
+            lines.append(f"%%py-ai-text-name: ({_escape_postscript_string(text.name)})")
+        else:
+            encoded_name = base64.b64encode(text.name.encode("utf-8")).decode("ascii")
+            lines.append(f"%%py-ai-text-name-utf8: {encoded_name}")
     lines.extend(
         [
             "1 A" if locked else "0 A",
@@ -257,10 +291,30 @@ def _serialized_text_frame(text: TextFrame, *, locked: bool) -> list[str]:
             "0 Tr",
             _color_operator(text.fill, stroke=False),
             f"/{text.font_name} {_number(text.font_size)} 0 0 Tf",
-            f"({_escape_postscript_text(text.text)}) Tx",
+            f"({_escape_postscript_text(text.text, font_name=text.font_name)}) Tx",
             "TO",
         ]
     )
+    return lines
+
+
+def _text_encoding_setup(document: Document) -> list[str]:
+    fonts = {
+        text.font_name
+        for layer in document.layers
+        for text in layer.text_frames
+        if "RKSJ-" in text.font_name
+    }
+    lines: list[str] = []
+    for font_name in sorted(fonts):
+        base_name = font_name.removeprefix("_")
+        lines.extend(
+            [
+                f"%AI3_BeginEncoding: {font_name} {base_name}",
+                f"[/{font_name}/{base_name} 0 1 0 TZ",
+                "%AI3_EndEncoding AdobeType",
+            ]
+        )
     return lines
 
 
@@ -299,6 +353,7 @@ def dumps_ai7(document: Document) -> bytes:
         "%%BeginProlog",
         "%%EndProlog",
         "%%BeginSetup",
+        *_text_encoding_setup(document),
         "%%EndSetup",
     ]
 
@@ -552,9 +607,21 @@ def loads_ai7(data: bytes) -> Document:
             value = line.removeprefix("%%py-ai-text-id: (")[:-1]
             pending_text_id = _unescape_postscript_string(value)
             continue
+        if line.startswith("%%py-ai-text-id-utf8: "):
+            with suppress(ValueError, UnicodeError):
+                pending_text_id = base64.b64decode(
+                    line.removeprefix("%%py-ai-text-id-utf8: "), validate=True
+                ).decode("utf-8")
+            continue
         if line.startswith("%%py-ai-text-name: (") and line.endswith(")"):
             value = line.removeprefix("%%py-ai-text-name: (")[:-1]
             pending_text_name = _unescape_postscript_string(value)
+            continue
+        if line.startswith("%%py-ai-text-name-utf8: "):
+            with suppress(ValueError, UnicodeError):
+                pending_text_name = base64.b64decode(
+                    line.removeprefix("%%py-ai-text-name-utf8: "), validate=True
+                ).decode("utf-8")
             continue
         if line.startswith("%%py-ai-text-alignment: (") and line.endswith(")"):
             value = line.removeprefix("%%py-ai-text-alignment: (")[:-1]
@@ -587,7 +654,11 @@ def loads_ai7(data: bytes) -> Document:
                 continue
             text_content_match = _TEXT_CONTENT_RE.match(line)
             if text_content_match:
-                text_parts.append(_unescape_postscript_text(text_content_match.group(1)))
+                text_parts.append(
+                    _unescape_postscript_text(
+                        text_content_match.group(1), font_name=text_font_name
+                    )
+                )
                 continue
             if line == "TO":
                 if current_layer is None:

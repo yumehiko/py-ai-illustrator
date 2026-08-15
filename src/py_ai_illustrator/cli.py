@@ -169,6 +169,7 @@ def build_parser() -> argparse.ArgumentParser:
             "compound-path",
             "clipping-group",
             "point-text",
+            "unicode-text",
         ),
         default="rgb-rectangle",
     )

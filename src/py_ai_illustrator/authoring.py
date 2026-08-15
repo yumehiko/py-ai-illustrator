@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
+from unicodedata import east_asian_width
 
 from .model import Color, Layer, LayerItemRef, Path, Point, ProcessColor, TextFrame
 
@@ -12,24 +13,60 @@ CellFormatter = Callable[[Any], str]
 CellAccessor = Callable[[Mapping[str, Any]], Any]
 
 
-def _estimated_text_width(value: str, font_size: float) -> float:
-    """Estimate Latin point-text width using conservative Helvetica-like metrics."""
+def _character_width_units(character: str) -> float:
+    if east_asian_width(character) in {"F", "W"}:
+        return 1.0
+    if character in " .,:;!|'`ijlItfr()[]":
+        return 0.3
+    if character in "MW@%&QG":
+        return 0.85
+    if character.isupper():
+        return 0.67
+    if character.isdigit() or character in "$+-=/":
+        return 0.56
+    return 0.52
 
-    narrow = " .,:;!|'`ijlItfr()[]"
-    wide = "MW@%&QG"
-    units = 0.0
-    for character in value:
-        if character in narrow:
-            units += 0.3
-        elif character in wide:
-            units += 0.85
-        elif character.isupper():
-            units += 0.67
-        elif character.isdigit() or character in "$+-=/":
-            units += 0.56
-        else:
-            units += 0.52
-    return units * font_size
+
+def _estimated_text_width(value: str, font_size: float) -> float:
+    """Estimate point-text width with Latin and East Asian width classes."""
+
+    return sum(_character_width_units(character) for character in value) * font_size
+
+
+def _wrap_text(value: str, *, max_width: float, font_size: float) -> tuple[str, ...]:
+    """Greedily wrap Latin words and East Asian text to a measured width."""
+
+    lines: list[str] = []
+    for paragraph in value.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        if not paragraph:
+            lines.append("")
+            continue
+        current = ""
+        for character in paragraph:
+            candidate = current + character
+            if not current or _estimated_text_width(candidate, font_size) <= max_width:
+                current = candidate
+                continue
+            break_at = current.rfind(" ")
+            if break_at >= 0:
+                line = current[:break_at].rstrip()
+                remainder = current[break_at + 1 :].lstrip() + character
+                if line:
+                    lines.append(line)
+                    current = remainder
+                    continue
+            lines.append(current.rstrip())
+            current = character.lstrip() if character.isspace() else character
+        lines.append(current.rstrip())
+    return tuple(lines or [""])
+
+
+@dataclass(frozen=True, slots=True)
+class _TableLayout:
+    header_lines: tuple[tuple[str, ...], ...]
+    header_height: float
+    row_lines: tuple[tuple[tuple[str, ...], ...], ...]
+    row_heights: tuple[float, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,6 +77,7 @@ class TableColumn:
     title: str
     width: float
     alignment: str = "left"
+    wrap: bool = False
     formatter: CellFormatter | None = None
     accessor: CellAccessor | None = None
 
@@ -63,6 +101,8 @@ class TableStyle:
     header_height: float = 34.0
     row_height: float = 30.0
     padding_x: float = 10.0
+    padding_y: float = 6.0
+    line_height_ratio: float = 1.25
     header_fill: ProcessColor = field(
         default_factory=lambda: Color(0.08, 0.16, 0.28)
     )
@@ -93,10 +133,11 @@ class TableStyle:
             self.row_height,
             self.header_font_size,
             self.body_font_size,
+            self.line_height_ratio,
         )
         if not all(value > 0 for value in positive):
             raise ValueError("Table heights and font sizes must be positive")
-        if self.padding_x < 0 or self.border_width < 0:
+        if self.padding_x < 0 or self.padding_y < 0 or self.border_width < 0:
             raise ValueError("Table padding and border width must not be negative")
 
 
@@ -123,9 +164,51 @@ class Table:
     def width(self) -> float:
         return sum(column.width for column in self.columns)
 
+    def _layout(self) -> _TableLayout:
+        def lines_for(column: TableColumn, value: str, font_size: float) -> tuple[str, ...]:
+            if not column.wrap:
+                return tuple(
+                    value.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+                )
+            return _wrap_text(
+                value,
+                max_width=max(column.width - 2 * self.style.padding_x, 1.0),
+                font_size=font_size,
+            )
+
+        def required_height(lines: Sequence[Sequence[str]], size: float) -> float:
+            count = max((len(cell) for cell in lines), default=1)
+            content = size + (count - 1) * size * self.style.line_height_ratio
+            return content + 2 * self.style.padding_y
+
+        header_lines = tuple(
+            lines_for(column, column.title, self.style.header_font_size)
+            for column in self.columns
+        )
+        header_height = max(
+            self.style.header_height,
+            required_height(header_lines, self.style.header_font_size),
+        )
+        row_lines = tuple(
+            tuple(
+                lines_for(column, column.text_for(row), self.style.body_font_size)
+                for column in self.columns
+            )
+            for row in self.rows
+        )
+        row_heights = tuple(
+            max(
+                self.style.row_height,
+                required_height(lines, self.style.body_font_size),
+            )
+            for lines in row_lines
+        )
+        return _TableLayout(header_lines, header_height, row_lines, row_heights)
+
     @property
     def height(self) -> float:
-        return self.style.header_height + self.style.row_height * len(self.rows)
+        layout = self._layout()
+        return layout.header_height + sum(layout.row_heights)
 
     def render_layer(
         self,
@@ -137,6 +220,7 @@ class Table:
     ) -> Layer:
         """Compile the table into paths, point text, and explicit stacking order."""
 
+        layout = self._layout()
         paths: list[Path] = []
         text_frames: list[TextFrame] = []
         order: list[LayerItemRef] = []
@@ -160,10 +244,13 @@ class Table:
         rectangle(
             f"{self.id}.background.header",
             top,
-            self.style.header_height,
+            layout.header_height,
             self.style.header_fill,
         )
+        row_tops: list[float] = []
+        row_top = top - layout.header_height
         for row_index, row in enumerate(self.rows):
+            row_tops.append(row_top)
             variant = str(row.get(self.variant_key, "")) if self.variant_key else ""
             fill = self.style.variant_fills.get(variant)
             if fill is None:
@@ -174,17 +261,18 @@ class Table:
                 )
             rectangle(
                 f"{self.id}.background.row-{row_index}",
-                top - self.style.header_height - self.style.row_height * row_index,
-                self.style.row_height,
+                row_top,
+                layout.row_heights[row_index],
                 fill,
             )
+            row_top -= layout.row_heights[row_index]
 
         horizontal_positions = [
             top,
-            top - self.style.header_height,
+            top - layout.header_height,
             *(
-                top - self.style.header_height - self.style.row_height * index
-                for index in range(1, len(self.rows) + 1)
+                row_top - layout.row_heights[index]
+                for index, row_top in enumerate(row_tops)
             ),
         ]
         for line_index, line_y in enumerate(horizontal_positions):
@@ -205,7 +293,10 @@ class Table:
         for line_index, line_x in enumerate(column_edges):
             line = Path(
                 id=f"{self.id}.grid.vertical-{line_index}",
-                points=[Point(line_x, top), Point(line_x, top - self.height)],
+                points=[
+                    Point(line_x, top),
+                    Point(line_x, top - layout.header_height - sum(layout.row_heights)),
+                ],
                 closed=False,
                 fill=None,
                 stroke=self.style.border_color,
@@ -229,56 +320,85 @@ class Table:
                 return (left + right - width) / 2
             return left + self.style.padding_x
 
-        def baseline(row_top: float, height: float, size: float) -> float:
-            return row_top - height / 2 - size * 0.3
+        def baselines(
+            row_top: float,
+            height: float,
+            size: float,
+            line_count: int,
+        ) -> tuple[float, ...]:
+            line_height = size * self.style.line_height_ratio
+            content_height = size + (line_count - 1) * line_height
+            first = row_top - (height - content_height) / 2 - size * 0.8
+            return tuple(first - index * line_height for index in range(line_count))
 
         for column_index, column in enumerate(self.columns):
-            value = column.title
-            text = TextFrame(
-                id=f"{self.id}.header.{column.key}",
-                name=f"Header: {column.title}",
-                text=value,
-                x=text_x(
-                    column_index,
-                    column.alignment,
-                    value,
-                    self.style.header_font_size,
-                ),
-                y=baseline(top, self.style.header_height, self.style.header_font_size),
-                font_size=self.style.header_font_size,
-                font_name=self.style.header_font_name,
-                fill=self.style.header_text_color,
-                alignment=column.alignment,
+            lines = layout.header_lines[column_index]
+            line_baselines = baselines(
+                top,
+                layout.header_height,
+                self.style.header_font_size,
+                len(lines),
             )
-            text_frames.append(text)
-            order.append(LayerItemRef("text", text.id))
+            for line_index, (value, line_y) in enumerate(
+                zip(lines, line_baselines, strict=True)
+            ):
+                suffix = f".line-{line_index}" if len(lines) > 1 else ""
+                text = TextFrame(
+                    id=f"{self.id}.header.{column.key}{suffix}",
+                    name=f"Header: {column.title}",
+                    text=value,
+                    x=text_x(
+                        column_index,
+                        column.alignment,
+                        value,
+                        self.style.header_font_size,
+                    ),
+                    y=line_y,
+                    font_size=self.style.header_font_size,
+                    font_name=self.style.header_font_name,
+                    fill=self.style.header_text_color,
+                    alignment=column.alignment,
+                )
+                text_frames.append(text)
+                order.append(LayerItemRef("text", text.id))
 
         for row_index, row in enumerate(self.rows):
             variant = str(row.get(self.variant_key, "")) if self.variant_key else ""
             color = self.style.variant_text_colors.get(
                 variant, self.style.body_text_color
             )
-            row_top = top - self.style.header_height - self.style.row_height * row_index
+            row_top = row_tops[row_index]
+            row_height = layout.row_heights[row_index]
             for column_index, column in enumerate(self.columns):
-                value = column.text_for(row)
-                text = TextFrame(
-                    id=f"{self.id}.row-{row_index}.{column.key}",
-                    name=f"Row {row_index + 1}: {column.title}",
-                    text=value,
-                    x=text_x(
-                        column_index,
-                        column.alignment,
-                        value,
-                        self.style.body_font_size,
-                    ),
-                    y=baseline(row_top, self.style.row_height, self.style.body_font_size),
-                    font_size=self.style.body_font_size,
-                    font_name=self.style.body_font_name,
-                    fill=color,
-                    alignment=column.alignment,
+                lines = layout.row_lines[row_index][column_index]
+                line_baselines = baselines(
+                    row_top,
+                    row_height,
+                    self.style.body_font_size,
+                    len(lines),
                 )
-                text_frames.append(text)
-                order.append(LayerItemRef("text", text.id))
+                for line_index, (value, line_y) in enumerate(
+                    zip(lines, line_baselines, strict=True)
+                ):
+                    suffix = f".line-{line_index}" if len(lines) > 1 else ""
+                    text = TextFrame(
+                        id=f"{self.id}.row-{row_index}.{column.key}{suffix}",
+                        name=f"Row {row_index + 1}: {column.title}",
+                        text=value,
+                        x=text_x(
+                            column_index,
+                            column.alignment,
+                            value,
+                            self.style.body_font_size,
+                        ),
+                        y=line_y,
+                        font_size=self.style.body_font_size,
+                        font_name=self.style.body_font_name,
+                        fill=color,
+                        alignment=column.alignment,
+                    )
+                    text_frames.append(text)
+                    order.append(LayerItemRef("text", text.id))
 
         return Layer(
             id=layer_id or f"{self.id}.layer",

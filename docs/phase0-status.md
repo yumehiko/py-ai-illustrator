@@ -29,8 +29,8 @@ legacy .ai bytes
 | compound path | 対応 | 対応 | `*u` / `*U`、subpath polarity `D` |
 | clipping group | 対応 | 対応 | `q` / `Q`、maskの`h/H`・`W` |
 | mixed item stacking | 対応 | 対応 | `item_order`はAI描画順、Illustrator DOMは逆順のtop-to-bottomとして照合 |
-| point text | 対応 | 対応 | 内容・位置・size・RGB/CMYK fill・整列要求。writerは現在ASCII限定 |
-| semantic table | n/a | 対応 | Pythonのcolumn/row/formatter/variant/styleをpath + textへrender |
+| point text | 対応 | 対応 | 内容・位置・size・RGB/CMYK fill。ASCIIとCP932/RKSJ日本語 |
+| semantic table | n/a | 対応 | formatter/variant/style、日英文字幅、折り返し、自動行高をrender |
 | image | 未対応 | 未対応 | fixture調査後 |
 | PDF-compatible AI semantic data | 未対応 | 未対応 | 現在は形式判定のみ |
 
@@ -49,7 +49,7 @@ legacy .ai bytes
 
 1. Illustrator再保存をまたぐlayer/container IDとdocument metadataの保持方式を調査する。
 2. 実装済みのoperator span/local patch primitiveをnode source spanとtyped editへ接続する。
-3. Unicode text/image/nested groupの次期feature profileを決める。
+3. CP932以外のtext encoding、image、nested groupの次期feature profileを決める。
 4. 実装した`Table.render_layer()`を共通render protocolとsemantic metadata manifestへ一般化する。
 5. 検証対象とするIllustratorバージョンの範囲を広げる。
 
@@ -75,6 +75,8 @@ legacy .ai bytes
 point textのIRとAI7 reader/writerを追加し、Illustrator生成AI8の`To` / `Tp` / `Tf` / `Tx`を読み取れるようにしました。Python生成表は16個のpath（背景・罫線）と20個のTextFrameとしてIllustrator 30.7.0で認識され、612×360 artboard上の座標、stacking、paint、文字内容・size・配置を確認しています。AI8再保存ではfont名が環境既定へ置換され、point textのalignmentがleftへ正規化されるため、この2項目はadvisoryとして報告します。
 
 Python意味モデルの最初の実装として`Table` / `TableColumn` / `TableStyle`を追加しました。列formatter/accessor、行variant、header/body/alternate配色、文字色、列幅、余白、行高、罫線、font要求を共有・派生でき、低水準IRへ決定的にrenderします。[`examples/styled_table.py`](../examples/styled_table.py)がsource of truthで、生成AIはPython readerとIllustrator実機の両方で検査します。
+
+Illustrator生成の日本語AI8 fixtureから、`RKSJ-H` font profileとCP932 octal textを採取しました。readerはfont名からCP932を選んでUnicodeへ復号し、writerはRKSJ fontのencoding resourceとCP932 bytesを生成します。日本語予定表は列ごとの折り返しと可変行高を含む15 paths / 18 TextFramesとして認識され、Illustrator直接読込・AI8完全往復・PDF/PNG visual previewのすべてに合格しました。
 
 compound pathはIllustrator生成AI8から`*u` / `*U` containerと`D` polarityを採取し、専用IR、reader、writerを追加しました。Python生成fixtureはIllustrator 30.7.0で2 componentを持つ1つの`CompoundPathItem`として認識され、Illustrator再保存後の完全往復でもcontainer、polarity、geometry、RGB fillが保持されました。
 

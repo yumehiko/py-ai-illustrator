@@ -60,9 +60,9 @@ price_table = Table(
 layer = price_table.render_layer(x=40, top=300)
 ```
 
-現在の`Table.render_layer()`は列幅、header/body/variantの配色、formatter、中央・右揃え、余白、行高、罫線を解決し、汎用グラフィックIRの`Layer`、`TextFrame`、`Path`へ決定的に展開します。コアIRが`PriceTable`等のあらゆる業務概念を直接知る必要はありません。折り返し、ページ分割、複合cell componentは今後の拡張です。
+現在の`Table.render_layer()`は列幅、header/body/variantの配色、formatter、中央・右揃え、余白、罫線に加え、列単位の折り返し、明示改行、東アジア文字幅、複数行に応じた行高を解決します。結果は汎用グラフィックIRの`Layer`、`TextFrame`、`Path`へ決定的に展開されます。コアIRが`PriceTable`等のあらゆる業務概念を直接知る必要はありません。ページ分割と複合cell componentは今後の拡張です。
 
-`formatter`や`accessor`にはPython関数を渡せます。したがって、単なるJSON schemaでは表しにくい制作物固有の計算や文脈依存の表示も、表コンポーネントの入力境界で扱えます。実行可能な完全例は[`examples/styled_table.py`](../examples/styled_table.py)です。
+`formatter`や`accessor`にはPython関数を渡せます。したがって、単なるJSON schemaでは表しにくい制作物固有の計算や文脈依存の表示も、表コンポーネントの入力境界で扱えます。実行可能な例は[`examples/styled_table.py`](../examples/styled_table.py)と、日本語・自動行高を扱う[`examples/japanese_table.py`](../examples/japanese_table.py)です。
 
 ## 三つの層の責務
 

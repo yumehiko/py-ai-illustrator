@@ -1,7 +1,14 @@
 import json
 from pathlib import Path
 
-from py_ai_illustrator.legacy import dumps_ai7, load_ai7, loads_ai7
+import pytest
+
+from py_ai_illustrator.legacy import (
+    UnsupportedLegacyFeature,
+    dumps_ai7,
+    load_ai7,
+    loads_ai7,
+)
 from py_ai_illustrator.model import (
     ClippingGroup,
     CmykColor,
@@ -453,3 +460,52 @@ LB
     assert (texts[0].x, texts[0].y, texts[0].font_size) == (40.0, 180.0, 14.0)
     assert texts[1].font_size == 14.0
     assert texts[0].fill == Color(0.1, 0.2, 0.3)
+
+
+def test_japanese_rksj_point_text_roundtrip() -> None:
+    font_name = "_KozGoPr6N-Regular-83pv-RKSJ-H"
+    original = Document(
+        width=420,
+        height=240,
+        layers=[
+            Layer(
+                id="japanese",
+                name="Japanese",
+                text_frames=[
+                    TextFrame(
+                        id="見出し",
+                        name="日本語見出し",
+                        text="日本語の表見出し",
+                        x=40,
+                        y=180,
+                        font_name=font_name,
+                        font_size=16,
+                    )
+                ],
+            )
+        ],
+    )
+
+    serialized = dumps_ai7(original)
+    assert f"%AI3_BeginEncoding: {font_name} ".encode() in serialized
+    assert br"(\223\372\226{\214\352\202\314" in serialized
+    assert loads_ai7(serialized).to_dict() == original.to_dict()
+
+
+def test_non_ascii_text_requires_a_compatible_legacy_font() -> None:
+    document = Document(
+        width=100,
+        height=100,
+        layers=[
+            Layer(
+                id="text",
+                name="Text",
+                text_frames=[
+                    TextFrame(id="unicode", text="日本語", x=10, y=50)
+                ],
+            )
+        ],
+    )
+
+    with pytest.raises(UnsupportedLegacyFeature, match="RKSJ"):
+        dumps_ai7(document)

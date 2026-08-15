@@ -48,3 +48,46 @@ def test_table_column_accessor_can_use_whole_row_context() -> None:
     )
 
     assert column.text_for({"family": "Doe", "given": "Jane"}) == "Doe, Jane"
+
+
+def test_table_wraps_japanese_text_and_expands_row_height() -> None:
+    table = Table(
+        id="schedule",
+        columns=[TableColumn("description", "内容", 80, wrap=True)],
+        rows=[{"description": "日本語の長い説明文です"}],
+        style=TableStyle(
+            header_height=20,
+            row_height=20,
+            padding_x=10,
+            padding_y=5,
+            line_height_ratio=1.2,
+            header_font_size=10,
+            body_font_size=10,
+        ),
+    )
+
+    layer = table.render_layer(x=20, top=100)
+    row_lines = layer.text_frames[1:]
+
+    assert [text.text for text in row_lines] == ["日本語の長い", "説明文です"]
+    assert table.height == 52
+    assert row_lines[0].id == "schedule.row-0.description.line-0"
+    assert row_lines[1].y < row_lines[0].y
+    assert layer.paths[-1].points[-1].y == 48
+
+
+def test_explicit_cell_lines_expand_without_enabling_wrap() -> None:
+    table = Table(
+        id="notes",
+        columns=[TableColumn("note", "Note", 120)],
+        rows=[{"note": "First line\nSecond line"}],
+        style=TableStyle(row_height=20, padding_y=4, body_font_size=10),
+    )
+
+    layer = table.render_layer(x=0, top=100)
+
+    assert [text.text for text in layer.text_frames[-2:]] == [
+        "First line",
+        "Second line",
+    ]
+    assert table.height > table.style.header_height + table.style.row_height
