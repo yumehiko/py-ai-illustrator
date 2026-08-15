@@ -32,6 +32,14 @@ def _character_code_expression(value: str | Path) -> str:
     return f"String.fromCharCode({codepoints})"
 
 
+def _text_identity_note(text: TextFrame) -> str:
+    return "py-ai-text:" + json.dumps(
+        {"id": text.id, "name": text.name},
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+
+
 def _group_paths(group: Group) -> list[AIPath]:
     paths: list[AIPath] = []
     paths.extend(group.paths)
@@ -74,6 +82,26 @@ def _document_text_frames(document: Document) -> list[TextFrame]:
             *(text for group in layer.groups for text in group_text(group)),
         ]
     ]
+
+
+def _document_text_frames_dom_order(document: Document) -> list[TextFrame]:
+    def group_text(group: Group) -> list[TextFrame]:
+        texts: list[TextFrame] = []
+        for item in reversed(group.ordered_items()):
+            if isinstance(item, TextFrame):
+                texts.append(item)
+            elif isinstance(item, Group):
+                texts.extend(group_text(item))
+        return texts
+
+    texts: list[TextFrame] = []
+    for layer in document.layers:
+        for item in reversed(layer.ordered_items()):
+            if isinstance(item, TextFrame):
+                texts.append(item)
+            elif isinstance(item, Group):
+                texts.extend(group_text(item))
+    return texts
 
 
 def _group_descendants(group: Group) -> list[Group]:
@@ -327,6 +355,7 @@ def _build_javascript(source: Path) -> str:
                 var paragraphAttributes = textRange ? textRange.paragraphAttributes : null;
                 textFrames.push({{
                     name: textFrame.name,
+                    note: textFrame.note,
                     contents: textFrame.contents,
                     position: [textFrame.position[0], textFrame.position[1]],
                     font_size: attributes && typeof attributes.size === "number"
@@ -676,9 +705,21 @@ def _build_roundtrip_javascript(source: Path, destination: Path) -> str:
 """
 
 
-def _build_native_materialization_javascript(source: Path, destination: Path) -> str:
+def _build_native_materialization_javascript(
+    source: Path,
+    destination: Path,
+    *,
+    text_notes: tuple[str, ...] = (),
+    text_contents: tuple[str, ...] = (),
+) -> str:
     source_literal = _character_code_expression(source)
     destination_literal = _character_code_expression(destination)
+    text_notes_literal = ",".join(
+        _character_code_expression(note) for note in text_notes
+    )
+    text_contents_literal = ",".join(
+        _character_code_expression(contents) for contents in text_contents
+    )
     return f"""#target illustrator
 (function () {{
     var source = new File({source_literal});
@@ -691,12 +732,32 @@ def _build_native_materialization_javascript(source: Path, destination: Path) ->
         if (!source.exists) throw new Error("Temporary fixture does not exist");
         documentRef = app.open(source);
         var legacyTextCount = documentRef.legacyTextItems.length;
+        var textNotes = [{text_notes_literal}];
+        var textContents = [{text_contents_literal}];
         var converted = legacyTextCount === 0
             ? true
             : documentRef.legacyTextItems.convertToNative();
         var nativeTextCount = documentRef.textFrames.length;
+        var assignedNoteCount = 0;
+        var identityContentMatchCount = 0;
+        for (
+            var noteIndex = 0;
+            noteIndex < nativeTextCount && noteIndex < textNotes.length;
+            noteIndex++
+        ) {{
+            documentRef.textFrames[noteIndex].note = textNotes[noteIndex];
+            assignedNoteCount++;
+            if (
+                noteIndex < textContents.length
+                && documentRef.textFrames[noteIndex].contents === textContents[noteIndex]
+            ) identityContentMatchCount++;
+        }}
         var justifications = [];
+        var nativeNoteCount = 0;
         for (var index = 0; index < documentRef.textFrames.length; index++) {{
+            if (documentRef.textFrames[index].note.indexOf("py-ai-text:") === 0) {{
+                nativeNoteCount++;
+            }}
             try {{
                 justifications.push(String(
                     documentRef.textFrames[index].textRange.paragraphAttributes.justification
@@ -717,7 +778,10 @@ def _build_native_materialization_javascript(source: Path, destination: Path) ->
             legacyTextCount,
             nativeTextCount,
             converted,
-            justifications.join(",")
+            justifications.join(","),
+            assignedNoteCount,
+            nativeNoteCount,
+            identityContentMatchCount
         ].join(":");
     }} catch (error) {{
         return "error:" + String(error) + ":line:" + String(error.line || "");
@@ -1104,6 +1168,9 @@ def materialize_native_ai(
         f"Justification.{text.alignment.upper()}"
         for text in _document_text_frames(source_document)
     )
+    dom_ordered_text = _document_text_frames_dom_order(source_document)
+    text_notes = tuple(_text_identity_note(text) for text in dom_ordered_text)
+    text_contents = tuple(text.text for text in dom_ordered_text)
 
     destination_path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="py-ai-illustrator-native-") as temp_directory:
@@ -1112,7 +1179,12 @@ def materialize_native_ai(
         shutil.copy2(source_path, input_copy)
         try:
             completed = _execute_javascript(
-                _build_native_materialization_javascript(input_copy, destination_path),
+                _build_native_materialization_javascript(
+                    input_copy,
+                    destination_path,
+                    text_notes=text_notes,
+                    text_contents=text_contents,
+                ),
                 temp_path,
                 timeout=timeout,
                 application_name=application_name,
@@ -1137,18 +1209,34 @@ def materialize_native_ai(
             "error": "Illustrator reported success but did not create the native AI file.",
         }
 
-    parts = response.split(":", 5)
-    if len(parts) != 6:
+    parts = response.split(":", 8)
+    if len(parts) != 9:
         return {"status": "failed", "illustrator_response": response}
-    _, version, legacy_count, native_count, converted, justifications = parts
+    (
+        _,
+        version,
+        legacy_count,
+        native_count,
+        converted,
+        justifications,
+        assigned_notes,
+        native_notes,
+        identity_content_matches,
+    ) = parts
     legacy_text_count = int(legacy_count)
     native_text_count = int(native_count)
     native_justifications = justifications.split(",") if justifications else []
+    assigned_note_count = int(assigned_notes)
+    native_note_count = int(native_notes)
+    identity_content_match_count = int(identity_content_matches)
     checks = {
         "legacy_conversion_succeeded": converted == "true",
         "text_frame_count": native_text_count == legacy_text_count,
         "paragraph_justifications": Counter(native_justifications)
         == expected_justifications,
+        "text_identity_notes": assigned_note_count == legacy_text_count
+        and native_note_count == legacy_text_count,
+        "text_identity_mapping": identity_content_match_count == legacy_text_count,
     }
     return {
         "status": "passed" if all(checks.values()) else "mismatch",
@@ -1157,6 +1245,8 @@ def materialize_native_ai(
         "illustrator_version": version,
         "legacy_text_count": legacy_text_count,
         "native_text_count": native_text_count,
+        "native_text_identity_note_count": native_note_count,
+        "text_identity_content_match_count": identity_content_match_count,
         "native_justifications": native_justifications,
         "checks": checks,
         "format": inspect_file(destination_path).to_dict(),

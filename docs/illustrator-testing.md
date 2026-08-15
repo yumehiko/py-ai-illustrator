@@ -60,7 +60,7 @@ uv run py-ai test-illustrator examples/retail-price-tags.native.ai
 uv run py-ai test-illustrator examples/quarterly-kpi-report.native.ai
 ```
 
-`materialize-native`はAI7の`Ta`段落属性を含むlegacy textを`convertToNative()`で現代TextFrameへ変換します。出力はPDF-compatible AIで、既存出力の上書きを拒否します。
+`materialize-native`はAI7の`Ta`段落属性を含むlegacy textを`convertToNative()`で現代TextFrameへ変換します。変換後は再帰的なIllustrator DOM順に基づき、各TextFrameの`note`へ`py-ai-text:` identity（安定ID・役割名）を設定します。出力はPDF-compatible AIで、既存出力の上書きを拒否します。
 
 調査用にIllustrator生成AIを残す場合は、既存ファイルではない出力先を指定します。上書きは拒否されます。
 
@@ -119,7 +119,7 @@ pathの安定IDと名前はAI7仕様の`%AI3_Note` path属性へ`py-ai:`接頭�
 
 現在、独自DSCコメントだけで保持しているdocument metadata、layer ID、compound/clipping containerのID・名前はIllustratorのAI8再保存で除去されます。また、document titleとboundsは保存先名とartwork boundsに変わります。これらは既知のlossとしてレポートの意味合格判定から除外しています。
 
-AI8互換のlegacy再保存ではfont名の置換やparagraph alignmentの正規化が起こり得るため、この経路では2項目を`advisory_checks`へ分離します。一方、native materialization経路ではAI7 `Ta`をnative paragraph justificationへ変換し、現代AIを再度開いた後もLEFT/CENTER/RIGHTが保持されることを必須の実機確認にしています。
+AI8互換のlegacy再保存ではfont名の置換やparagraph alignmentの正規化が起こり得るため、この経路では2項目を`advisory_checks`へ分離します。一方、native materialization経路ではAI7 `Ta`をnative paragraph justificationへ変換し、現代AIを再度開いた後もLEFT/CENTER/RIGHTと全TextFrameのidentity noteが保持されることを必須の実機確認にしています。
 
 ## 確認済み環境
 
@@ -141,6 +141,8 @@ AI8互換のlegacy再保存ではfont名の置換やparagraph alignmentの正規
 | `examples/quarterly-kpi-report.ai` | 1 layer / 4 groups / 17 paths / 24 point texts | actual/target/grid、dash、round cap/join、KPI cards |
 
 native materializationも同じ環境で確認済みです。
+
+下記6 fixtureはすべて、再オープン後に全native TextFrameの`note`が`py-ai-text:` identityを保持することも確認しています。
 
 | native fixture | 変換結果 | 再オープン後 |
 | --- | --- | --- |

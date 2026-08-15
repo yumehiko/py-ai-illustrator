@@ -143,7 +143,7 @@ uv run py-ai test-illustrator examples/quarterly-kpi-report.native.ai
 
 完全往復ではIllustratorによるdocument原点の移動を正規化し、RGBの8-bit量子化を許容して意味属性を比較します。pathの安定IDと名前は標準の`%AI3_Note` path属性へ埋め込み、Illustrator 30.7.0でのAI8再保存後も照合します。layer/containerのID・名前とdocument metadataはまだ比較対象外です。
 
-legacy point textはASCIIに加え、`RKSJ-H` / `RKSJ-V` fontを明示した日本語CP932の読み書きに対応します。writerは`Ta` operatorと揃え基準のanchorを出力します。ただし現行IllustratorでAI7 textを直接開いた状態はlegacy textであり、現代のTextFrameへ変換するまで再編集できません。`materialize-native`は一時コピーだけを開いて全legacy textをnativeへ変換し、PDF-compatible AIとして保存します。Illustrator 30.7.0で、文字内容とLEFT/CENTER/RIGHT段落揃えが保存後も保持されることを確認済みです。
+legacy point textはASCIIに加え、`RKSJ-H` / `RKSJ-V` fontを明示した日本語CP932の読み書きに対応します。writerは`Ta` operatorと揃え基準のanchorを出力します。ただし現行IllustratorでAI7 textを直接開いた状態はlegacy textであり、現代のTextFrameへ変換するまで再編集できません。`materialize-native`は一時コピーだけを開いて全legacy textをnativeへ変換し、PDF-compatible AIとして保存します。変換後の各TextFrameには`py-ai-text:` noteとして安定IDと役割名を設定します。Illustrator 30.7.0で、文字内容、LEFT/CENTER/RIGHT段落揃え、identity noteが保存後も保持されることを確認済みです。
 
 長文の自動リフローを行うarea textは未対応です。Illustrator 30.7.0でarea textをAI8互換保存するとoutlineへ変換されるため、対応にはmodern AI materialization時にarea textを再構成する別経路が必要です。現行`TextBlock`の折り返しは複数のpoint textとして出力します。
 

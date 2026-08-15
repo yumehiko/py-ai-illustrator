@@ -9,6 +9,7 @@ from py_ai_illustrator.illustrator import (
     _build_roundtrip_javascript,
     _compare_roundtrip_semantics,
     _compare_structure,
+    _document_text_frames_dom_order,
     _expected_structure,
 )
 from py_ai_illustrator.model import Color, ControlPoint, Document, Point
@@ -61,6 +62,39 @@ def test_native_materialization_converts_legacy_text_and_closes_its_copy(
     assert "documentRef.close(SaveOptions.DONOTSAVECHANGES)" in javascript
     assert "current document" not in javascript
     assert "\\" not in javascript
+
+
+def test_text_identity_notes_follow_recursive_illustrator_dom_order() -> None:
+    source = Path(__file__).parents[1] / "examples" / "quarterly-kpi-report.ai"
+    document = illustrator.load_ai7(source)
+
+    texts = _document_text_frames_dom_order(document)
+
+    assert [text.id for text in texts[:3]] == [
+        "report.source.line-0",
+        "operating-index.label-5.line-0",
+        "operating-index.label-4.line-0",
+    ]
+
+
+def test_native_materialization_assigns_identity_notes_after_conversion(
+    tmp_path: Path,
+) -> None:
+    javascript = _build_native_materialization_javascript(
+        tmp_path / "source.ai",
+        tmp_path / "native.ai",
+        text_notes=('py-ai-text:{"id":"price","name":"Price"}',),
+        text_contents=("Price",),
+    )
+
+    conversion = javascript.index("legacyTextItems.convertToNative()")
+    assignment = javascript.index(
+        "documentRef.textFrames[noteIndex].note = textNotes[noteIndex]"
+    )
+    assert conversion < assignment
+    assert 'py-ai-text:{"id":"price","name":"Price"}' not in javascript
+    assert 'var textContents = [String.fromCharCode(80,114,105,99,101)]' in javascript
+    assert "String.fromCharCode" in javascript
 
 
 def test_expected_structure_comes_from_legacy_reader() -> None:

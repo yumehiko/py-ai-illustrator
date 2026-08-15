@@ -35,7 +35,7 @@ legacy .ai bytes
 | area text | 未対応 | 未対応 | AI8互換保存ではoutline化。modern materializationでの再構成が必要 |
 | semantic table | n/a | 対応 | formatter/variant/style、日英文字幅、折り返し、自動行高をrender |
 | semantic components | n/a | 対応 | TextBlock、LayerBuilder、名札・ポスター・入れ子棚札作例 |
-| native AI materialization | n/a | Illustrator経由 | legacy textをnative TextFrameへ変換、段落揃えを保持 |
+| native AI materialization | n/a | Illustrator経由 | legacy textをnative TextFrameへ変換、段落揃えとidentity noteを保持 |
 | image | 未対応 | 未対応 | fixture調査後 |
 | PDF-compatible AI semantic data | 未対応 | 未対応 | 現在は形式判定のみ |
 
@@ -88,6 +88,8 @@ Python意味モデルの最初の実装として`Table` / `TableColumn` / `Table
 pathのnative stroke styleとしてdash pattern/offset、line cap/join、miter limitを追加しました。Illustrator生成AI8の複合statement `1 J 2 j 6 w 7 M [18 8 4 8 ]3 d`を読み、Python writerからも同じ属性を出力します。[`examples/quarterly_kpi_report.py`](../examples/quarterly_kpi_report.py)はactual/target/gridを異なる線styleで生成し、Illustrator直接検査、AI8完全往復、native materialization、PDF/PNG previewに合格しました。
 
 area textも同時にfixture調査しましたが、Illustrator 30.7.0でAI8互換保存すると文字がoutline群へ変換されました。長文の再編集性を上げるには、modern AI materialization時にarea frameをDOMで再構成する必要があります。
+
+legacy textへ標準`%AI3_Note`を書くだけでは、Illustrator DOMへnoteが付かずAI8再保存で失われます。一方、native materializationで変換直後のTextFrameへDOM `note`を設定する方式は保持されました。layer/groupのtop-to-bottom DOM順を再帰的に再現してIDと役割名を対応付け、6つのnative作例すべてで全TextFrameのidentity noteを再オープン確認しています。
 
 Illustrator生成の日本語AI8 fixtureから、`RKSJ-H` font profileとCP932 octal textを採取しました。readerはfont名からCP932を選んでUnicodeへ復号し、writerはRKSJ fontのencoding resourceとCP932 bytesを生成します。日本語予定表は列ごとの折り返しと可変行高を含む15 paths / 18 TextFramesとして認識され、Illustrator直接読込・AI8完全往復・PDF/PNG visual previewのすべてに合格しました。
 

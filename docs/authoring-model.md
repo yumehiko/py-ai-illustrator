@@ -86,7 +86,7 @@ layer = price_table.render_layer(x=40, top=300)
 
 AI7は公開仕様に基づく往復・検査形式として有用ですが、現行IllustratorではAI7 textがlegacy textとして読み込まれます。writerは`Ta` operatorへLEFT/CENTER/RIGHTを出力しますが、現代の編集可能なTextFrameにするには変換が必要です。
 
-`py-ai materialize-native`は入力を一時コピーし、Illustratorの`legacyTextItems.convertToNative()`を使ってnative TextFrameへ変換し、PDF-compatible AIとして別名保存します。これにより、純Pythonの決定的なAI7経路と、Illustrator環境を使う高編集性の現代AI経路を分離します。
+`py-ai materialize-native`は入力を一時コピーし、Illustratorの`legacyTextItems.convertToNative()`を使ってnative TextFrameへ変換し、PDF-compatible AIとして別名保存します。変換直後、IRのDOM順と対応する各TextFrameの`note`へ`py-ai-text:` identityを設定します。IDと役割名はnative AIの再オープン後も保持されるため、将来のselectorやsidecar manifestが見た目だけで文字を推測せず対応付ける基盤になります。これにより、純Pythonの決定的なAI7経路と、Illustrator環境を使う高編集性の現代AI経路を分離します。
 
 現行`TextBlock`の折り返しは、各行を独立したpoint textとしてrenderします。Illustrator上で幅変更に追従するarea textではありません。Illustrator 30.7.0はarea textをAI8互換保存するとoutline化するため、area text対応はlegacy serializerではなく、modern AI materialization時にDOM上でframeを再構成する課題として扱います。
 
