@@ -16,6 +16,7 @@ from .model import (
     CompoundPath,
     ControlPoint,
     Document,
+    Group,
     Layer,
     LayerItemRef,
     Path,
@@ -218,9 +219,17 @@ def _path_geometry(path: Path) -> list[str]:
 
 
 def _serialized_path(path: Path, *, locked: bool) -> list[str]:
-    lines = [f"%AI7_Tag: ({_escape_postscript_string(path.id)})"]
+    if path.id.isascii():
+        lines = [f"%AI7_Tag: ({_escape_postscript_string(path.id)})"]
+    else:
+        encoded_id = base64.b64encode(path.id.encode("utf-8")).decode("ascii")
+        lines = [f"%%py-ai-path-id-utf8: {encoded_id}"]
     if path.name is not None:
-        lines.append(f"%%py-ai-path-name: ({_escape_postscript_string(path.name)})")
+        if path.name.isascii():
+            lines.append(f"%%py-ai-path-name: ({_escape_postscript_string(path.name)})")
+        else:
+            encoded_name = base64.b64encode(path.name.encode("utf-8")).decode("ascii")
+            lines.append(f"%%py-ai-path-name-utf8: {encoded_name}")
     lines.extend(["1 A" if locked else "0 A", "1 D" if path.polarity == "positive" else "0 D"])
     note = _path_note(path)
     if note is not None:
@@ -246,11 +255,17 @@ def _serialized_path(path: Path, *, locked: bool) -> list[str]:
 
 
 def _serialized_clipping_path(path: Path, *, locked: bool) -> list[str]:
-    lines = [
-        f"%AI7_Tag: ({_escape_postscript_string(path.id)})",
-        "1 A" if locked else "0 A",
-        "1 D" if path.polarity == "positive" else "0 D",
-    ]
+    if path.id.isascii():
+        lines = [f"%AI7_Tag: ({_escape_postscript_string(path.id)})"]
+    else:
+        encoded_id = base64.b64encode(path.id.encode("utf-8")).decode("ascii")
+        lines = [f"%%py-ai-path-id-utf8: {encoded_id}"]
+    lines.extend(
+        [
+            "1 A" if locked else "0 A",
+            "1 D" if path.polarity == "positive" else "0 D",
+        ]
+    )
     note = _path_note(path)
     if note is not None:
         lines.append(f"%AI3_Note:{note}")
@@ -300,11 +315,76 @@ def _serialized_text_frame(text: TextFrame, *, locked: bool) -> list[str]:
     return lines
 
 
+def _serialized_item(
+    item: Path | TextFrame | CompoundPath | ClippingGroup | Group,
+    *,
+    locked: bool,
+) -> list[str]:
+    if isinstance(item, Path):
+        return _serialized_path(item, locked=locked)
+    if isinstance(item, TextFrame):
+        return _serialized_text_frame(item, locked=locked)
+    if isinstance(item, CompoundPath):
+        lines = [f"%%py-ai-compound-id: ({_escape_postscript_string(item.id)})"]
+        if item.name is not None:
+            lines.append(
+                "%%py-ai-compound-name: "
+                f"({_escape_postscript_string(item.name)})"
+            )
+        lines.append("*u")
+        for path in item.paths:
+            lines.extend(_serialized_path(path, locked=locked))
+        lines.append("*U")
+        return lines
+    if isinstance(item, ClippingGroup):
+        lines = [f"%%py-ai-clipping-id: ({_escape_postscript_string(item.id)})"]
+        if item.name is not None:
+            lines.append(
+                "%%py-ai-clipping-name: "
+                f"({_escape_postscript_string(item.name)})"
+            )
+        lines.append("q")
+        lines.extend(_serialized_clipping_path(item.clipping_path, locked=locked))
+        for path in item.paths:
+            lines.extend(_serialized_path(path, locked=locked))
+        lines.append("Q")
+        return lines
+
+    if item.id.isascii():
+        lines = [f"%%py-ai-group-id: ({_escape_postscript_string(item.id)})"]
+    else:
+        encoded_id = base64.b64encode(item.id.encode("utf-8")).decode("ascii")
+        lines = [f"%%py-ai-group-id-utf8: {encoded_id}"]
+    if item.name is not None:
+        if item.name.isascii():
+            lines.append(
+                f"%%py-ai-group-name: ({_escape_postscript_string(item.name)})"
+            )
+        else:
+            encoded_name = base64.b64encode(item.name.encode("utf-8")).decode("ascii")
+            lines.append(f"%%py-ai-group-name-utf8: {encoded_name}")
+    lines.append("u")
+    for child in item.ordered_items():
+        lines.extend(_serialized_item(child, locked=locked))
+    lines.append("U")
+    return lines
+
+
+def _group_text_frames(group: Group) -> list[TextFrame]:
+    return [
+        *group.text_frames,
+        *(text for nested in group.groups for text in _group_text_frames(nested)),
+    ]
+
+
 def _text_encoding_setup(document: Document) -> list[str]:
     fonts = {
         text.font_name
         for layer in document.layers
-        for text in layer.text_frames
+        for text in [
+            *layer.text_frames,
+            *(text for group in layer.groups for text in _group_text_frames(group)),
+        ]
         if "RKSJ-" in text.font_name
     }
     lines: list[str] = []
@@ -372,49 +452,7 @@ def dumps_ai7(document: Document) -> bytes:
             ]
         )
         for item in layer.ordered_items():
-            if isinstance(item, Path):
-                lines.extend(_serialized_path(item, locked=layer.locked))
-            elif isinstance(item, TextFrame):
-                lines.extend(_serialized_text_frame(item, locked=layer.locked))
-            elif isinstance(item, CompoundPath):
-                lines.extend(
-                    [
-                        f"%%py-ai-compound-id: ({_escape_postscript_string(item.id)})",
-                        *(
-                            [
-                                "%%py-ai-compound-name: "
-                                f"({_escape_postscript_string(item.name)})"
-                            ]
-                            if item.name is not None
-                            else []
-                        ),
-                        "*u",
-                    ]
-                )
-                for path in item.paths:
-                    lines.extend(_serialized_path(path, locked=layer.locked))
-                lines.append("*U")
-            elif isinstance(item, ClippingGroup):
-                lines.extend(
-                    [
-                        f"%%py-ai-clipping-id: ({_escape_postscript_string(item.id)})",
-                        *(
-                            [
-                                "%%py-ai-clipping-name: "
-                                f"({_escape_postscript_string(item.name)})"
-                            ]
-                            if item.name is not None
-                            else []
-                        ),
-                        "q",
-                    ]
-                )
-                lines.extend(
-                    _serialized_clipping_path(item.clipping_path, locked=layer.locked)
-                )
-                for path in item.paths:
-                    lines.extend(_serialized_path(path, locked=layer.locked))
-                lines.append("Q")
+            lines.extend(_serialized_item(item, locked=layer.locked))
         lines.extend(["LB", "%AI5_EndLayer"])
 
     lines.extend(["%%Trailer", "%%EOF", ""])
@@ -456,6 +494,10 @@ def loads_ai7(data: bytes) -> Document:
     pending_compound_name: str | None = None
     pending_clipping_id: str | None = None
     pending_clipping_name: str | None = None
+    pending_group_id: str | None = None
+    pending_group_name: str | None = None
+    group_stack: list[tuple[Group, bool]] = []
+    group_counter = 0
     polarity = "positive"
     path_counter = 0
     text_counter = 0
@@ -470,6 +512,31 @@ def loads_ai7(data: bytes) -> Document:
     pending_text_name: str | None = None
     pending_text_alignment: str | None = None
     metadata: dict[str, object] = {}
+
+    def active_container() -> Layer | Group:
+        nonlocal current_layer
+        if group_stack:
+            return group_stack[-1][0]
+        if current_layer is None:
+            current_layer = Layer(id="layer-1", name="Layer 1")
+        return current_layer
+
+    def append_item(
+        kind: str,
+        item: Path | TextFrame | CompoundPath | ClippingGroup | Group,
+    ) -> None:
+        container = active_container()
+        if isinstance(item, Path):
+            container.paths.append(item)
+        elif isinstance(item, TextFrame):
+            container.text_frames.append(item)
+        elif isinstance(item, CompoundPath):
+            container.compound_paths.append(item)
+        elif isinstance(item, ClippingGroup):
+            container.clipping_groups.append(item)
+        else:
+            container.groups.append(item)
+        container.item_order.append(LayerItemRef(kind, item.id))
 
     for token in source.lines:
         line = source.line_content(token).decode("latin-1").strip()
@@ -509,8 +576,54 @@ def loads_ai7(data: bytes) -> Document:
             current_layer.name = _unescape_postscript_string(layer_name_match.group(1))
             continue
         if line == "%AI5_EndLayer" and current_layer is not None:
+            group_stack.clear()
             layers.append(current_layer)
             current_layer = None
+            continue
+        if line.startswith("%%py-ai-group-id: (") and line.endswith(")"):
+            value = line.removeprefix("%%py-ai-group-id: (")[:-1]
+            pending_group_id = _unescape_postscript_string(value)
+            continue
+        if line.startswith("%%py-ai-group-id-utf8: "):
+            with suppress(ValueError, UnicodeError):
+                pending_group_id = base64.b64decode(
+                    line.removeprefix("%%py-ai-group-id-utf8: "), validate=True
+                ).decode("utf-8")
+            continue
+        if line.startswith("%%py-ai-group-name: (") and line.endswith(")"):
+            value = line.removeprefix("%%py-ai-group-name: (")[:-1]
+            pending_group_name = _unescape_postscript_string(value)
+            continue
+        if line.startswith("%%py-ai-group-name-utf8: "):
+            with suppress(ValueError, UnicodeError):
+                pending_group_name = base64.b64decode(
+                    line.removeprefix("%%py-ai-group-name-utf8: "), validate=True
+                ).decode("utf-8")
+            continue
+        if line == "u" and current_layer is not None:
+            group_counter += 1
+            explicit = pending_group_id is not None or pending_group_name is not None
+            group_stack.append(
+                (
+                    Group(
+                        id=pending_group_id or f"group-{group_counter}",
+                        name=pending_group_name,
+                    ),
+                    explicit,
+                )
+            )
+            pending_group_id = None
+            pending_group_name = None
+            continue
+        if line == "U" and group_stack:
+            group, explicit = group_stack.pop()
+            children = group.ordered_items()
+            if not explicit and len(children) == 1:
+                child = children[0]
+                kind = group.item_order[0].kind
+                append_item(kind, child)
+            elif children or explicit:
+                append_item("group", group)
             continue
         if line.startswith("%%py-ai-compound-id: (") and line.endswith(")"):
             value = line.removeprefix("%%py-ai-compound-id: (")[:-1]
@@ -528,21 +641,16 @@ def loads_ai7(data: bytes) -> Document:
             pending_compound_name = None
             continue
         if line == "*U" and current_compound_paths is not None:
-            if current_layer is None:
-                current_layer = Layer(id="layer-1", name="Layer 1")
             if len(current_compound_paths) >= 2:
                 compound = CompoundPath(
                     id=current_compound_id or f"compound-{len(layers) + 1}",
                     name=current_compound_name,
                     paths=current_compound_paths,
                 )
-                current_layer.compound_paths.append(compound)
-                current_layer.item_order.append(LayerItemRef("compound_path", compound.id))
+                append_item("compound_path", compound)
             else:
-                current_layer.paths.extend(current_compound_paths)
-                current_layer.item_order.extend(
-                    LayerItemRef("path", path.id) for path in current_compound_paths
-                )
+                for path in current_compound_paths:
+                    append_item("path", path)
             current_compound_paths = None
             current_compound_id = None
             current_compound_name = None
@@ -565,8 +673,6 @@ def loads_ai7(data: bytes) -> Document:
             pending_clipping_name = None
             continue
         if line == "Q" and current_clipping_paths is not None:
-            if current_layer is None:
-                current_layer = Layer(id="layer-1", name="Layer 1")
             if current_clipping_path is not None and current_clipping_paths:
                 group = ClippingGroup(
                     id=current_clipping_id or f"clipping-{len(layers) + 1}",
@@ -574,18 +680,12 @@ def loads_ai7(data: bytes) -> Document:
                     clipping_path=current_clipping_path,
                     paths=current_clipping_paths,
                 )
-                current_layer.clipping_groups.append(group)
-                current_layer.item_order.append(LayerItemRef("clipping_group", group.id))
+                append_item("clipping_group", group)
             else:
                 if current_clipping_path is not None:
-                    current_layer.paths.append(current_clipping_path)
-                    current_layer.item_order.append(
-                        LayerItemRef("path", current_clipping_path.id)
-                    )
-                current_layer.paths.extend(current_clipping_paths)
-                current_layer.item_order.extend(
-                    LayerItemRef("path", path.id) for path in current_clipping_paths
-                )
+                    append_item("path", current_clipping_path)
+                for path in current_clipping_paths:
+                    append_item("path", path)
             current_clipping_paths = None
             current_clipping_path = None
             current_clipping_id = None
@@ -595,8 +695,20 @@ def loads_ai7(data: bytes) -> Document:
         if line.startswith("%AI7_Tag: (") and line.endswith(")"):
             pending_id = _unescape_postscript_string(line[11:-1])
             continue
+        if line.startswith("%%py-ai-path-id-utf8: "):
+            with suppress(ValueError, UnicodeError):
+                pending_id = base64.b64decode(
+                    line.removeprefix("%%py-ai-path-id-utf8: "), validate=True
+                ).decode("utf-8")
+            continue
         if line.startswith("%%py-ai-path-name: (") and line.endswith(")"):
             pending_name = _unescape_postscript_string(line[20:-1])
+            continue
+        if line.startswith("%%py-ai-path-name-utf8: "):
+            with suppress(ValueError, UnicodeError):
+                pending_name = base64.b64decode(
+                    line.removeprefix("%%py-ai-path-name-utf8: "), validate=True
+                ).decode("utf-8")
             continue
         if line.startswith("%AI3_Note:"):
             note_id, note_name = _parse_path_note(line[10:].lstrip())
@@ -663,8 +775,6 @@ def loads_ai7(data: bytes) -> Document:
                 )
                 continue
             if line == "TO":
-                if current_layer is None:
-                    current_layer = Layer(id="layer-1", name="Layer 1")
                 text_counter += 1
                 text_frame = TextFrame(
                     id=pending_text_id or f"text-{text_counter}",
@@ -677,8 +787,7 @@ def loads_ai7(data: bytes) -> Document:
                     fill=fill or Color(0.0, 0.0, 0.0),
                     alignment=pending_text_alignment or text_alignment,
                 )
-                current_layer.text_frames.append(text_frame)
-                current_layer.item_order.append(LayerItemRef("text", text_frame.id))
+                append_item("text", text_frame)
                 pending_text_id = None
                 pending_text_name = None
                 pending_text_alignment = None
@@ -770,8 +879,6 @@ def loads_ai7(data: bytes) -> Document:
             )
             continue
         if line in {"b", "f", "s", "n", "B", "F", "S", "N"} and current_points:
-            if current_layer is None:
-                current_layer = Layer(id="layer-1", name="Layer 1")
             path_counter += 1
             is_clipping_mask = (
                 current_clipping_paths is not None
@@ -818,8 +925,7 @@ def loads_ai7(data: bytes) -> Document:
             elif current_clipping_paths is not None:
                 current_clipping_paths.append(parsed_path)
             else:
-                current_layer.paths.append(parsed_path)
-                current_layer.item_order.append(LayerItemRef("path", parsed_path.id))
+                append_item("path", parsed_path)
             current_points = []
             pending_id = None
             pending_name = None

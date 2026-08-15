@@ -78,6 +78,7 @@ def test_expected_structure_comes_from_legacy_reader() -> None:
         "stroked_count": 1,
         "compound_path_item_count": 0,
         "clipping_group_count": 0,
+        "group_item_count": 0,
     }
 
 
@@ -94,6 +95,7 @@ def test_structure_comparison_reports_individual_mismatches() -> None:
         "stroked_count": 1,
         "compound_path_item_count": 0,
         "clipping_group_count": 0,
+        "group_item_count": 0,
     }
     actual = dict(expected, point_counts=[3])
     checks = _compare_structure(expected, actual)
@@ -117,6 +119,7 @@ def test_runner_reports_a_successful_illustrator_import(monkeypatch) -> None:
         "stroked_count": 1,
         "compound_path_item_count": 0,
         "clipping_group_count": 0,
+        "group_item_count": 0,
     }
 
     def fake_run(command, **kwargs):

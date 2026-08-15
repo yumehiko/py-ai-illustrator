@@ -10,7 +10,7 @@ from py_ai_illustrator.authoring import (
     ellipse_path,
     rectangle_path,
 )
-from py_ai_illustrator.model import Color
+from py_ai_illustrator.model import Color, LayerItemRef
 
 
 def test_table_compiles_semantics_to_editable_paths_and_text() -> None:
@@ -168,3 +168,20 @@ def test_table_can_render_as_a_composable_component() -> None:
     assert rendered.width == 100
     assert rendered.height == table.height
     assert len(builder.build().item_order) == len(rendered.item_order)
+
+
+def test_layer_builder_can_keep_a_component_as_an_editable_group() -> None:
+    rendered = TextBlock(id="label", text="Grouped", width=80).render(x=20, top=80)
+    builder = LayerBuilder(id="page", name="Page")
+
+    group = builder.add_grouped(
+        rendered,
+        group_id="product-card",
+        group_name="Product Card",
+    )
+    layer = builder.build()
+
+    assert group.name == "Product Card"
+    assert group.text_frames[0].text == "Grouped"
+    assert layer.item_order == [LayerItemRef("group", "product-card")]
+    assert layer.groups == [group]

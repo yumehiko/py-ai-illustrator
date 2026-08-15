@@ -228,12 +228,97 @@ class LayerItemRef:
     id: str
 
     def __post_init__(self) -> None:
-        if self.kind not in {"path", "text", "compound_path", "clipping_group"}:
+        if self.kind not in {
+            "path",
+            "text",
+            "compound_path",
+            "clipping_group",
+            "group",
+        }:
             raise ValueError(f"Unsupported layer item kind: {self.kind}")
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> LayerItemRef:
         return cls(kind=str(data["kind"]), id=str(data["id"]))
+
+
+@dataclass(slots=True)
+class Group:
+    """An editable group that may contain heterogeneous and nested artwork."""
+
+    id: str
+    name: str | None = None
+    paths: list[Path] = field(default_factory=list)
+    text_frames: list[TextFrame] = field(default_factory=list)
+    compound_paths: list[CompoundPath] = field(default_factory=list)
+    clipping_groups: list[ClippingGroup] = field(default_factory=list)
+    groups: list[Group] = field(default_factory=list)
+    item_order: list[LayerItemRef] = field(default_factory=list)
+    unknown: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.id:
+            raise ValueError("A group id must not be empty")
+        if not self.item_order:
+            self.item_order = [
+                *(LayerItemRef("path", path.id) for path in self.paths),
+                *(LayerItemRef("text", text.id) for text in self.text_frames),
+                *(
+                    LayerItemRef("compound_path", compound.id)
+                    for compound in self.compound_paths
+                ),
+                *(
+                    LayerItemRef("clipping_group", group.id)
+                    for group in self.clipping_groups
+                ),
+                *(LayerItemRef("group", group.id) for group in self.groups),
+            ]
+
+    def ordered_items(
+        self,
+    ) -> list[Path | TextFrame | CompoundPath | ClippingGroup | Group]:
+        typed_items: list[
+            tuple[str, Path | TextFrame | CompoundPath | ClippingGroup | Group]
+        ] = [
+            *(("path", path) for path in self.paths),
+            *(("text", text) for text in self.text_frames),
+            *(("compound_path", compound) for compound in self.compound_paths),
+            *(("clipping_group", group) for group in self.clipping_groups),
+            *(("group", group) for group in self.groups),
+        ]
+        remaining = list(typed_items)
+        ordered: list[Path | TextFrame | CompoundPath | ClippingGroup | Group] = []
+        for reference in self.item_order:
+            for index, (kind, item) in enumerate(remaining):
+                if kind == reference.kind and item.id == reference.id:
+                    ordered.append(item)
+                    remaining.pop(index)
+                    break
+        ordered.extend(item for _, item in remaining)
+        return ordered
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Group:
+        return cls(
+            id=str(data["id"]),
+            name=data.get("name"),
+            paths=[Path.from_dict(path) for path in data.get("paths", [])],
+            text_frames=[
+                TextFrame.from_dict(text) for text in data.get("text_frames", [])
+            ],
+            compound_paths=[
+                CompoundPath.from_dict(path) for path in data.get("compound_paths", [])
+            ],
+            clipping_groups=[
+                ClippingGroup.from_dict(group) for group in data.get("clipping_groups", [])
+            ],
+            groups=[Group.from_dict(group) for group in data.get("groups", [])],
+            item_order=[
+                LayerItemRef.from_dict(reference)
+                for reference in data.get("item_order", [])
+            ],
+            unknown=dict(data.get("unknown", {})),
+        )
 
 
 @dataclass(slots=True)
@@ -244,6 +329,7 @@ class Layer:
     text_frames: list[TextFrame] = field(default_factory=list)
     compound_paths: list[CompoundPath] = field(default_factory=list)
     clipping_groups: list[ClippingGroup] = field(default_factory=list)
+    groups: list[Group] = field(default_factory=list)
     item_order: list[LayerItemRef] = field(default_factory=list)
     visible: bool = True
     locked: bool = False
@@ -262,19 +348,23 @@ class Layer:
                     LayerItemRef("clipping_group", group.id)
                     for group in self.clipping_groups
                 ),
+                *(LayerItemRef("group", group.id) for group in self.groups),
             ]
 
-    def ordered_items(self) -> list[Path | TextFrame | CompoundPath | ClippingGroup]:
+    def ordered_items(
+        self,
+    ) -> list[Path | TextFrame | CompoundPath | ClippingGroup | Group]:
         typed_items: list[
-            tuple[str, Path | TextFrame | CompoundPath | ClippingGroup]
+            tuple[str, Path | TextFrame | CompoundPath | ClippingGroup | Group]
         ] = [
             *(("path", path) for path in self.paths),
             *(("text", text) for text in self.text_frames),
             *(("compound_path", compound) for compound in self.compound_paths),
             *(("clipping_group", group) for group in self.clipping_groups),
+            *(("group", group) for group in self.groups),
         ]
         remaining = list(typed_items)
-        ordered: list[Path | TextFrame | CompoundPath | ClippingGroup] = []
+        ordered: list[Path | TextFrame | CompoundPath | ClippingGroup | Group] = []
         for reference in self.item_order:
             for index, (kind, item) in enumerate(remaining):
                 if kind == reference.kind and item.id == reference.id:
@@ -299,6 +389,7 @@ class Layer:
             clipping_groups=[
                 ClippingGroup.from_dict(group) for group in data.get("clipping_groups", [])
             ],
+            groups=[Group.from_dict(group) for group in data.get("groups", [])],
             item_order=[
                 LayerItemRef.from_dict(reference)
                 for reference in data.get("item_order", [])

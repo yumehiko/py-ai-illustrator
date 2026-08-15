@@ -16,6 +16,7 @@ from py_ai_illustrator.model import (
     CompoundPath,
     ControlPoint,
     Document,
+    Group,
     Layer,
     LayerItemRef,
     Point,
@@ -57,6 +58,55 @@ def test_ai7_roundtrip_preserves_supported_semantics() -> None:
     assert b"%AI5_ArtSize: 320 240" in serialized
     assert b"%AI3_TemplateBox: 160 360 160 360" in serialized
     restored = loads_ai7(serialized)
+    assert restored.to_dict() == original.to_dict()
+
+
+def test_nested_editable_groups_roundtrip_with_mixed_item_order() -> None:
+    nested = Group(
+        id="price-block",
+        name="Price Block",
+        paths=[
+            AIPath(
+                id="price-rule",
+                points=[Point(20, 70), Point(180, 70)],
+                closed=False,
+                stroke=Color(0.2, 0.2, 0.2),
+            )
+        ],
+        text_frames=[TextFrame(id="price", text="$24.00", x=180, y=40, alignment="right")],
+        item_order=[
+            LayerItemRef("path", "price-rule"),
+            LayerItemRef("text", "price"),
+        ],
+    )
+    card = Group(
+        id="product-card",
+        name="商品カード",
+        paths=[
+            AIPath(
+                id="background",
+                name="商品背景",
+                points=[Point(10, 10), Point(190, 10), Point(190, 90), Point(10, 90)],
+                fill=Color(0.95, 0.95, 0.95),
+            )
+        ],
+        groups=[nested],
+        item_order=[
+            LayerItemRef("path", "background"),
+            LayerItemRef("group", "price-block"),
+        ],
+    )
+    original = Document(
+        width=200,
+        height=100,
+        layers=[Layer(id="catalog", name="Catalog", groups=[card])],
+    )
+
+    serialized = dumps_ai7(original)
+    restored = loads_ai7(serialized)
+
+    assert b"%%py-ai-group-id: (product-card)" in serialized
+    assert b"%%py-ai-group-id: (price-block)" in serialized
     assert restored.to_dict() == original.to_dict()
 
 

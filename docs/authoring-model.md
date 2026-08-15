@@ -70,10 +70,13 @@ layer = price_table.render_layer(x=40, top=300)
 
 - `RenderedComponent`: componentが生成したpath、text、描画順、寸法
 - `LayerBuilder`: 複数componentを安定ID付きで一つのlayerへ合成
+- `Group`: path、text、compound、clipping、子groupの描画順を保つ編集単位
 - `TextBlock` / `TextStyle`: 折り返し、文字階層、ネイティブ段落揃え
 - `rectangle_path` / `ellipse_path`: domainに依存しない編集可能な図形primitive
 
 [`examples/conference_badges.py`](../examples/conference_badges.py)では、`Attendee`とrole variantから4枚の`ConferenceBadge`を生成します。[`examples/event_poster.py`](../examples/event_poster.py)では、同じprimitiveから日本語の告知ポスターを生成します。前者は反復・variant・識別番号、後者は文字階層・折り返し・装飾図形が主題です。いずれも表のrow/column modelへ押し込めていません。
+
+[`examples/retail_price_tags.py`](../examples/retail_price_tags.py)は、実務寄りの反復制作例です。商品、価格、販売状態を`Product`として持ち、`PriceTag`が共通体裁とvariantを決定します。`LayerBuilder.add_grouped()`により各棚札は一括移動でき、価格欄も子groupとして独立編集できます。金額はIllustratorのRIGHT段落揃えで保持されるため、桁数を変更しても座標の手調整を前提にしません。
 
 この形なら、今後の商品カード、値札、名刺、図解、カタログページ等も、それぞれの文脈を持つPython componentとして追加できます。低水準IRとAI writerは特定componentを知りません。
 

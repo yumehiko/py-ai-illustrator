@@ -190,6 +190,7 @@ def build_parser() -> argparse.ArgumentParser:
             "cmyk-curve",
             "compound-path",
             "clipping-group",
+            "group",
             "point-text",
             "unicode-text",
         ),

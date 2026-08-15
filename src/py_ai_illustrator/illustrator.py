@@ -14,13 +14,35 @@ from typing import Any
 
 from .format import FileFormat, inspect_file
 from .legacy import load_ai7
-from .model import CmykColor, Color, Document, ProcessColor, TextFrame
+from .model import (
+    ClippingGroup,
+    CmykColor,
+    Color,
+    CompoundPath,
+    Document,
+    Group,
+    ProcessColor,
+    TextFrame,
+)
 from .model import Path as AIPath
 
 
 def _character_code_expression(value: str | Path) -> str:
     codepoints = ",".join(str(ord(character)) for character in str(value))
     return f"String.fromCharCode({codepoints})"
+
+
+def _group_paths(group: Group) -> list[AIPath]:
+    paths: list[AIPath] = []
+    paths.extend(group.paths)
+    for compound in group.compound_paths:
+        paths.extend(compound.paths)
+    for clipping_group in group.clipping_groups:
+        paths.append(clipping_group.clipping_path)
+        paths.extend(clipping_group.paths)
+    for child in group.groups:
+        paths.extend(_group_paths(child))
+    return paths
 
 
 def _document_paths(document: Document) -> list[AIPath]:
@@ -32,11 +54,84 @@ def _document_paths(document: Document) -> list[AIPath]:
         for group in layer.clipping_groups:
             paths.append(group.clipping_path)
             paths.extend(group.paths)
+        for group in layer.groups:
+            paths.extend(_group_paths(group))
     return paths
 
 
 def _document_text_frames(document: Document) -> list[TextFrame]:
-    return [text for layer in document.layers for text in layer.text_frames]
+    def group_text(group: Group) -> list[TextFrame]:
+        return [
+            *group.text_frames,
+            *(text for child in group.groups for text in group_text(child)),
+        ]
+
+    return [
+        text
+        for layer in document.layers
+        for text in [
+            *layer.text_frames,
+            *(text for group in layer.groups for text in group_text(group)),
+        ]
+    ]
+
+
+def _group_descendants(group: Group) -> list[Group]:
+    return [
+        group,
+        *(nested for child in group.groups for nested in _group_descendants(child)),
+    ]
+
+
+def _document_groups(document: Document) -> list[Group]:
+    return [
+        group
+        for layer in document.layers
+        for root in layer.groups
+        for group in _group_descendants(root)
+    ]
+
+
+def _document_compound_paths(document: Document) -> list[CompoundPath]:
+    return [
+        compound
+        for layer in document.layers
+        for compound in [
+            *layer.compound_paths,
+            *(
+                compound
+                for root in layer.groups
+                for group in _group_descendants(root)
+                for compound in group.compound_paths
+            ),
+        ]
+    ]
+
+
+def _document_clipping_groups(document: Document) -> list[ClippingGroup]:
+    return [
+        clipping_group
+        for layer in document.layers
+        for clipping_group in [
+            *layer.clipping_groups,
+            *(
+                clipping_group
+                for root in layer.groups
+                for group in _group_descendants(root)
+                for clipping_group in group.clipping_groups
+            ),
+        ]
+    ]
+
+
+def _group_signature(group: Group) -> tuple[Any, ...]:
+    child_groups = {child.id: child for child in group.groups}
+    return tuple(
+        (reference.kind, _group_signature(child_groups[reference.id]))
+        if reference.kind == "group"
+        else (reference.kind,)
+        for reference in group.item_order
+    )
 
 
 def _expected_structure(source: Path) -> dict[str, Any] | None:
@@ -59,6 +154,7 @@ def _expected_structure(source: Path) -> dict[str, Any] | None:
                     "text": "TextFrame",
                     "compound_path": "CompoundPathItem",
                     "clipping_group": "GroupItem",
+                    "group": "GroupItem",
                 }[reference.kind]
                 for reference in reversed(layer.item_order)
             ]
@@ -70,10 +166,9 @@ def _expected_structure(source: Path) -> dict[str, Any] | None:
         "closed_count": sum(path.closed for path in paths),
         "filled_count": sum(path.fill is not None for path in paths),
         "stroked_count": sum(path.stroke is not None for path in paths),
-        "compound_path_item_count": sum(
-            len(layer.compound_paths) for layer in document.layers
-        ),
-        "clipping_group_count": sum(len(layer.clipping_groups) for layer in document.layers),
+        "compound_path_item_count": len(_document_compound_paths(document)),
+        "clipping_group_count": len(_document_clipping_groups(document)),
+        "group_item_count": len(_document_groups(document)),
     }
 
 
@@ -145,7 +240,8 @@ def _build_javascript(source: Path) -> str:
             var layer = documentRef.layers[layerIndex];
             var pageItemTypes = [];
             for (var pageItemIndex = 0; pageItemIndex < layer.pageItems.length; pageItemIndex++) {{
-                pageItemTypes.push(layer.pageItems[pageItemIndex].typename);
+                var layerItem = layer.pageItems[pageItemIndex];
+                if (layerItem.parent === layer) pageItemTypes.push(layerItem.typename);
             }}
             layers.push({{
                 name: layer.name,
@@ -201,19 +297,22 @@ def _build_javascript(source: Path) -> str:
         }}
 
         var textFrames = [];
-        for (
-            var textLayerIndex = 0;
-            textLayerIndex < documentRef.layers.length;
-            textLayerIndex++
-        ) {{
-            var textLayer = documentRef.layers[textLayerIndex];
+        function collectTextFrames(container) {{
             for (
                 var textFrameIndex = 0;
-                textFrameIndex < textLayer.pageItems.length;
+                textFrameIndex < container.pageItems.length;
                 textFrameIndex++
             ) {{
-                var textFrame = textLayer.pageItems[textFrameIndex];
-                if (textFrame.typename !== "TextFrame") continue;
+                var textFrame = container.pageItems[textFrameIndex];
+                if (textFrame.parent !== container) continue;
+                if (textFrame.typename === "GroupItem") {{
+                    collectTextFrames(textFrame);
+                    continue;
+                }}
+                if (
+                    textFrame.typename !== "TextFrame"
+                    && textFrame.typename !== "LegacyTextItem"
+                ) continue;
                 var textRange = textFrame.textRange;
                 var attributes = textRange ? textRange.characterAttributes : null;
                 var paragraphAttributes = textRange ? textRange.paragraphAttributes : null;
@@ -231,6 +330,13 @@ def _build_javascript(source: Path) -> str:
                         : null
                 }});
             }}
+        }}
+        for (
+            var textLayerIndex = 0;
+            textLayerIndex < documentRef.layers.length;
+            textLayerIndex++
+        ) {{
+            collectTextFrames(documentRef.layers[textLayerIndex]);
         }}
 
         var layerNames = [];
@@ -267,6 +373,7 @@ def _build_javascript(source: Path) -> str:
             artboard_count: documentRef.artboards.length,
             compound_path_item_count: documentRef.compoundPathItems.length,
             clipping_group_count: clippingGroupCount,
+            group_item_count: documentRef.groupItems.length - clippingGroupCount,
             layer_names: layerNames,
             layer_page_item_types: layerPageItemTypes,
             point_counts: pointCounts,
@@ -401,6 +508,38 @@ def _build_export_javascript(destination: Path, fixture: str) -> str:
         clip.stroked = false;
         clip.clipping = true;
         group.clipped = true;
+"""
+    elif fixture == "group":
+        fixture_javascript = """
+        documentRef = app.documents.add(DocumentColorSpace.RGB, 300, 200);
+        var layer = documentRef.layers[0];
+        layer.name = "Illustrator Native Group";
+
+        var group = layer.groupItems.add();
+        group.name = "Native Product Card";
+        var background = group.pathItems.add();
+        background.name = "Card Background";
+        background.setEntirePath([[20, 20], [280, 20], [280, 180], [20, 180]]);
+        background.closed = true;
+        background.filled = true;
+        background.stroked = false;
+        var backgroundFill = new RGBColor();
+        backgroundFill.red = 242;
+        backgroundFill.green = 245;
+        backgroundFill.blue = 250;
+        background.fillColor = backgroundFill;
+
+        var accent = group.pathItems.add();
+        accent.name = "Card Accent";
+        accent.setEntirePath([[20, 160], [280, 160], [280, 180], [20, 180]]);
+        accent.closed = true;
+        accent.filled = true;
+        accent.stroked = false;
+        var accentFill = new RGBColor();
+        accentFill.red = 38;
+        accentFill.green = 102;
+        accentFill.blue = 204;
+        accent.fillColor = accentFill;
 """
     elif fixture == "point-text":
         fixture_javascript = """
@@ -598,6 +737,7 @@ def _compare_structure(expected: dict[str, Any], actual: dict[str, Any]) -> dict
         "stroked_count",
         "compound_path_item_count",
         "clipping_group_count",
+        "group_item_count",
     )
     return {key: actual.get(key) == expected[key] for key in keys}
 
@@ -671,18 +811,12 @@ def _compare_roundtrip_semantics(
 ) -> dict[str, bool]:
     expected_paths = _document_paths(expected)
     actual_paths = _document_paths(actual)
-    expected_compounds = [
-        compound for layer in expected.layers for compound in layer.compound_paths
-    ]
-    actual_compounds = [
-        compound for layer in actual.layers for compound in layer.compound_paths
-    ]
-    expected_clipping_groups = [
-        group for layer in expected.layers for group in layer.clipping_groups
-    ]
-    actual_clipping_groups = [
-        group for layer in actual.layers for group in layer.clipping_groups
-    ]
+    expected_compounds = _document_compound_paths(expected)
+    actual_compounds = _document_compound_paths(actual)
+    expected_clipping_groups = _document_clipping_groups(expected)
+    actual_clipping_groups = _document_clipping_groups(actual)
+    expected_groups = _document_groups(expected)
+    actual_groups = _document_groups(actual)
     expected_text = _document_text_frames(expected)
     actual_text = _document_text_frames(actual)
     paired_text = list(zip(expected_text, actual_text, strict=False))
@@ -771,6 +905,10 @@ def _compare_roundtrip_semantics(
                 expected_clipping_groups, actual_clipping_groups, strict=True
             )
         ),
+        "group_item_count": len(expected_groups) == len(actual_groups),
+        "group_structure": len(expected_groups) == len(actual_groups)
+        and [_group_signature(group) for group in expected_groups]
+        == [_group_signature(group) for group in actual_groups],
         "stroke_widths": same_path_count
         and all(
             math.isclose(
@@ -986,6 +1124,7 @@ def run_illustrator_export_test(
         "cmyk-curve",
         "compound-path",
         "clipping-group",
+        "group",
         "point-text",
         "unicode-text",
     }:
@@ -1051,6 +1190,7 @@ def run_illustrator_export_test(
             "cmyk-curve": "Illustrator Native Curves",
             "compound-path": "Illustrator Native Compound",
             "clipping-group": "Illustrator Native Clipping",
+            "group": "Illustrator Native Group",
             "point-text": "Illustrator Native Text",
             "unicode-text": "Illustrator Native Unicode",
         }[fixture]
@@ -1063,7 +1203,7 @@ def run_illustrator_export_test(
             "path_item_count": len(paths)
             == (
                 2
-                if fixture in {"compound-path", "clipping-group"}
+                if fixture in {"compound-path", "clipping-group", "group"}
                 else 0
                 if fixture in {"point-text", "unicode-text"}
                 else 1
@@ -1124,6 +1264,18 @@ def run_illustrator_export_test(
                     and group.clipping_path.stroke is None,
                     "content_filled": group is not None
                     and group.paths[0].fill is not None,
+                }
+            )
+        elif fixture == "group":
+            groups = document.layers[0].groups if document.layers else []
+            group = groups[0] if groups else None
+            checks.update(
+                {
+                    "group_item_count": len(groups) == 1,
+                    "group_child_count": group is not None
+                    and len(group.item_order) == 2,
+                    "group_path_count": group is not None
+                    and len(group.paths) == 2,
                 }
             )
         elif fixture in {"point-text", "unicode-text"}:

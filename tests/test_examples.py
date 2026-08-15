@@ -70,6 +70,41 @@ def test_event_poster_preserves_hierarchy_and_wrapped_japanese() -> None:
     )
 
 
+def test_retail_price_tags_preserve_editable_nested_business_components() -> None:
+    example = Path(__file__).parents[1] / "examples" / "retail-price-tags.ai"
+    document = load_ai7(example)
+    layer = document.layers[0]
+
+    assert document.metadata["business_case"] == "retail-shelf-labels"
+    assert len(layer.groups) == 6
+    assert all(len(tag.groups) == 1 for tag in layer.groups)
+    assert all(tag.groups[0].id.endswith("price-group") for tag in layer.groups)
+    price_frames = [
+        text
+        for tag in layer.groups
+        for price_group in tag.groups
+        for text in price_group.text_frames
+        if ".price.line-" in text.id
+    ]
+    assert [text.text for text in price_frames] == [
+        "298円",
+        "348円",
+        "680円",
+        "458円",
+        "798円",
+        "320円",
+    ]
+    assert all(text.alignment == "right" for text in price_frames)
+    statuses = {
+        text.text
+        for tag in layer.groups
+        for price_group in tag.groups
+        for text in price_group.text_frames
+        if ".variant.line-" in text.id
+    }
+    assert statuses == {"おすすめ", "SALE", "残りわずか"}
+
+
 def test_materialized_examples_are_pdf_compatible_native_ai() -> None:
     examples = Path(__file__).parents[1] / "examples"
     native_examples = (
@@ -77,6 +112,7 @@ def test_materialized_examples_are_pdf_compatible_native_ai() -> None:
         "japanese-table.native.ai",
         "conference-badges.native.ai",
         "event-poster.native.ai",
+        "retail-price-tags.native.ai",
     )
 
     for name in native_examples:

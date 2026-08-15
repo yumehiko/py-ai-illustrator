@@ -10,8 +10,9 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 - mask pathとcontent pathsを保持するclipping group IR
 - point textの内容・位置・サイズ・色・ネイティブ段落揃えを持つtext IR
 - 通常path・compound・clippingの混在した描画順を保持するlayer `item_order`
+- heterogeneousな要素と子groupを持つ通常group IR、入れ子の描画順
 - Pythonの行データ・列・formatter・variant・共有styleから表をrenderする`Table`
-- 表・名札・ポスターを同じ境界で合成する`RenderedComponent` / `LayerBuilder`
+- 表・名札・ポスター・棚札を同じ境界で合成する`RenderedComponent` / `LayerBuilder`
 - 意味的な文字ブロック、再利用可能な文字style、矩形・Bézier楕円のauthoring primitives
 - AI7のlegacy textを現代Illustratorの編集可能なTextFrameへ変換するnative materialization
 - 未知行や非UTF-8 byteを変更せず、物理行のbyte spanを索引化するlossless source prototype
@@ -33,7 +34,7 @@ JSONはIllustratorファイルを作るための唯一の記述言語ではあ�
 
 日本語と長文折り返しの例は [examples/japanese_table.py](examples/japanese_table.py) です。列ごとの`wrap`、東アジア文字幅、複数行の自動行高、CP932/RKSJ font resourceを使います。
 
-表以外の例として、[examples/conference_badges.py](examples/conference_badges.py) は参加者・役割variantから4枚の名札を合成し、[examples/event_poster.py](examples/event_poster.py) は日本語の文字階層、折り返し、装飾図形から告知ポスターを組み立てます。これらは`Table`を使わず、同じ汎用IRとcomponent境界へrenderします。
+表以外の例として、[examples/conference_badges.py](examples/conference_badges.py) は参加者・役割variantから4枚の名札を合成し、[examples/event_poster.py](examples/event_poster.py) は日本語の文字階層、折り返し、装飾図形から告知ポスターを組み立てます。[examples/retail_price_tags.py](examples/retail_price_tags.py) は商品データと販売状態から6枚の棚札を作り、各棚札と価格欄を再配置可能な入れ子groupとして保持します。これらは`Table`を使わず、同じ汎用IRとcomponent境界へrenderします。
 
 ```bash
 uv run python examples/styled_table.py
@@ -43,6 +44,7 @@ uv run python examples/japanese_table.py
 uv run py-ai test-illustrator-roundtrip examples/japanese-table.ai
 uv run python examples/conference_badges.py
 uv run python examples/event_poster.py
+uv run python examples/retail_price_tags.py
 
 # Illustratorを使い、legacy textを編集可能なnative TextFrameへ変換
 uv run py-ai materialize-native examples/styled-table.ai \
@@ -127,6 +129,8 @@ uv run py-ai test-illustrator-roundtrip examples/japanese-table.ai
 uv run py-ai test-illustrator examples/styled-table.native.ai
 uv run py-ai test-illustrator examples/conference-badges.native.ai
 uv run py-ai test-illustrator examples/event-poster.native.ai
+uv run py-ai test-illustrator examples/retail-price-tags.ai
+uv run py-ai test-illustrator examples/retail-price-tags.native.ai
 ```
 
 同梱fixtureをIllustratorで開く方向に加え、Illustrator自身が作成・AI8保存したfixtureをPython IRへ読む方向も確認済みです。layer/path/anchor、開閉、塗り・線、Bézier方向点、RGB/CMYK属性、point textを照合します。これは現在の限定subsetに対する結果で、任意のAIファイルの完全互換を意味しません。

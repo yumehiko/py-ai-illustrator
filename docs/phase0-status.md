@@ -1,6 +1,6 @@
 # Phase 0 実装状況
 
-更新日: 2026-08-15
+更新日: 2026-08-16
 
 ## 今回作った縦切り
 
@@ -28,10 +28,11 @@ legacy .ai bytes
 | CMYK fill / stroke | 対応 | 対応 | `k`, `K` |
 | compound path | 対応 | 対応 | `*u` / `*U`、subpath polarity `D` |
 | clipping group | 対応 | 対応 | `q` / `Q`、maskの`h/H`・`W` |
+| nested ordinary group | 対応 | 対応 | `u` / `U`、path/text/containerの異種描画順 |
 | mixed item stacking | 対応 | 対応 | `item_order`はAI描画順、Illustrator DOMは逆順のtop-to-bottomとして照合 |
 | point text | 対応 | 対応 | 内容・位置・size・RGB/CMYK fill。ASCIIとCP932/RKSJ日本語 |
 | semantic table | n/a | 対応 | formatter/variant/style、日英文字幅、折り返し、自動行高をrender |
-| semantic components | n/a | 対応 | TextBlock、LayerBuilder、名札・ポスター作例 |
+| semantic components | n/a | 対応 | TextBlock、LayerBuilder、名札・ポスター・入れ子棚札作例 |
 | native AI materialization | n/a | Illustrator経由 | legacy textをnative TextFrameへ変換、段落揃えを保持 |
 | image | 未対応 | 未対応 | fixture調査後 |
 | PDF-compatible AI semantic data | 未対応 | 未対応 | 現在は形式判定のみ |
@@ -51,8 +52,8 @@ legacy .ai bytes
 
 1. Illustrator再保存をまたぐlayer/container IDとdocument metadataの保持方式を調査する。
 2. 実装済みのoperator span/local patch primitiveをnode source spanとtyped editへ接続する。
-3. CP932以外のtext encoding、image、nested groupの次期feature profileを決める。
-4. 実装した共通render境界へnested group、transform、semantic metadata manifestを追加する。
+3. CP932以外のtext encoding、image、transformの次期feature profileを決める。
+4. 実装した共通render境界へsemantic metadata manifestを追加する。
 5. 検証対象とするIllustratorバージョンの範囲を広げる。
 
 終了条件のうち、Python内の `IR -> AI7 -> IR` と、Illustrator 30.7.0でfixtureを開いた際の編集構造検査は完了しました。対応範囲はまだ小さいため、AI7 writer全体の位置付けは引き続き experimental です。
@@ -79,6 +80,8 @@ point textのIRとAI7 reader/writerを追加し、Illustrator生成AI8の`To` / 
 Python意味モデルの最初の実装として`Table` / `TableColumn` / `TableStyle`を追加しました。列formatter/accessor、行variant、header/body/alternate配色、文字色、列幅、余白、行高、罫線、font要求を共有・派生でき、低水準IRへ決定的にrenderします。[`examples/styled_table.py`](../examples/styled_table.py)がsource of truthで、生成AIはPython readerとIllustrator実機の両方で検査します。
 
 表に依存しない`RenderedComponent` / `LayerBuilder` / `TextBlock` / `TextStyle`と矩形・Bézier楕円primitiveを追加しました。参加者とrole variantから4枚を生成する[`examples/conference_badges.py`](../examples/conference_badges.py)と、日本語文字階層・折り返し・装飾図形を持つ[`examples/event_poster.py`](../examples/event_poster.py)を同じ汎用IRへrenderしています。両方ともlegacy構造検査、native materialization、Illustrator再オープン、PDF/PNG visual previewに合格しました。
+
+通常groupの`u` / `U`を再帰的な`Group` IRとして読み書きし、path、text、compound、clipping、子groupの異種描画順を保持するようにしました。商品データから6枚を生成する[`examples/retail_price_tags.py`](../examples/retail_price_tags.py)では、棚札と価格欄を2階層のgroupにしています。Illustrator 30.7.0で12 groups / 19 paths / 41 TextFrames、RIGHT段落揃え、variant配色をnative化後も保持し、PDF/PNG visual previewにも合格しました。
 
 Illustrator生成の日本語AI8 fixtureから、`RKSJ-H` font profileとCP932 octal textを採取しました。readerはfont名からCP932を選んでUnicodeへ復号し、writerはRKSJ fontのencoding resourceとCP932 bytesを生成します。日本語予定表は列ごとの折り返しと可変行高を含む15 paths / 18 TextFramesとして認識され、Illustrator直接読込・AI8完全往復・PDF/PNG visual previewのすべてに合格しました。
 

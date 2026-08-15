@@ -7,7 +7,17 @@ from dataclasses import dataclass, field
 from typing import Any
 from unicodedata import east_asian_width
 
-from .model import Color, ControlPoint, Layer, LayerItemRef, Path, Point, ProcessColor, TextFrame
+from .model import (
+    Color,
+    ControlPoint,
+    Group,
+    Layer,
+    LayerItemRef,
+    Path,
+    Point,
+    ProcessColor,
+    TextFrame,
+)
 
 CellFormatter = Callable[[Any], str]
 CellAccessor = Callable[[Mapping[str, Any]], Any]
@@ -21,6 +31,7 @@ class RenderedComponent:
     height: float
     paths: list[Path] = field(default_factory=list)
     text_frames: list[TextFrame] = field(default_factory=list)
+    groups: list[Group] = field(default_factory=list)
     item_order: list[LayerItemRef] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -30,6 +41,7 @@ class RenderedComponent:
             self.item_order = [
                 *(LayerItemRef("path", path.id) for path in self.paths),
                 *(LayerItemRef("text", text.id) for text in self.text_frames),
+                *(LayerItemRef("group", group.id) for group in self.groups),
             ]
 
     def as_layer(self, *, layer_id: str, layer_name: str) -> Layer:
@@ -38,6 +50,17 @@ class RenderedComponent:
             name=layer_name,
             paths=list(self.paths),
             text_frames=list(self.text_frames),
+            groups=list(self.groups),
+            item_order=list(self.item_order),
+        )
+
+    def as_group(self, *, group_id: str, group_name: str | None = None) -> Group:
+        return Group(
+            id=group_id,
+            name=group_name,
+            paths=list(self.paths),
+            text_frames=list(self.text_frames),
+            groups=list(self.groups),
             item_order=list(self.item_order),
         )
 
@@ -50,6 +73,7 @@ class LayerBuilder:
     name: str
     _paths: list[Path] = field(default_factory=list, init=False, repr=False)
     _text_frames: list[TextFrame] = field(default_factory=list, init=False, repr=False)
+    _groups: list[Group] = field(default_factory=list, init=False, repr=False)
     _item_order: list[LayerItemRef] = field(default_factory=list, init=False, repr=False)
     _ids: set[str] = field(default_factory=set, init=False, repr=False)
 
@@ -68,14 +92,35 @@ class LayerBuilder:
         self._text_frames.append(text)
         self._item_order.append(LayerItemRef("text", text.id))
 
+    def add_group(self, group: Group) -> None:
+        self._claim(group.id)
+        self._groups.append(group)
+        self._item_order.append(LayerItemRef("group", group.id))
+
+    def add_grouped(
+        self,
+        component: RenderedComponent,
+        *,
+        group_id: str,
+        group_name: str | None = None,
+    ) -> Group:
+        """Keep a rendered component movable as one editable Illustrator group."""
+
+        group = component.as_group(group_id=group_id, group_name=group_name)
+        self.add_group(group)
+        return group
+
     def add(self, component: RenderedComponent) -> None:
         paths = {path.id: path for path in component.paths}
         text_frames = {text.id: text for text in component.text_frames}
+        groups = {group.id: group for group in component.groups}
         for reference in component.item_order:
             if reference.kind == "path":
                 self.add_path(paths[reference.id])
             elif reference.kind == "text":
                 self.add_text(text_frames[reference.id])
+            elif reference.kind == "group":
+                self.add_group(groups[reference.id])
             else:
                 raise ValueError(
                     f"Rendered components do not yet support {reference.kind!r} items"
@@ -87,6 +132,7 @@ class LayerBuilder:
             name=self.name,
             paths=list(self._paths),
             text_frames=list(self._text_frames),
+            groups=list(self._groups),
             item_order=list(self._item_order),
         )
 
