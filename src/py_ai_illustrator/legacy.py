@@ -39,6 +39,10 @@ _CUBIC_RE = re.compile(
 )
 _SHORT_CUBIC_RE = re.compile(rf"^({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+([vVyY])$")
 _WIDTH_RE = re.compile(rf"(?:^|\s)({_NUMBER})\s+w(?:\s|$)")
+_LINE_CAP_RE = re.compile(r"(?:^|\s)([012])\s+J(?:\s|$)")
+_LINE_JOIN_RE = re.compile(r"(?:^|\s)([012])\s+j(?:\s|$)")
+_MITER_LIMIT_RE = re.compile(rf"(?:^|\s)({_NUMBER})\s+M(?:\s|$)")
+_DASH_RE = re.compile(rf"\[((?:\s*{_NUMBER})*\s*)\]\s*({_NUMBER})\s+d(?:\s|$)")
 _POLARITY_RE = re.compile(r"^([01])\s+D$")
 _BOUNDS_RE = re.compile(r"^%%(?:HiRes)?BoundingBox:\s+(.+)$")
 _LAYER_NAME_RE = re.compile(r"^\((.*)\)\s+Ln$")
@@ -52,6 +56,8 @@ _TEXT_FONT_RE = re.compile(rf"^/(\S+)\s+({_NUMBER})\s+{_NUMBER}\s+{_NUMBER}\s+Tf
 _TEXT_ALIGNMENT_RE = re.compile(r"^([0-4])\s+Ta$")
 _TEXT_CONTENT_RE = re.compile(r"^\((.*)\)\s+Tx(?:\s+.*)?$")
 _TEXT_ALIGNMENT_CODES = {"left": 0, "center": 1, "right": 2}
+_LINE_CAP_CODES = {"butt": 0, "round": 1, "projecting": 2}
+_LINE_JOIN_CODES = {"miter": 0, "round": 1, "bevel": 2}
 _POSTSCRIPT_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 _PATH_NOTE_PREFIX = "py-ai:"
 
@@ -238,7 +244,16 @@ def _serialized_path(path: Path, *, locked: bool) -> list[str]:
         lines.append(_color_operator(path.fill, stroke=False))
     if path.stroke is not None:
         lines.append(_color_operator(path.stroke, stroke=True))
-    lines.append(f"{_number(path.stroke_width)} w")
+    dash_values = " ".join(_number(value) for value in path.dash_pattern)
+    lines.extend(
+        [
+            f"{_LINE_CAP_CODES[path.line_cap]} J",
+            f"{_LINE_JOIN_CODES[path.line_join]} j",
+            f"{_number(path.stroke_width)} w",
+            f"{_number(path.miter_limit)} M",
+            f"[{dash_values}] {_number(path.dash_offset)} d",
+        ]
+    )
     lines.extend(_path_geometry(path))
     render = {
         (True, True, True): "b",
@@ -264,6 +279,13 @@ def _serialized_clipping_path(path: Path, *, locked: bool) -> list[str]:
         [
             "1 A" if locked else "0 A",
             "1 D" if path.polarity == "positive" else "0 D",
+            f"{_LINE_CAP_CODES[path.line_cap]} J",
+            f"{_LINE_JOIN_CODES[path.line_join]} j",
+            f"{_number(path.stroke_width)} w",
+            f"{_number(path.miter_limit)} M",
+            "["
+            + " ".join(_number(value) for value in path.dash_pattern)
+            + f"] {_number(path.dash_offset)} d",
         ]
     )
     note = _path_note(path)
@@ -488,6 +510,11 @@ def loads_ai7(data: bytes) -> Document:
     fill: ProcessColor | None = None
     stroke: ProcessColor | None = None
     stroke_width = 1.0
+    dash_pattern: list[float] = []
+    dash_offset = 0.0
+    line_cap = "butt"
+    line_join = "miter"
+    miter_limit = 4.0
     pending_id: str | None = None
     pending_name: str | None = None
     pending_compound_id: str | None = None
@@ -820,7 +847,23 @@ def loads_ai7(data: bytes) -> Document:
         width_match = _WIDTH_RE.search(line)
         if width_match:
             stroke_width = float(width_match.group(1))
-            continue
+        line_cap_match = _LINE_CAP_RE.search(line)
+        if line_cap_match:
+            line_cap = {"0": "butt", "1": "round", "2": "projecting"}[
+                line_cap_match.group(1)
+            ]
+        line_join_match = _LINE_JOIN_RE.search(line)
+        if line_join_match:
+            line_join = {"0": "miter", "1": "round", "2": "bevel"}[
+                line_join_match.group(1)
+            ]
+        miter_limit_match = _MITER_LIMIT_RE.search(line)
+        if miter_limit_match:
+            miter_limit = float(miter_limit_match.group(1))
+        dash_match = _DASH_RE.search(line)
+        if dash_match:
+            dash_pattern = [float(value) for value in dash_match.group(1).split()]
+            dash_offset = float(dash_match.group(2))
         polarity_match = _POLARITY_RE.match(line)
         if polarity_match:
             polarity = "positive" if polarity_match.group(1) == "1" else "negative"
@@ -914,6 +957,11 @@ def loads_ai7(data: bytes) -> Document:
                 fill=fill if has_fill else None,
                 stroke=stroke if has_stroke else None,
                 stroke_width=stroke_width,
+                dash_pattern=list(dash_pattern),
+                dash_offset=dash_offset,
+                line_cap=line_cap,
+                line_join=line_join,
+                miter_limit=miter_limit,
                 name=pending_name,
                 polarity=polarity,
             )

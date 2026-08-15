@@ -26,11 +26,13 @@ legacy .ai bytes
 | Bézier curve | 対応 | 対応 | `c/C`, `v/V`, `y/Y`を読み、writerは`c/C`へ正規化 |
 | RGB fill / stroke / width | 対応 | 対応 | `Xa`, `XA`, `w` |
 | CMYK fill / stroke | 対応 | 対応 | `k`, `K` |
+| stroke style | 対応 | 対応 | dash pattern/offset、cap、join、miter limit |
 | compound path | 対応 | 対応 | `*u` / `*U`、subpath polarity `D` |
 | clipping group | 対応 | 対応 | `q` / `Q`、maskの`h/H`・`W` |
 | nested ordinary group | 対応 | 対応 | `u` / `U`、path/text/containerの異種描画順 |
 | mixed item stacking | 対応 | 対応 | `item_order`はAI描画順、Illustrator DOMは逆順のtop-to-bottomとして照合 |
 | point text | 対応 | 対応 | 内容・位置・size・RGB/CMYK fill。ASCIIとCP932/RKSJ日本語 |
+| area text | 未対応 | 未対応 | AI8互換保存ではoutline化。modern materializationでの再構成が必要 |
 | semantic table | n/a | 対応 | formatter/variant/style、日英文字幅、折り返し、自動行高をrender |
 | semantic components | n/a | 対応 | TextBlock、LayerBuilder、名札・ポスター・入れ子棚札作例 |
 | native AI materialization | n/a | Illustrator経由 | legacy textをnative TextFrameへ変換、段落揃えを保持 |
@@ -82,6 +84,10 @@ Python意味モデルの最初の実装として`Table` / `TableColumn` / `Table
 表に依存しない`RenderedComponent` / `LayerBuilder` / `TextBlock` / `TextStyle`と矩形・Bézier楕円primitiveを追加しました。参加者とrole variantから4枚を生成する[`examples/conference_badges.py`](../examples/conference_badges.py)と、日本語文字階層・折り返し・装飾図形を持つ[`examples/event_poster.py`](../examples/event_poster.py)を同じ汎用IRへrenderしています。両方ともlegacy構造検査、native materialization、Illustrator再オープン、PDF/PNG visual previewに合格しました。
 
 通常groupの`u` / `U`を再帰的な`Group` IRとして読み書きし、path、text、compound、clipping、子groupの異種描画順を保持するようにしました。商品データから6枚を生成する[`examples/retail_price_tags.py`](../examples/retail_price_tags.py)では、棚札と価格欄を2階層のgroupにしています。Illustrator 30.7.0で12 groups / 19 paths / 41 TextFrames、RIGHT段落揃え、variant配色をnative化後も保持し、PDF/PNG visual previewにも合格しました。
+
+pathのnative stroke styleとしてdash pattern/offset、line cap/join、miter limitを追加しました。Illustrator生成AI8の複合statement `1 J 2 j 6 w 7 M [18 8 4 8 ]3 d`を読み、Python writerからも同じ属性を出力します。[`examples/quarterly_kpi_report.py`](../examples/quarterly_kpi_report.py)はactual/target/gridを異なる線styleで生成し、Illustrator直接検査、AI8完全往復、native materialization、PDF/PNG previewに合格しました。
+
+area textも同時にfixture調査しましたが、Illustrator 30.7.0でAI8互換保存すると文字がoutline群へ変換されました。長文の再編集性を上げるには、modern AI materialization時にarea frameをDOMで再構成する必要があります。
 
 Illustrator生成の日本語AI8 fixtureから、`RKSJ-H` font profileとCP932 octal textを採取しました。readerはfont名からCP932を選んでUnicodeへ復号し、writerはRKSJ fontのencoding resourceとCP932 bytesを生成します。日本語予定表は列ごとの折り返しと可変行高を含む15 paths / 18 TextFramesとして認識され、Illustrator直接読込・AI8完全往復・PDF/PNG visual previewのすべてに合格しました。
 

@@ -241,6 +241,39 @@ def test_bezier_and_cmyk_roundtrip() -> None:
     assert restored.to_dict() == original.to_dict()
 
 
+def test_native_stroke_style_roundtrip() -> None:
+    original = Document(
+        width=300,
+        height=200,
+        layers=[
+            Layer(
+                id="route",
+                name="Route",
+                paths=[
+                    AIPath(
+                        id="dashed-route",
+                        points=[Point(30, 40), Point(150, 160), Point(270, 40)],
+                        closed=False,
+                        stroke=Color(0.15, 0.4, 0.8),
+                        stroke_width=6,
+                        dash_pattern=[18, 8, 4, 8],
+                        dash_offset=3,
+                        line_cap="round",
+                        line_join="bevel",
+                        miter_limit=7,
+                    )
+                ],
+            )
+        ],
+    )
+
+    serialized = dumps_ai7(original)
+    restored = loads_ai7(serialized)
+
+    assert b"1 J\n2 j\n6 w\n7 M\n[18 8 4 8] 3 d" in serialized
+    assert restored.to_dict() == original.to_dict()
+
+
 def test_closed_bezier_roundtrip_preserves_closing_handles() -> None:
     original = Document(
         width=200,

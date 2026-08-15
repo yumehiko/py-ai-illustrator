@@ -105,6 +105,32 @@ def test_retail_price_tags_preserve_editable_nested_business_components() -> Non
     assert statuses == {"おすすめ", "SALE", "残りわずか"}
 
 
+def test_quarterly_report_preserves_chart_semantics_and_stroke_styles() -> None:
+    example = Path(__file__).parents[1] / "examples" / "quarterly-kpi-report.ai"
+    document = load_ai7(example)
+    layer = document.layers[0]
+
+    assert document.metadata["business_case"] == "quarterly-kpi-report"
+    assert len(layer.groups) == 4
+    chart = next(group for group in layer.groups if group.id == "operating-index.group")
+    target = next(path for path in chart.paths if path.id == "operating-index.target")
+    actual = next(path for path in chart.paths if path.id == "operating-index.actual")
+    assert target.dash_pattern == [10, 6]
+    assert target.dash_offset == 2
+    assert target.line_cap == "round"
+    assert actual.dash_pattern == []
+    assert actual.line_cap == "round"
+    assert actual.line_join == "round"
+    metric_values = [
+        text
+        for metric in layer.groups[:3]
+        for text in metric.text_frames
+        if ".value.line-" in text.id
+    ]
+    assert [text.text for text in metric_values] == ["$1.42M", "42.8%", "76.2%"]
+    assert all(text.alignment == "right" for text in metric_values)
+
+
 def test_materialized_examples_are_pdf_compatible_native_ai() -> None:
     examples = Path(__file__).parents[1] / "examples"
     native_examples = (
@@ -113,6 +139,7 @@ def test_materialized_examples_are_pdf_compatible_native_ai() -> None:
         "conference-badges.native.ai",
         "event-poster.native.ai",
         "retail-price-tags.native.ai",
+        "quarterly-kpi-report.native.ai",
     )
 
     for name in native_examples:

@@ -8,6 +8,7 @@ from py_ai_illustrator.authoring import (
     TextBlock,
     TextStyle,
     ellipse_path,
+    polyline_path,
     rectangle_path,
 )
 from py_ai_illustrator.model import Color, LayerItemRef
@@ -185,3 +186,22 @@ def test_layer_builder_can_keep_a_component_as_an_editable_group() -> None:
     assert group.text_frames[0].text == "Grouped"
     assert layer.item_order == [LayerItemRef("group", "product-card")]
     assert layer.groups == [group]
+
+
+def test_polyline_path_keeps_native_stroke_style() -> None:
+    route = polyline_path(
+        "route",
+        points=[(10, 20), (30, 50), (80, 40)],
+        stroke=Color(0.1, 0.4, 0.8),
+        stroke_width=4,
+        dash_pattern=(12, 6),
+        dash_offset=2,
+        line_cap="round",
+        line_join="bevel",
+    )
+
+    assert not route.closed
+    assert route.dash_pattern == [12, 6]
+    assert route.dash_offset == 2
+    assert route.line_cap == "round"
+    assert route.line_join == "bevel"

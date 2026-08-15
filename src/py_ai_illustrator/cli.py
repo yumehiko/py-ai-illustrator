@@ -188,6 +188,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=(
             "rgb-rectangle",
             "cmyk-curve",
+            "stroke-style",
             "compound-path",
             "clipping-group",
             "group",

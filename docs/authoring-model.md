@@ -72,11 +72,13 @@ layer = price_table.render_layer(x=40, top=300)
 - `LayerBuilder`: 複数componentを安定ID付きで一つのlayerへ合成
 - `Group`: path、text、compound、clipping、子groupの描画順を保つ編集単位
 - `TextBlock` / `TextStyle`: 折り返し、文字階層、ネイティブ段落揃え
-- `rectangle_path` / `ellipse_path`: domainに依存しない編集可能な図形primitive
+- `rectangle_path` / `ellipse_path` / `polyline_path`: domainに依存しない編集可能な図形primitive
 
 [`examples/conference_badges.py`](../examples/conference_badges.py)では、`Attendee`とrole variantから4枚の`ConferenceBadge`を生成します。[`examples/event_poster.py`](../examples/event_poster.py)では、同じprimitiveから日本語の告知ポスターを生成します。前者は反復・variant・識別番号、後者は文字階層・折り返し・装飾図形が主題です。いずれも表のrow/column modelへ押し込めていません。
 
 [`examples/retail_price_tags.py`](../examples/retail_price_tags.py)は、実務寄りの反復制作例です。商品、価格、販売状態を`Product`として持ち、`PriceTag`が共通体裁とvariantを決定します。`LayerBuilder.add_grouped()`により各棚札は一括移動でき、価格欄も子groupとして独立編集できます。金額はIllustratorのRIGHT段落揃えで保持されるため、桁数を変更しても座標の手調整を前提にしません。
+
+[`examples/quarterly_kpi_report.py`](../examples/quarterly_kpi_report.py)では、`LineChart`が月次値を座標へscaleし、actual series、target、grid、labelへrenderします。線は単なる見た目ではなく、solid/dashed、cap、join、offsetを持つnative strokeとして保持されます。表のcell modelを流用せず、グラフ固有の入力検証とscale規則をPython componentへ置いています。
 
 この形なら、今後の商品カード、値札、名刺、図解、カタログページ等も、それぞれの文脈を持つPython componentとして追加できます。低水準IRとAI writerは特定componentを知りません。
 
@@ -85,6 +87,8 @@ layer = price_table.render_layer(x=40, top=300)
 AI7は公開仕様に基づく往復・検査形式として有用ですが、現行IllustratorではAI7 textがlegacy textとして読み込まれます。writerは`Ta` operatorへLEFT/CENTER/RIGHTを出力しますが、現代の編集可能なTextFrameにするには変換が必要です。
 
 `py-ai materialize-native`は入力を一時コピーし、Illustratorの`legacyTextItems.convertToNative()`を使ってnative TextFrameへ変換し、PDF-compatible AIとして別名保存します。これにより、純Pythonの決定的なAI7経路と、Illustrator環境を使う高編集性の現代AI経路を分離します。
+
+現行`TextBlock`の折り返しは、各行を独立したpoint textとしてrenderします。Illustrator上で幅変更に追従するarea textではありません。Illustrator 30.7.0はarea textをAI8互換保存するとoutline化するため、area text対応はlegacy serializerではなく、modern AI materialization時にDOM上でframeを再構成する課題として扱います。
 
 ## 三つの層の責務
 

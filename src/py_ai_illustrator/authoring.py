@@ -249,6 +249,35 @@ def rectangle_path(
     )
 
 
+def polyline_path(
+    item_id: str,
+    *,
+    points: Sequence[tuple[float, float]],
+    stroke: ProcessColor,
+    stroke_width: float = 1.0,
+    dash_pattern: Sequence[float] = (),
+    dash_offset: float = 0.0,
+    line_cap: str = "butt",
+    line_join: str = "miter",
+    name: str | None = None,
+) -> Path:
+    """Create an editable open polyline with native Illustrator stroke styling."""
+
+    return Path(
+        id=item_id,
+        name=name,
+        points=[Point(x, y) for x, y in points],
+        closed=False,
+        fill=None,
+        stroke=stroke,
+        stroke_width=stroke_width,
+        dash_pattern=list(dash_pattern),
+        dash_offset=dash_offset,
+        line_cap=line_cap,
+        line_join=line_join,
+    )
+
+
 def ellipse_path(
     item_id: str,
     *,

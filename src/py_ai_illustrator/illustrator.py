@@ -256,6 +256,10 @@ def _build_javascript(source: Path) -> str:
         for (var pathIndex = 0; pathIndex < documentRef.pathItems.length; pathIndex++) {{
             var path = documentRef.pathItems[pathIndex];
             var anchors = [];
+            var strokeDashes = [];
+            for (var dashIndex = 0; dashIndex < path.strokeDashes.length; dashIndex++) {{
+                strokeDashes.push(path.strokeDashes[dashIndex]);
+            }}
             for (var pointIndex = 0; pointIndex < path.pathPoints.length; pointIndex++) {{
                 var point = path.pathPoints[pointIndex];
                 anchors.push({{
@@ -272,6 +276,11 @@ def _build_javascript(source: Path) -> str:
                 filled: path.filled,
                 stroked: path.stroked,
                 stroke_width: path.strokeWidth,
+                dash_pattern: strokeDashes,
+                dash_offset: path.strokeDashOffset,
+                line_cap: String(path.strokeCap),
+                line_join: String(path.strokeJoin),
+                miter_limit: path.strokeMiterLimit,
                 fill_color: path.filled ? colorToObject(path.fillColor) : null,
                 stroke_color: path.stroked ? colorToObject(path.strokeColor) : null,
                 anchors: anchors
@@ -457,6 +466,31 @@ def _build_export_javascript(destination: Path, fixture: str) -> str:
         stroke.magenta = 25;
         stroke.yellow = 0;
         stroke.black = 10;
+        path.strokeColor = stroke;
+"""
+    elif fixture == "stroke-style":
+        fixture_javascript = """
+        documentRef = app.documents.add(DocumentColorSpace.RGB, 300, 200);
+        var layer = documentRef.layers[0];
+        layer.name = "Illustrator Native Stroke Style";
+
+        var path = layer.pathItems.add();
+        path.name = "Native Dashed Route";
+        path.setEntirePath([[30, 40], [150, 160], [270, 40]]);
+        path.closed = false;
+        path.filled = false;
+        path.stroked = true;
+        path.strokeWidth = 6;
+        path.strokeDashes = [18, 8, 4, 8];
+        path.strokeDashOffset = 3;
+        path.strokeCap = StrokeCap.ROUNDENDCAP;
+        path.strokeJoin = StrokeJoin.BEVELENDJOIN;
+        path.strokeMiterLimit = 7;
+
+        var stroke = new RGBColor();
+        stroke.red = 38;
+        stroke.green = 102;
+        stroke.blue = 204;
         path.strokeColor = stroke;
 """
     elif fixture == "compound-path":
@@ -919,6 +953,32 @@ def _compare_roundtrip_semantics(
             )
             for left, right in paired_paths
         ),
+        "dash_patterns": same_path_count
+        and all(left.dash_pattern == right.dash_pattern for left, right in paired_paths),
+        "dash_offsets": same_path_count
+        and all(
+            math.isclose(
+                left.dash_offset,
+                right.dash_offset,
+                rel_tol=0.0,
+                abs_tol=tolerance,
+            )
+            for left, right in paired_paths
+        ),
+        "line_caps": same_path_count
+        and all(left.line_cap == right.line_cap for left, right in paired_paths),
+        "line_joins": same_path_count
+        and all(left.line_join == right.line_join for left, right in paired_paths),
+        "miter_limits": same_path_count
+        and all(
+            math.isclose(
+                left.miter_limit,
+                right.miter_limit,
+                rel_tol=0.0,
+                abs_tol=tolerance,
+            )
+            for left, right in paired_paths
+        ),
         "fill_colors": same_path_count
         and all(
             _color_close(left.fill, right.fill, tolerance=tolerance)
@@ -1122,6 +1182,7 @@ def run_illustrator_export_test(
     if fixture not in {
         "rgb-rectangle",
         "cmyk-curve",
+        "stroke-style",
         "compound-path",
         "clipping-group",
         "group",
@@ -1188,6 +1249,7 @@ def run_illustrator_export_test(
         expected_layer_name = {
             "rgb-rectangle": "Illustrator Native",
             "cmyk-curve": "Illustrator Native Curves",
+            "stroke-style": "Illustrator Native Stroke Style",
             "compound-path": "Illustrator Native Compound",
             "clipping-group": "Illustrator Native Clipping",
             "group": "Illustrator Native Group",
@@ -1233,6 +1295,17 @@ def run_illustrator_export_test(
                     "bezier_handles": path is not None
                     and path.points[0].out_handle is not None
                     and path.points[1].in_handle is not None,
+                }
+            )
+        elif fixture == "stroke-style":
+            checks.update(
+                {
+                    "dash_pattern": path is not None
+                    and path.dash_pattern == [18.0, 8.0, 4.0, 8.0],
+                    "dash_offset": path is not None and path.dash_offset == 3.0,
+                    "line_cap": path is not None and path.line_cap == "round",
+                    "line_join": path is not None and path.line_join == "bevel",
+                    "miter_limit": path is not None and path.miter_limit == 7.0,
                 }
             )
         elif fixture == "compound-path":

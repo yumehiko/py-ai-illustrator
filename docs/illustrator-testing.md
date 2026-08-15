@@ -30,6 +30,7 @@ uv run py-ai test-illustrator examples/cmyk-curve.ai
 uv run py-ai test-illustrator-export --fixture rgb-rectangle
 uv run py-ai test-illustrator-export --fixture cmyk-curve
 uv run py-ai test-illustrator-export --fixture group
+uv run py-ai test-illustrator-export --fixture stroke-style
 ```
 
 完全往復（Python生成AIをIllustratorでAI8再保存し、Python IRへ戻す）:
@@ -45,6 +46,8 @@ uv run py-ai test-illustrator-roundtrip examples/styled-table.ai
 uv run py-ai test-illustrator examples/japanese-table.ai
 uv run py-ai test-illustrator-roundtrip examples/japanese-table.ai
 uv run py-ai test-illustrator examples/retail-price-tags.ai
+uv run py-ai test-illustrator examples/quarterly-kpi-report.ai
+uv run py-ai test-illustrator-roundtrip examples/quarterly-kpi-report.ai
 ```
 
 現行Illustratorで再編集可能なnative TextFrameを持つ現代AIへ変換する場合:
@@ -54,6 +57,7 @@ uv run py-ai materialize-native examples/styled-table.ai \
   -o examples/styled-table.native.ai
 uv run py-ai test-illustrator examples/styled-table.native.ai
 uv run py-ai test-illustrator examples/retail-price-tags.native.ai
+uv run py-ai test-illustrator examples/quarterly-kpi-report.native.ai
 ```
 
 `materialize-native`はAI7の`Ta`段落属性を含むlegacy textを`convertToNative()`で現代TextFrameへ変換します。出力はPDF-compatible AIで、既存出力の上書きを拒否します。
@@ -105,6 +109,7 @@ uv run py-ai test-illustrator examples/rectangle.ai \
 - pathの安定IDと名前
 - anchor間の相対座標と、anchorに対するBézier handleの相対座標
 - stroke width
+- dash pattern/offset、line cap/join、miter limit
 - RGB/CMYK process color
 - point textの内容、size、fill、相対配置
 
@@ -133,6 +138,7 @@ AI8互換のlegacy再保存ではfont名の置換やparagraph alignmentの正規
 | `examples/conference-badges.ai` | 1 layer / 16 paths / 20 point texts | 4名札、role variant、楕円avatar、左右中央揃え |
 | `examples/event-poster.ai` | 1 layer / 4 paths / 9 point texts | 日本語階層、折り返し、装飾Bézier楕円 |
 | `examples/retail-price-tags.ai` | 1 layer / 12 nested groups / 19 paths / 41 point texts | 6棚札、価格欄group、販売variant、右揃え価格 |
+| `examples/quarterly-kpi-report.ai` | 1 layer / 4 groups / 17 paths / 24 point texts | actual/target/grid、dash、round cap/join、KPI cards |
 
 native materializationも同じ環境で確認済みです。
 
@@ -143,6 +149,7 @@ native materializationも同じ環境で確認済みです。
 | `conference-badges.native.ai` | 20 legacy → 20 native TextFrames | 名前・role・番号と3種の揃えを保持 |
 | `event-poster.native.ai` | 9 legacy → 9 native TextFrames | 日本語階層・折り返しと3種の揃えを保持 |
 | `retail-price-tags.native.ai` | 41 legacy → 41 native TextFrames | 12 groups、販売variant、RIGHT価格揃えを保持 |
+| `quarterly-kpi-report.native.ai` | 24 legacy → 24 native TextFrames | chart group、dash、KPI値と3種の揃えを保持 |
 
 逆方向も同じ環境で確認済みです。
 
@@ -153,6 +160,7 @@ native materializationも同じ環境で確認済みです。
 | `point-text` | legacy AI検出、文字列、size 14、RGB fill |
 | `unicode-text` | RKSJ-H + CP932をUnicode日本語へ復号、size 16、RGB fill |
 | `group` | legacy AI検出、1 ordinary group、2 child paths |
+| `stroke-style` | dash pattern/offset、round cap、bevel join、miter limitを復号 |
 
 完全往復も両fixtureで`passed`です。RGB矩形は全体が平行移動しRGB値が8-bitへ量子化されましたが、正規化後のpath geometryとpaint属性は一致しました。CMYK Bézierはanchor・handle・CMYK値・stroke widthが保持されました。両方ともpath ID・名前も保持されました。
 

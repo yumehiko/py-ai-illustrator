@@ -1,0 +1,666 @@
+%!PS-Adobe-3.0
+%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)
+%%Title: (Semantic quarterly KPI report)
+%%BoundingBox: 0 0 612 420
+%%HiResBoundingBox: 0 0 612 420
+%%DocumentProcessColors: Cyan Magenta Yellow Black
+%AI5_FileFormat 3.0
+%AI3_ColorUsage: Color
+%AI3_TemplateBox: 306 630 306 630
+%AI3_DocumentPreview: None
+%AI5_ArtSize: 612 420
+%AI5_RulerUnits: 2
+%AI5_ArtFlags: 0 0 0 1 0 0 1 0 0
+%AI5_NumLayers: 1
+%%PageOrigin:0 0
+%%py-ai-metadata: eyJzb3VyY2UiOiJleGFtcGxlcy9xdWFydGVybHlfa3BpX3JlcG9ydC5weSIsImNvbXBvbmVudCI6IkxpbmVDaGFydCIsImJ1c2luZXNzX2Nhc2UiOiJxdWFydGVybHkta3BpLXJlcG9ydCJ9
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+%%EndSetup
+%AI5_BeginLayer
+%%py-ai-layer-id: (quarterly-report)
+1 1 1 1 0 0 0 79 128 255 Lb
+(Quarterly KPI report) Ln
+%AI7_Tag: (report.background)
+%%py-ai-path-name: (Report background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InJlcG9ydC5iYWNrZ3JvdW5kIiwibmFtZSI6IlJlcG9ydCBiYWNrZ3JvdW5kIn0=
+0.965 0.96 0.94 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+0 0 m
+612 0 L
+612 420 L
+0 420 L
+0 0 L
+f
+%%py-ai-text-id: (report.eyebrow.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Report period)
+0 A
+0 To
+1 0 0 1 574 386.8 0 Tp
+TP
+1 0 0 1 574 386.8 Tm
+0 Tr
+0.1 0.38 0.78 Xa
+/Helvetica-Bold 9 0 0 Tf
+2 Ta
+(NORTH REGION / Q2 2026) Tx
+TO
+%%py-ai-text-id: (report.title.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Report title)
+0 A
+0 To
+1 0 0 1 38 357.8 0 Tp
+TP
+1 0 0 1 38 357.8 Tm
+0 Tr
+0.06 0.1 0.18 Xa
+/Helvetica-Bold 24 0 0 Tf
+0 Ta
+(Quarterly performance) Tx
+TO
+%%py-ai-group-id: (metric-1.group)
+%%py-ai-group-name: (Metric: Revenue)
+u
+%AI7_Tag: (metric-1.background)
+%%py-ai-path-name: (Metric card: Revenue)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im1ldHJpYy0xLmJhY2tncm91bmQiLCJuYW1lIjoiTWV0cmljIGNhcmQ6IFJldmVudWUifQ==
+1 1 1 Xa
+0.82 0.82 0.8 XA
+0 J
+0 j
+0.7 w
+4 M
+[] 0 d
+38 262 m
+202 262 L
+202 332 L
+38 332 L
+38 262 L
+b
+%%py-ai-text-id: (metric-1.label.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Metric label)
+0 A
+0 To
+1 0 0 1 50 313.6 0 Tp
+TP
+1 0 0 1 50 313.6 Tm
+0 Tr
+0.4 0.44 0.52 Xa
+/Helvetica-Bold 8 0 0 Tf
+0 Ta
+(REVENUE) Tx
+TO
+%%py-ai-text-id: (metric-1.value.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Metric value)
+0 A
+0 To
+1 0 0 1 190 283.4 0 Tp
+TP
+1 0 0 1 190 283.4 Tm
+0 Tr
+0.06 0.1 0.18 Xa
+/Helvetica-Bold 22 0 0 Tf
+2 Ta
+($1.42M) Tx
+TO
+%%py-ai-text-id: (metric-1.change.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Metric change)
+0 A
+0 To
+1 0 0 1 190 266.6 0 Tp
+TP
+1 0 0 1 190 266.6 Tm
+0 Tr
+0.1 0.38 0.78 Xa
+/Helvetica-Bold 8 0 0 Tf
+2 Ta
+(+18.4%) Tx
+TO
+U
+%%py-ai-group-id: (metric-2.group)
+%%py-ai-group-name: (Metric: Gross margin)
+u
+%AI7_Tag: (metric-2.background)
+%%py-ai-path-name: (Metric card: Gross margin)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im1ldHJpYy0yLmJhY2tncm91bmQiLCJuYW1lIjoiTWV0cmljIGNhcmQ6IEdyb3NzIG1hcmdpbiJ9
+1 1 1 Xa
+0.82 0.82 0.8 XA
+0 J
+0 j
+0.7 w
+4 M
+[] 0 d
+224 262 m
+388 262 L
+388 332 L
+224 332 L
+224 262 L
+b
+%%py-ai-text-id: (metric-2.label.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Metric label)
+0 A
+0 To
+1 0 0 1 236 313.6 0 Tp
+TP
+1 0 0 1 236 313.6 Tm
+0 Tr
+0.4 0.44 0.52 Xa
+/Helvetica-Bold 8 0 0 Tf
+0 Ta
+(GROSS MARGIN) Tx
+TO
+%%py-ai-text-id: (metric-2.value.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Metric value)
+0 A
+0 To
+1 0 0 1 376 283.4 0 Tp
+TP
+1 0 0 1 376 283.4 Tm
+0 Tr
+0.06 0.1 0.18 Xa
+/Helvetica-Bold 22 0 0 Tf
+2 Ta
+(42.8%) Tx
+TO
+%%py-ai-text-id: (metric-2.change.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Metric change)
+0 A
+0 To
+1 0 0 1 376 266.6 0 Tp
+TP
+1 0 0 1 376 266.6 Tm
+0 Tr
+0.1 0.38 0.78 Xa
+/Helvetica-Bold 8 0 0 Tf
+2 Ta
+(+3.1 pt) Tx
+TO
+U
+%%py-ai-group-id: (metric-3.group)
+%%py-ai-group-name: (Metric: Retention)
+u
+%AI7_Tag: (metric-3.background)
+%%py-ai-path-name: (Metric card: Retention)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im1ldHJpYy0zLmJhY2tncm91bmQiLCJuYW1lIjoiTWV0cmljIGNhcmQ6IFJldGVudGlvbiJ9
+1 1 1 Xa
+0.82 0.82 0.8 XA
+0 J
+0 j
+0.7 w
+4 M
+[] 0 d
+410 262 m
+574 262 L
+574 332 L
+410 332 L
+410 262 L
+b
+%%py-ai-text-id: (metric-3.label.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Metric label)
+0 A
+0 To
+1 0 0 1 422 313.6 0 Tp
+TP
+1 0 0 1 422 313.6 Tm
+0 Tr
+0.4 0.44 0.52 Xa
+/Helvetica-Bold 8 0 0 Tf
+0 Ta
+(RETENTION) Tx
+TO
+%%py-ai-text-id: (metric-3.value.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Metric value)
+0 A
+0 To
+1 0 0 1 562 283.4 0 Tp
+TP
+1 0 0 1 562 283.4 Tm
+0 Tr
+0.06 0.1 0.18 Xa
+/Helvetica-Bold 22 0 0 Tf
+2 Ta
+(76.2%) Tx
+TO
+%%py-ai-text-id: (metric-3.change.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Metric change)
+0 A
+0 To
+1 0 0 1 562 266.6 0 Tp
+TP
+1 0 0 1 562 266.6 Tm
+0 Tr
+0.92 0.3 0.22 Xa
+/Helvetica-Bold 8 0 0 Tf
+2 Ta
+(-1.4 pt) Tx
+TO
+U
+%AI7_Tag: (chart.panel)
+%%py-ai-path-name: (Chart panel)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImNoYXJ0LnBhbmVsIiwibmFtZSI6IkNoYXJ0IHBhbmVsIn0=
+1 1 1 Xa
+0.82 0.82 0.8 XA
+0 J
+0 j
+0.7 w
+4 M
+[] 0 d
+38 50 m
+574 50 L
+574 244 L
+38 244 L
+38 50 L
+b
+%%py-ai-text-id: (chart.title.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-name: (Chart title)
+0 A
+0 To
+1 0 0 1 58 215.2 0 Tp
+TP
+1 0 0 1 58 215.2 Tm
+0 Tr
+0.06 0.1 0.18 Xa
+/Helvetica-Bold 11 0 0 Tf
+0 Ta
+(Monthly operating index) Tx
+TO
+%%py-ai-text-id: (chart.legend.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Target legend)
+0 A
+0 To
+1 0 0 1 554 216.6 0 Tp
+TP
+1 0 0 1 554 216.6 Tm
+0 Tr
+0.92 0.3 0.22 Xa
+/Helvetica-Bold 8 0 0 Tf
+2 Ta
+(TARGET 100) Tx
+TO
+%%py-ai-group-id: (operating-index.group)
+%%py-ai-group-name: (Operating index chart)
+u
+%AI7_Tag: (operating-index.grid-60)
+%%py-ai-path-name: (Grid line 60)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im9wZXJhdGluZy1pbmRleC5ncmlkLTYwIiwibmFtZSI6IkdyaWQgbGluZSA2MCJ9
+0.78 0.8 0.84 XA
+1 J
+0 j
+0.7 w
+4 M
+[2 4] 0 d
+94 77 m
+544 77 L
+S
+%%py-ai-text-id: (operating-index.tick-60.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Y axis value)
+0 A
+0 To
+1 0 0 1 86 74.4 0 Tp
+TP
+1 0 0 1 86 74.4 Tm
+0 Tr
+0.4 0.44 0.52 Xa
+/Helvetica 7 0 0 Tf
+2 Ta
+(60) Tx
+TO
+%AI7_Tag: (operating-index.grid-80)
+%%py-ai-path-name: (Grid line 80)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im9wZXJhdGluZy1pbmRleC5ncmlkLTgwIiwibmFtZSI6IkdyaWQgbGluZSA4MCJ9
+0.78 0.8 0.84 XA
+1 J
+0 j
+0.7 w
+4 M
+[2 4] 0 d
+94 116.333333 m
+544 116.333333 L
+S
+%%py-ai-text-id: (operating-index.tick-80.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Y axis value)
+0 A
+0 To
+1 0 0 1 86 113.733333 0 Tp
+TP
+1 0 0 1 86 113.733333 Tm
+0 Tr
+0.4 0.44 0.52 Xa
+/Helvetica 7 0 0 Tf
+2 Ta
+(80) Tx
+TO
+%AI7_Tag: (operating-index.grid-100)
+%%py-ai-path-name: (Grid line 100)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im9wZXJhdGluZy1pbmRleC5ncmlkLTEwMCIsIm5hbWUiOiJHcmlkIGxpbmUgMTAwIn0=
+0.78 0.8 0.84 XA
+1 J
+0 j
+0.7 w
+4 M
+[2 4] 0 d
+94 155.666667 m
+544 155.666667 L
+S
+%%py-ai-text-id: (operating-index.tick-100.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Y axis value)
+0 A
+0 To
+1 0 0 1 86 153.066667 0 Tp
+TP
+1 0 0 1 86 153.066667 Tm
+0 Tr
+0.4 0.44 0.52 Xa
+/Helvetica 7 0 0 Tf
+2 Ta
+(100) Tx
+TO
+%AI7_Tag: (operating-index.grid-120)
+%%py-ai-path-name: (Grid line 120)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im9wZXJhdGluZy1pbmRleC5ncmlkLTEyMCIsIm5hbWUiOiJHcmlkIGxpbmUgMTIwIn0=
+0.78 0.8 0.84 XA
+1 J
+0 j
+0.7 w
+4 M
+[2 4] 0 d
+94 195 m
+544 195 L
+S
+%%py-ai-text-id: (operating-index.tick-120.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Y axis value)
+0 A
+0 To
+1 0 0 1 86 192.4 0 Tp
+TP
+1 0 0 1 86 192.4 Tm
+0 Tr
+0.4 0.44 0.52 Xa
+/Helvetica 7 0 0 Tf
+2 Ta
+(120) Tx
+TO
+%AI7_Tag: (operating-index.target)
+%%py-ai-path-name: (Target line)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im9wZXJhdGluZy1pbmRleC50YXJnZXQiLCJuYW1lIjoiVGFyZ2V0IGxpbmUifQ==
+0.92 0.3 0.22 XA
+1 J
+0 j
+1.6 w
+4 M
+[10 6] 2 d
+94 155.666667 m
+544 155.666667 L
+S
+%AI7_Tag: (operating-index.actual)
+%%py-ai-path-name: (Actual performance)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im9wZXJhdGluZy1pbmRleC5hY3R1YWwiLCJuYW1lIjoiQWN0dWFsIHBlcmZvcm1hbmNlIn0=
+0.1 0.38 0.78 XA
+1 J
+1 j
+3 w
+4 M
+[] 0 d
+94 100.6 m
+184 124.2 L
+274 114.366667 L
+364 147.8 L
+454 171.4 L
+544 179.266667 L
+S
+%AI7_Tag: (operating-index.point-0)
+%%py-ai-path-name: (APR: 72)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im9wZXJhdGluZy1pbmRleC5wb2ludC0wIiwibmFtZSI6IkFQUjogNzIifQ==
+1 1 1 Xa
+0.1 0.38 0.78 XA
+0 J
+0 j
+2 w
+4 M
+[] 0 d
+98 100.6 m
+98 102.809139 96.209139 104.6 94 104.6 c
+91.790861 104.6 90 102.809139 90 100.6 c
+90 98.390861 91.790861 96.6 94 96.6 c
+96.209139 96.6 98 98.390861 98 100.6 c
+b
+%%py-ai-text-id: (operating-index.label-0.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Month label)
+0 A
+0 To
+1 0 0 1 94 58.6 0 Tp
+TP
+1 0 0 1 94 58.6 Tm
+0 Tr
+0.4 0.44 0.52 Xa
+/Helvetica 8 0 0 Tf
+1 Ta
+(APR) Tx
+TO
+%AI7_Tag: (operating-index.point-1)
+%%py-ai-path-name: (MAY: 84)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im9wZXJhdGluZy1pbmRleC5wb2ludC0xIiwibmFtZSI6Ik1BWTogODQifQ==
+1 1 1 Xa
+0.1 0.38 0.78 XA
+0 J
+0 j
+2 w
+4 M
+[] 0 d
+188 124.2 m
+188 126.409139 186.209139 128.2 184 128.2 c
+181.790861 128.2 180 126.409139 180 124.2 c
+180 121.990861 181.790861 120.2 184 120.2 c
+186.209139 120.2 188 121.990861 188 124.2 c
+b
+%%py-ai-text-id: (operating-index.label-1.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Month label)
+0 A
+0 To
+1 0 0 1 184 58.6 0 Tp
+TP
+1 0 0 1 184 58.6 Tm
+0 Tr
+0.4 0.44 0.52 Xa
+/Helvetica 8 0 0 Tf
+1 Ta
+(MAY) Tx
+TO
+%AI7_Tag: (operating-index.point-2)
+%%py-ai-path-name: (JUN: 79)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im9wZXJhdGluZy1pbmRleC5wb2ludC0yIiwibmFtZSI6IkpVTjogNzkifQ==
+1 1 1 Xa
+0.1 0.38 0.78 XA
+0 J
+0 j
+2 w
+4 M
+[] 0 d
+278 114.366667 m
+278 116.575806 276.209139 118.366667 274 118.366667 c
+271.790861 118.366667 270 116.575806 270 114.366667 c
+270 112.157528 271.790861 110.366667 274 110.366667 c
+276.209139 110.366667 278 112.157528 278 114.366667 c
+b
+%%py-ai-text-id: (operating-index.label-2.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Month label)
+0 A
+0 To
+1 0 0 1 274 58.6 0 Tp
+TP
+1 0 0 1 274 58.6 Tm
+0 Tr
+0.4 0.44 0.52 Xa
+/Helvetica 8 0 0 Tf
+1 Ta
+(JUN) Tx
+TO
+%AI7_Tag: (operating-index.point-3)
+%%py-ai-path-name: (JUL: 96)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im9wZXJhdGluZy1pbmRleC5wb2ludC0zIiwibmFtZSI6IkpVTDogOTYifQ==
+1 1 1 Xa
+0.1 0.38 0.78 XA
+0 J
+0 j
+2 w
+4 M
+[] 0 d
+368 147.8 m
+368 150.009139 366.209139 151.8 364 151.8 c
+361.790861 151.8 360 150.009139 360 147.8 c
+360 145.590861 361.790861 143.8 364 143.8 c
+366.209139 143.8 368 145.590861 368 147.8 c
+b
+%%py-ai-text-id: (operating-index.label-3.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Month label)
+0 A
+0 To
+1 0 0 1 364 58.6 0 Tp
+TP
+1 0 0 1 364 58.6 Tm
+0 Tr
+0.4 0.44 0.52 Xa
+/Helvetica 8 0 0 Tf
+1 Ta
+(JUL) Tx
+TO
+%AI7_Tag: (operating-index.point-4)
+%%py-ai-path-name: (AUG: 108)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im9wZXJhdGluZy1pbmRleC5wb2ludC00IiwibmFtZSI6IkFVRzogMTA4In0=
+1 1 1 Xa
+0.1 0.38 0.78 XA
+0 J
+0 j
+2 w
+4 M
+[] 0 d
+458 171.4 m
+458 173.609139 456.209139 175.4 454 175.4 c
+451.790861 175.4 450 173.609139 450 171.4 c
+450 169.190861 451.790861 167.4 454 167.4 c
+456.209139 167.4 458 169.190861 458 171.4 c
+b
+%%py-ai-text-id: (operating-index.label-4.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Month label)
+0 A
+0 To
+1 0 0 1 454 58.6 0 Tp
+TP
+1 0 0 1 454 58.6 Tm
+0 Tr
+0.4 0.44 0.52 Xa
+/Helvetica 8 0 0 Tf
+1 Ta
+(AUG) Tx
+TO
+%AI7_Tag: (operating-index.point-5)
+%%py-ai-path-name: (SEP: 112)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im9wZXJhdGluZy1pbmRleC5wb2ludC01IiwibmFtZSI6IlNFUDogMTEyIn0=
+1 1 1 Xa
+0.1 0.38 0.78 XA
+0 J
+0 j
+2 w
+4 M
+[] 0 d
+548 179.266667 m
+548 181.475806 546.209139 183.266667 544 183.266667 c
+541.790861 183.266667 540 181.475806 540 179.266667 c
+540 177.057528 541.790861 175.266667 544 175.266667 c
+546.209139 175.266667 548 177.057528 548 179.266667 c
+b
+%%py-ai-text-id: (operating-index.label-5.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-name: (Month label)
+0 A
+0 To
+1 0 0 1 544 58.6 0 Tp
+TP
+1 0 0 1 544 58.6 Tm
+0 Tr
+0.4 0.44 0.52 Xa
+/Helvetica 8 0 0 Tf
+1 Ta
+(SEP) Tx
+TO
+U
+%%py-ai-text-id: (report.source.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-name: (Data source)
+0 A
+0 To
+1 0 0 1 574 24.4 0 Tp
+TP
+1 0 0 1 574 24.4 Tm
+0 Tr
+0.4 0.44 0.52 Xa
+/Helvetica 7 0 0 Tf
+2 Ta
+(Source: internal sales and customer operations data / refreshed 2026-09-30) Tx
+TO
+LB
+%AI5_EndLayer
+%%Trailer
+%%EOF

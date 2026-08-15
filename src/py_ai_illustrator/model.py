@@ -110,6 +110,11 @@ class Path:
     fill: ProcessColor | None = None
     stroke: ProcessColor | None = None
     stroke_width: float = 1.0
+    dash_pattern: list[float] = field(default_factory=list)
+    dash_offset: float = 0.0
+    line_cap: str = "butt"
+    line_join: str = "miter"
+    miter_limit: float = 4.0
     name: str | None = None
     polarity: str = "positive"
     unknown: dict[str, Any] = field(default_factory=dict)
@@ -119,6 +124,16 @@ class Path:
             raise ValueError("A path needs at least two points")
         if self.stroke_width < 0:
             raise ValueError("stroke_width must not be negative")
+        if any(value < 0 for value in self.dash_pattern):
+            raise ValueError("dash_pattern values must not be negative")
+        if self.dash_pattern and not any(self.dash_pattern):
+            raise ValueError("dash_pattern must contain a positive value")
+        if self.line_cap not in {"butt", "round", "projecting"}:
+            raise ValueError("line_cap must be 'butt', 'round', or 'projecting'")
+        if self.line_join not in {"miter", "round", "bevel"}:
+            raise ValueError("line_join must be 'miter', 'round', or 'bevel'")
+        if self.miter_limit <= 0:
+            raise ValueError("miter_limit must be positive")
         if self.polarity not in {"positive", "negative"}:
             raise ValueError("polarity must be 'positive' or 'negative'")
 
@@ -134,6 +149,11 @@ class Path:
                 _process_color_from_dict(data["stroke"]) if data.get("stroke") is not None else None
             ),
             stroke_width=float(data.get("stroke_width", 1.0)),
+            dash_pattern=[float(value) for value in data.get("dash_pattern", [])],
+            dash_offset=float(data.get("dash_offset", 0.0)),
+            line_cap=str(data.get("line_cap", "butt")),
+            line_join=str(data.get("line_join", "miter")),
+            miter_limit=float(data.get("miter_limit", 4.0)),
             polarity=str(data.get("polarity", "positive")),
             unknown=dict(data.get("unknown", {})),
         )

@@ -9,6 +9,7 @@ from .authoring import (
     TextBlock,
     TextStyle,
     ellipse_path,
+    polyline_path,
     rectangle_path,
 )
 from .format import FileFormat, FormatReport, inspect_file
@@ -62,6 +63,7 @@ __all__ = [
     "TableStyle",
     "ellipse_path",
     "inspect_file",
+    "polyline_path",
     "rectangle_path",
     "tokenize_legacy",
 ]
