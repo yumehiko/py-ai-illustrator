@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import math
 import re
 from contextlib import suppress
 from pathlib import Path as FilePath
@@ -52,6 +53,10 @@ _TEXT_POSITION_RE = re.compile(
     rf"^{_NUMBER}\s+{_NUMBER}\s+{_NUMBER}\s+{_NUMBER}\s+"
     rf"({_NUMBER})\s+({_NUMBER})\s+{_NUMBER}\s+Tp$"
 )
+_TEXT_MATRIX_RE = re.compile(
+    rf"^({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+({_NUMBER})\s+"
+    rf"({_NUMBER})\s+({_NUMBER})\s+Tm$"
+)
 _TEXT_FONT_RE = re.compile(rf"^/(\S+)\s+({_NUMBER})\s+{_NUMBER}\s+{_NUMBER}\s+Tf$")
 _TEXT_ALIGNMENT_RE = re.compile(r"^([0-4])\s+Ta$")
 _TEXT_CONTENT_RE = re.compile(r"^\((.*)\)\s+Tx(?:\s+.*)?$")
@@ -67,6 +72,8 @@ class UnsupportedLegacyFeature(ValueError):
 
 
 def _number(value: float) -> str:
+    if abs(value) < 0.0000005:
+        return "0"
     return f"{value:.6f}".rstrip("0").rstrip(".") or "0"
 
 
@@ -310,6 +317,8 @@ def _serialized_text_frame(text: TextFrame, *, locked: bool) -> list[str]:
     lines = [f"%%py-ai-text-alignment: ({text.alignment})"]
     if text.tracking != 0:
         lines.append(f"%%py-ai-text-tracking: {_number(text.tracking)}")
+    if text.rotation != 0:
+        lines.append(f"%%py-ai-text-rotation: {_number(text.rotation)}")
     if text.native_font_name is not None:
         if not _POSTSCRIPT_NAME_RE.fullmatch(text.native_font_name):
             raise UnsupportedLegacyFeature(
@@ -327,13 +336,17 @@ def _serialized_text_frame(text: TextFrame, *, locked: bool) -> list[str]:
         else:
             encoded_name = base64.b64encode(text.name.encode("utf-8")).decode("ascii")
             lines.append(f"%%py-ai-text-name-utf8: {encoded_name}")
+    radians = math.radians(text.rotation)
+    cosine = math.cos(radians)
+    sine = math.sin(radians)
     lines.extend(
         [
             "1 A" if locked else "0 A",
             "0 To",
             f"1 0 0 1 {_number(text.x)} {_number(text.y)} 0 Tp",
             "TP",
-            f"1 0 0 1 {_number(text.x)} {_number(text.y)} Tm",
+            f"{_number(cosine)} {_number(sine)} {_number(-sine)} "
+            f"{_number(cosine)} {_number(text.x)} {_number(text.y)} Tm",
             "0 Tr",
             _color_operator(text.fill, stroke=False),
             f"/{text.font_name} {_number(text.font_size)} 0 0 Tf",
@@ -535,11 +548,13 @@ def loads_ai7(data: bytes) -> Document:
     text_font_name = "Helvetica"
     text_font_size = 12.0
     text_alignment = "left"
+    text_rotation = 0.0
     pending_text_id: str | None = None
     pending_text_name: str | None = None
     pending_text_alignment: str | None = None
     pending_text_native_font_name: str | None = None
     pending_text_tracking = 0.0
+    pending_text_rotation: float | None = None
     metadata: dict[str, object] = {}
 
     def active_container() -> Layer | Group:
@@ -782,17 +797,33 @@ def loads_ai7(data: bytes) -> Document:
                     line.removeprefix("%%py-ai-text-tracking: ")
                 )
             continue
+        if line.startswith("%%py-ai-text-rotation: "):
+            with suppress(ValueError):
+                pending_text_rotation = float(
+                    line.removeprefix("%%py-ai-text-rotation: ")
+                )
+            continue
         if _TEXT_BEGIN_RE.match(line):
             in_text = True
             text_parts = []
             text_x = 0.0
             text_y = 0.0
+            text_rotation = 0.0
             continue
         if in_text:
             text_position_match = _TEXT_POSITION_RE.match(line)
             if text_position_match:
                 text_x = float(text_position_match.group(1))
                 text_y = float(text_position_match.group(2))
+                continue
+            text_matrix_match = _TEXT_MATRIX_RE.match(line)
+            if text_matrix_match:
+                text_rotation = math.degrees(
+                    math.atan2(
+                        float(text_matrix_match.group(2)),
+                        float(text_matrix_match.group(1)),
+                    )
+                )
                 continue
             text_font_match = _TEXT_FONT_RE.match(line)
             if text_font_match:
@@ -823,6 +854,11 @@ def loads_ai7(data: bytes) -> Document:
                     font_name=text_font_name,
                     native_font_name=pending_text_native_font_name,
                     tracking=pending_text_tracking,
+                    rotation=(
+                        pending_text_rotation
+                        if pending_text_rotation is not None
+                        else text_rotation
+                    ),
                     fill=fill or Color(0.0, 0.0, 0.0),
                     alignment=pending_text_alignment or text_alignment,
                 )
@@ -832,6 +868,7 @@ def loads_ai7(data: bytes) -> Document:
                 pending_text_alignment = None
                 pending_text_native_font_name = None
                 pending_text_tracking = 0.0
+                pending_text_rotation = None
                 in_text = False
                 continue
         ai8_rgb_match = _AI8_RGB_COLOR_RE.match(line)

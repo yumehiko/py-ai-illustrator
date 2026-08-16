@@ -57,6 +57,7 @@ uv run py-ai test-illustrator-roundtrip examples/japanese-table.ai
 uv run py-ai test-illustrator examples/retail-price-tags.ai
 uv run py-ai test-illustrator examples/quarterly-kpi-report.ai
 uv run py-ai test-illustrator-roundtrip examples/quarterly-kpi-report.ai
+uv run py-ai test-illustrator examples/packaging-labels.ai
 ```
 
 現行Illustratorで再編集可能なnative TextFrameを持つ現代AIへ変換する場合:
@@ -67,9 +68,12 @@ uv run py-ai materialize-native examples/styled-table.ai \
 uv run py-ai test-illustrator examples/styled-table.native.ai
 uv run py-ai test-illustrator examples/retail-price-tags.native.ai
 uv run py-ai test-illustrator examples/quarterly-kpi-report.native.ai
+uv run py-ai test-illustrator examples/packaging-labels.native.ai
 ```
 
-`materialize-native`はAI7の`Ta`段落属性を含むlegacy textを`convertToNative()`で現代TextFrameへ変換します。変換後は再帰的なIllustrator DOM順に基づき、各TextFrameの`note`へ`py-ai-text:` identity（安定ID・役割名）を設定し、`FontSpec.postscript_name`のfontと`TextStyle.tracking`を割り当てます。指定fontが見つからない場合、割り当て後のfont名やtrackingが一致しない場合は`mismatch`にします。出力はPDF-compatible AIで、既存出力の上書きを拒否します。
+`materialize-native`はAI7の`Ta`段落属性を含むlegacy textを`convertToNative()`で現代TextFrameへ変換します。変換後は再帰的なIllustrator DOM順に基づき、各TextFrameの`note`へ`py-ai-text:` identity（安定ID・役割名）を設定し、`FontSpec.postscript_name`のfont、`TextStyle.tracking`、rotationを割り当てます。指定fontが見つからない場合、割り当て後のfont名、tracking、rotationが一致しない場合は`mismatch`にします。出力はPDF-compatible AIで、既存出力の上書きを拒否します。
+
+rotationを含むlegacy AIをIllustratorでAI8互換再保存する経路では、一部textがoutlineへ変換され、text/path/group数の完全往復は成立しませんでした。回転textの保証対象はnative materialization経路です。`packaging-labels.native.ai`では保存・再オープン後も全20 TextFramesがnativeのまま残り、5件の回転角を保持します。
 
 調査用にIllustrator生成AIを残す場合は、既存ファイルではない出力先を指定します。上書きは拒否されます。
 
@@ -161,6 +165,7 @@ native materializationも同じ環境で確認済みです。
 | `event-poster.native.ai` | 9 legacy → 9 native TextFrames | 日本語階層・折り返しと3種の揃えを保持 |
 | `retail-price-tags.native.ai` | 41 legacy → 41 native TextFrames | 12 groups、販売variant、RIGHT価格揃えを保持 |
 | `quarterly-kpi-report.native.ai` | 24 legacy → 24 native TextFrames | chart group、dash、KPI値と3種の揃えを保持 |
+| `packaging-labels.native.ai` | 20 legacy → 20 native TextFrames | 5 groups、90度side code、-12度badge、font・tracking・IDを保持 |
 
 逆方向も同じ環境で確認済みです。
 

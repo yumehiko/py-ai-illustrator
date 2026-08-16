@@ -36,6 +36,7 @@ legacy .ai bytes
 | semantic table | n/a | 対応 | formatter/variant/style、日英文字幅、折り返し、自動行高をrender |
 | semantic components | n/a | 対応 | TextBlock、LayerBuilder、名札・ポスター・入れ子棚札作例 |
 | native AI materialization | n/a | Illustrator経由 | legacy textをnative TextFrameへ変換、段落揃えとidentity noteを保持 |
+| rigid transform / text rotation | 対応 | 対応 | path・handle・text・nested group、native角度検証 |
 | image | 未対応 | 未対応 | fixture調査後 |
 | PDF-compatible AI semantic data | 未対応 | 未対応 | 現在は形式判定のみ |
 
@@ -88,6 +89,8 @@ Python意味モデルの最初の実装として`Table` / `TableColumn` / `Table
 pathのnative stroke styleとしてdash pattern/offset、line cap/join、miter limitを追加しました。Illustrator生成AI8の複合statement `1 J 2 j 6 w 7 M [18 8 4 8 ]3 d`を読み、Python writerからも同じ属性を出力します。[`examples/quarterly_kpi_report.py`](../examples/quarterly_kpi_report.py)はactual/target/gridを異なる線styleで生成し、Illustrator直接検査、AI8完全往復、native materialization、PDF/PNG previewに合格しました。
 
 area textも同時にfixture調査しましたが、Illustrator 30.7.0でAI8互換保存すると文字がoutline群へ変換されました。長文の再編集性を上げるには、modern AI materialization時にarea frameをDOMで再構成する必要があります。
+
+`AffineTransform`とtext rotationを追加し、rigid matrixでpath、Bézier handle、text、nested groupを一括配置できるようにしました。[`examples/packaging_labels.py`](../examples/packaging_labels.py)は3つのlabel groupと2つのbadge group、14 paths、20 TextFramesを持ちます。Illustrator 30.7.0でnative化・再オープンし、side code 3件の90度、badge 2件の-12度、font、tracking、identity mappingを確認しました。PDF visual QAでは初期side codeの枠外配置を検出し、rotation前positionを保持するmaterializationとanchor調整で解消しました。legacy AI8互換再保存では一部の回転textがoutline化したため、rotationの再編集保証はnative materialization経路に限定します。
 
 legacy textへ標準`%AI3_Note`を書くだけでは、Illustrator DOMへnoteが付かずAI8再保存で失われます。一方、native materializationで変換直後のTextFrameへDOM `note`を設定する方式は保持されました。layer/groupのtop-to-bottom DOM順を再帰的に再現してIDと役割名を対応付け、6つのnative作例すべてで全TextFrameのidentity noteを再オープン確認しています。
 

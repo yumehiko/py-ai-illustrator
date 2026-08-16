@@ -1,6 +1,7 @@
 """Python tools for inspecting and translating Adobe Illustrator files."""
 
 from .authoring import (
+    AffineTransform,
     FontSpec,
     LayerBuilder,
     RenderedComponent,
@@ -12,6 +13,9 @@ from .authoring import (
     ellipse_path,
     polyline_path,
     rectangle_path,
+    transform_group,
+    transform_path,
+    transform_text,
 )
 from .format import FileFormat, FormatReport, inspect_file
 from .lossless import (
@@ -38,6 +42,7 @@ from .model import (
 
 __all__ = [
     "CmykColor",
+    "AffineTransform",
     "Color",
     "CompoundPath",
     "ControlPoint",
@@ -67,6 +72,9 @@ __all__ = [
     "inspect_file",
     "polyline_path",
     "rectangle_path",
+    "transform_group",
+    "transform_path",
+    "transform_text",
     "tokenize_legacy",
 ]
 

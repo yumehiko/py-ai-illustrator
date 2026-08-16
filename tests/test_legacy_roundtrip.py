@@ -545,6 +545,7 @@ def test_point_text_roundtrip_preserves_editable_text_semantics() -> None:
                         font_name="Helvetica-Bold",
                         font_size=14,
                         tracking=120,
+                        rotation=30,
                         fill=Color(0.1, 0.2, 0.3),
                         alignment="center",
                     )
@@ -557,6 +558,8 @@ def test_point_text_roundtrip_preserves_editable_text_semantics() -> None:
     assert b"0 To" in serialized
     assert b"/Helvetica-Bold 14 0 0 Tf" in serialized
     assert b"%%py-ai-text-tracking: 120" in serialized
+    assert b"%%py-ai-text-rotation: 30" in serialized
+    assert b"0.866025 0.5 -0.5 0.866025 40 180 Tm" in serialized
     assert b"(Table \\(Header\\)) Tx" in serialized
     assert loads_ai7(serialized).to_dict() == original.to_dict()
 
@@ -590,6 +593,30 @@ LB
     assert (texts[0].x, texts[0].y, texts[0].font_size) == (40.0, 180.0, 14.0)
     assert texts[1].font_size == 14.0
     assert texts[0].fill == Color(0.1, 0.2, 0.3)
+
+
+def test_reads_text_rotation_from_native_text_matrix() -> None:
+    source = br"""%!PS-Adobe-3.0
+%%BoundingBox: 0 0 200 200
+%AI5_FileFormat 3.0
+%AI5_BeginLayer
+1 1 1 1 0 0 1 0 79 128 255 0 50 Lb
+(Rotated) Ln
+0 To
+1 0 0 1 40 80 0 Tp
+TP
+0 1 -1 0 40 80 Tm
+/Helvetica 12 0 0 Tf
+(ROTATED) Tx
+TO
+LB
+%AI5_EndLayer
+%%EOF
+"""
+
+    text = loads_ai7(source).layers[0].text_frames[0]
+
+    assert text.rotation == pytest.approx(90)
 
 
 def test_japanese_rksj_point_text_roundtrip() -> None:

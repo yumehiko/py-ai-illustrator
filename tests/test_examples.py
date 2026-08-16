@@ -131,6 +131,29 @@ def test_quarterly_report_preserves_chart_semantics_and_stroke_styles() -> None:
     assert all(text.alignment == "right" for text in metric_values)
 
 
+def test_packaging_labels_preserve_rotated_editable_variants() -> None:
+    example = Path(__file__).parents[1] / "examples" / "packaging-labels.ai"
+    document = load_ai7(example)
+    layer = document.layers[0]
+
+    assert document.metadata["business_case"] == "packaging-label-variants"
+    assert len(layer.groups) == 3
+    side_codes = [
+        text
+        for label in layer.groups
+        for text in label.text_frames
+        if text.id.endswith("side-code.line-0")
+    ]
+    badges = [group for label in layer.groups for group in label.groups]
+    badge_texts = [text for badge in badges for text in badge.text_frames]
+
+    assert len(side_codes) == 3
+    assert all(text.rotation == 90 for text in side_codes)
+    assert {text.text for text in badge_texts} == {"NEW", "LIMITED"}
+    assert all(text.rotation == -12 for text in badge_texts)
+    assert all(len(badge.paths) == 1 for badge in badges)
+
+
 def test_materialized_examples_are_pdf_compatible_native_ai() -> None:
     examples = Path(__file__).parents[1] / "examples"
     native_examples = (
@@ -140,6 +163,7 @@ def test_materialized_examples_are_pdf_compatible_native_ai() -> None:
         "event-poster.native.ai",
         "retail-price-tags.native.ai",
         "quarterly-kpi-report.native.ai",
+        "packaging-labels.native.ai",
     )
 
     for name in native_examples:

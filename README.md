@@ -16,6 +16,7 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 - Pythonの行データ・列・formatter・variant・共有styleから表をrenderする`Table`
 - 表・名札・ポスター・棚札を同じ境界で合成する`RenderedComponent` / `LayerBuilder`
 - 意味的な文字ブロック、再利用可能な文字style、矩形・Bézier楕円・polylineのauthoring primitives
+- rigid affine transformによるpath・Bézier handle・text・nested groupの再配置とtext rotation
 - AI7のlegacy textを現代Illustratorの編集可能なTextFrameへ変換するnative materialization
 - 未知行や非UTF-8 byteを変更せず、物理行のbyte spanを索引化するlossless source prototype
 - 公開仕様に沿った Illustrator 7 互換サブセットと JSON IR の往復変換
@@ -40,6 +41,8 @@ JSONはIllustratorファイルを作るための唯一の記述言語ではあ�
 
 [examples/quarterly_kpi_report.py](examples/quarterly_kpi_report.py) は月次値と目標値からKPIレポートを生成します。実績polyline、目標破線、grid、data point、KPI cardを編集可能な要素として保持し、dash・round cap/joinもIllustratorのnative stroke属性へ出力します。
 
+[examples/packaging_labels.py](examples/packaging_labels.py) は商品variantから3種のパッケージラベルを生成します。90度のside code、-12度のbadge、badge内のpathとtextを同じrigid transformで配置し、回転後も個々の要素とgroupを編集可能に保ちます。
+
 ```bash
 uv run python examples/styled_table.py
 uv run py-ai test-illustrator examples/styled-table.ai
@@ -50,6 +53,7 @@ uv run python examples/conference_badges.py
 uv run python examples/event_poster.py
 uv run python examples/retail_price_tags.py
 uv run python examples/quarterly_kpi_report.py
+uv run python examples/packaging_labels.py
 
 # Illustratorを使い、legacy textを編集可能なnative TextFrameへ変換
 uv run py-ai illustrator-fonts --query "小塚ゴシック" \
@@ -138,15 +142,18 @@ uv run py-ai test-illustrator examples/retail-price-tags.ai
 uv run py-ai test-illustrator examples/retail-price-tags.native.ai
 uv run py-ai test-illustrator examples/quarterly-kpi-report.ai
 uv run py-ai test-illustrator examples/quarterly-kpi-report.native.ai
+uv run py-ai test-illustrator examples/packaging-labels.native.ai
 ```
 
 同梱fixtureをIllustratorで開く方向に加え、Illustrator自身が作成・AI8保存したfixtureをPython IRへ読む方向も確認済みです。layer/path/anchor、開閉、塗り・線、Bézier方向点、RGB/CMYK属性、point textを照合します。これは現在の限定subsetに対する結果で、任意のAIファイルの完全互換を意味しません。
 
 完全往復ではIllustratorによるdocument原点の移動を正規化し、RGBの8-bit量子化を許容して意味属性を比較します。pathの安定IDと名前は標準の`%AI3_Note` path属性へ埋め込み、Illustrator 30.7.0でのAI8再保存後も照合します。layer/containerのID・名前とdocument metadataはまだ比較対象外です。
 
-legacy point textはASCIIに加え、`RKSJ-H` / `RKSJ-V` fontを明示した日本語CP932の読み書きに対応します。writerは`Ta` operatorと揃え基準のanchorを出力します。ただし現行IllustratorでAI7 textを直接開いた状態はlegacy textであり、現代のTextFrameへ変換するまで再編集できません。`materialize-native`は一時コピーだけを開いて全legacy textをnativeへ変換し、PDF-compatible AIとして保存します。変換後の各TextFrameには`py-ai-text:` noteとして安定IDと役割名を設定し、指定されたPostScript名のフォントとtrackingを明示的に再設定します。フォントが導入されていない場合は黙って代替せず、検証を失敗させて不足名を報告します。Illustrator 30.7.0で、文字内容、LEFT/CENTER/RIGHT段落揃え、tracking、identity noteが保存後も保持されることを確認済みです。
+legacy point textはASCIIに加え、`RKSJ-H` / `RKSJ-V` fontを明示した日本語CP932の読み書きに対応します。writerは`Ta` operator、text matrix、揃え基準のanchorを出力します。ただし現行IllustratorでAI7 textを直接開いた状態はlegacy textであり、現代のTextFrameへ変換するまで再編集できません。`materialize-native`は一時コピーだけを開いて全legacy textをnativeへ変換し、PDF-compatible AIとして保存します。変換後の各TextFrameには`py-ai-text:` noteとして安定IDと役割名を設定し、指定されたPostScript名のフォント、tracking、rotationを明示的に再設定します。フォントが導入されていない場合は黙って代替せず、検証を失敗させて不足名を報告します。Illustrator 30.7.0で、文字内容、LEFT/CENTER/RIGHT段落揃え、tracking、rotation、identity noteが保存後も保持されることを確認済みです。
 
 長文の自動リフローを行うarea textは未対応です。Illustrator 30.7.0でarea textをAI8互換保存するとoutlineへ変換されるため、対応にはmodern AI materialization時にarea textを再構成する別経路が必要です。現行`TextBlock`の折り返しは複数のpoint textとして出力します。
+
+回転textも、Illustrator 30.7.0でlegacy AIをAI8互換再保存すると一部がoutlineへ変換される場合があります。rotationを含む再編集可能な成果物は`materialize-native`経路を使い、font・tracking・rotation・identityの一致を検証します。
 
 初期 reader は、直線・3次Bézierからなる基本 path を対象にしています。compound pathやclippingを含む任意のlegacy AIを完全に読める段階ではありません。入力は上書きせず、出力先を明示してください。
 

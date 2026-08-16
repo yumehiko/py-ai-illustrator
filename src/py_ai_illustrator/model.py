@@ -178,6 +178,7 @@ class TextFrame:
     font_name: str = "Helvetica"
     native_font_name: str | None = None
     tracking: float = 0.0
+    rotation: float = 0.0
     fill: ProcessColor = field(default_factory=lambda: Color(0.0, 0.0, 0.0))
     alignment: str = "left"
     name: str | None = None
@@ -188,6 +189,8 @@ class TextFrame:
             raise ValueError("font_size must be positive")
         if not math.isfinite(self.tracking):
             raise ValueError("tracking must be finite")
+        if not math.isfinite(self.rotation):
+            raise ValueError("rotation must be finite")
         if self.alignment not in {"left", "center", "right"}:
             raise ValueError("alignment must be 'left', 'center', or 'right'")
 
@@ -204,6 +207,7 @@ class TextFrame:
                 str(data["native_font_name"]) if data.get("native_font_name") is not None else None
             ),
             tracking=float(data.get("tracking", 0.0)),
+            rotation=float(data.get("rotation", 0.0)),
             fill=_process_color_from_dict(
                 data.get("fill", {"red": 0.0, "green": 0.0, "blue": 0.0})
             ),

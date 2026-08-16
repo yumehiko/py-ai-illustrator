@@ -333,6 +333,12 @@ def _build_javascript(source: Path) -> str:
             }});
         }}
 
+        function itemRotation(item) {{
+            if (!item.matrix) return null;
+            var matrix = item.matrix;
+            return Math.atan2(matrix.mValueB, matrix.mValueA) * 180 / Math.PI;
+        }}
+
         var textFrames = [];
         function collectTextFrames(container) {{
             for (
@@ -365,6 +371,7 @@ def _build_javascript(source: Path) -> str:
                     tracking: attributes && typeof attributes.tracking === "number"
                         ? attributes.tracking
                         : null,
+                    rotation: itemRotation(textFrame),
                     fill_color: attributes ? colorToObject(attributes.fillColor) : null,
                     justification: paragraphAttributes
                         ? String(paragraphAttributes.justification)
@@ -716,6 +723,7 @@ def _build_native_materialization_javascript(
     text_contents: tuple[str, ...] = (),
     desired_font_names: tuple[str, ...] = (),
     desired_trackings: tuple[float, ...] = (),
+    desired_rotations: tuple[float, ...] = (),
 ) -> str:
     source_literal = _character_code_expression(source)
     destination_literal = _character_code_expression(destination)
@@ -727,6 +735,7 @@ def _build_native_materialization_javascript(
         _character_code_expression(name) for name in desired_font_names
     )
     desired_trackings_literal = ",".join(str(value) for value in desired_trackings)
+    desired_rotations_literal = ",".join(str(value) for value in desired_rotations)
     return f"""#target illustrator
 (function () {{
     var source = new File({source_literal});
@@ -743,6 +752,7 @@ def _build_native_materialization_javascript(
         var textContents = [{text_contents_literal}];
         var desiredFontNames = [{desired_font_names_literal}];
         var desiredTrackings = [{desired_trackings_literal}];
+        var desiredRotations = [{desired_rotations_literal}];
         var converted = legacyTextCount === 0
             ? true
             : documentRef.legacyTextItems.convertToNative();
@@ -754,6 +764,16 @@ def _build_native_materialization_javascript(
         var matchingFontCount = 0;
         var missingFonts = [];
         var matchingTrackingCount = 0;
+        var matchingRotationCount = 0;
+        function itemRotation(item) {{
+            var matrix = item.matrix;
+            return Math.atan2(matrix.mValueB, matrix.mValueA) * 180 / Math.PI;
+        }}
+        function angleDifference(left, right) {{
+            var difference = (left - right + 180) % 360;
+            if (difference < 0) difference += 360;
+            return Math.abs(difference - 180);
+        }}
         for (
             var noteIndex = 0;
             noteIndex < nativeTextCount && noteIndex < textNotes.length;
@@ -792,6 +812,24 @@ def _build_native_materialization_javascript(
                             - desiredTrackings[noteIndex]
                     ) < 0.01
                 ) matchingTrackingCount++;
+            }}
+            if (noteIndex < desiredRotations.length) {{
+                var currentRotation = itemRotation(documentRef.textFrames[noteIndex]);
+                var rotationDelta = desiredRotations[noteIndex] - currentRotation;
+                if (Math.abs(rotationDelta) > 0.0001) {{
+                    var positionBeforeRotation = [
+                        documentRef.textFrames[noteIndex].position[0],
+                        documentRef.textFrames[noteIndex].position[1]
+                    ];
+                    documentRef.textFrames[noteIndex].rotate(rotationDelta);
+                    documentRef.textFrames[noteIndex].position = positionBeforeRotation;
+                }}
+                if (
+                    angleDifference(
+                        itemRotation(documentRef.textFrames[noteIndex]),
+                        desiredRotations[noteIndex]
+                    ) < 0.01
+                ) matchingRotationCount++;
             }}
             if (
                 noteIndex < textContents.length
@@ -832,7 +870,8 @@ def _build_native_materialization_javascript(
             assignedFontCount,
             matchingFontCount,
             missingFonts.join(","),
-            matchingTrackingCount
+            matchingTrackingCount,
+            matchingRotationCount
         ].join(":");
     }} catch (error) {{
         return "error:" + String(error) + ":line:" + String(error.line || "");
@@ -1041,6 +1080,11 @@ def _path_geometry_close(expected: AIPath, actual: AIPath, *, tolerance: float) 
     return True
 
 
+def _angle_close(expected: float, actual: float, *, tolerance: float) -> bool:
+    difference = (expected - actual + 180.0) % 360.0 - 180.0
+    return abs(difference) <= tolerance
+
+
 def _compare_roundtrip_semantics(
     expected: Document,
     actual: Document,
@@ -1089,6 +1133,16 @@ def _compare_roundtrip_semantics(
         and all(left.font_name == right.font_name for left, right in paired_text),
         "text_alignments": same_text_count
         and all(left.alignment == right.alignment for left, right in paired_text),
+        "text_trackings": same_text_count
+        and all(
+            math.isclose(left.tracking, right.tracking, rel_tol=0.0, abs_tol=tolerance)
+            for left, right in paired_text
+        ),
+        "text_rotations": same_text_count
+        and all(
+            _angle_close(left.rotation, right.rotation, tolerance=tolerance)
+            for left, right in paired_text
+        ),
         "text_fill_colors": same_text_count
         and all(
             _color_close(left.fill, right.fill, tolerance=tolerance) for left, right in paired_text
@@ -1307,6 +1361,7 @@ def materialize_native_ai(
         for text in dom_ordered_text
     )
     desired_trackings = tuple(text.tracking for text in dom_ordered_text)
+    desired_rotations = tuple(text.rotation for text in dom_ordered_text)
 
     destination_path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="py-ai-illustrator-native-") as temp_directory:
@@ -1322,6 +1377,7 @@ def materialize_native_ai(
                     text_contents=text_contents,
                     desired_font_names=desired_font_names,
                     desired_trackings=desired_trackings,
+                    desired_rotations=desired_rotations,
                 ),
                 temp_path,
                 timeout=timeout,
@@ -1347,8 +1403,8 @@ def materialize_native_ai(
             "error": "Illustrator reported success but did not create the native AI file.",
         }
 
-    parts = response.split(":", 13)
-    if len(parts) != 14:
+    parts = response.split(":", 14)
+    if len(parts) != 15:
         return {"status": "failed", "illustrator_response": response}
     (
         _,
@@ -1365,6 +1421,7 @@ def materialize_native_ai(
         matching_fonts,
         missing_fonts,
         matching_trackings,
+        matching_rotations,
     ) = parts
     legacy_text_count = int(legacy_count)
     native_text_count = int(native_count)
@@ -1377,6 +1434,7 @@ def materialize_native_ai(
     matching_font_count = int(matching_fonts)
     missing_font_names = missing_fonts.split(",") if missing_fonts else []
     matching_tracking_count = int(matching_trackings)
+    matching_rotation_count = int(matching_rotations)
     checks = {
         "legacy_conversion_succeeded": converted == "true",
         "text_frame_count": native_text_count == legacy_text_count,
@@ -1387,6 +1445,7 @@ def materialize_native_ai(
         "requested_fonts_available": assigned_font_count == requested_font_count,
         "native_font_names": matching_font_count == requested_font_count,
         "native_tracking": matching_tracking_count == legacy_text_count,
+        "native_rotation": matching_rotation_count == legacy_text_count,
     }
     return {
         "status": "passed" if all(checks.values()) else "mismatch",
@@ -1402,6 +1461,7 @@ def materialize_native_ai(
         "matching_font_count": matching_font_count,
         "missing_fonts": missing_font_names,
         "matching_tracking_count": matching_tracking_count,
+        "matching_rotation_count": matching_rotation_count,
         "native_justifications": native_justifications,
         "checks": checks,
         "format": inspect_file(destination_path).to_dict(),
@@ -1701,7 +1761,12 @@ def run_illustrator_roundtrip_test(
             }
 
         checks = _compare_roundtrip_semantics(expected, actual)
-        advisory_keys = {"text_font_names", "text_alignments"}
+        advisory_keys = {
+            "text_font_names",
+            "text_alignments",
+            "text_trackings",
+            "text_rotations",
+        }
         advisory_checks = {key: checks.pop(key) for key in advisory_keys if key in checks}
         passed = format_report.format is FileFormat.LEGACY_AI and all(checks.values())
         return {

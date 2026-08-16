@@ -88,6 +88,7 @@ def test_native_materialization_assigns_identity_notes_after_conversion(
         text_contents=("Price",),
         desired_font_names=("Helvetica-Bold",),
         desired_trackings=(160,),
+        desired_rotations=(-12,),
     )
 
     conversion = javascript.index("legacyTextItems.convertToNative()")
@@ -99,6 +100,9 @@ def test_native_materialization_assigns_identity_notes_after_conversion(
     assert "app.textFonts.getByName" in javascript
     assert "characterAttributes.textFont" in javascript
     assert "characterAttributes.tracking" in javascript
+    assert "textFrames[noteIndex].rotate(rotationDelta)" in javascript
+    assert "position = positionBeforeRotation" in javascript
+    assert "itemRotation" in javascript
     assert "String.fromCharCode(72,101,108,118,101,116,105,99,97,45,66,111,108,100)" in javascript
 
 

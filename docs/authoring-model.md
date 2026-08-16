@@ -74,12 +74,15 @@ layer = price_table.render_layer(x=40, top=300)
 - `TextBlock` / `TextStyle`: 折り返し、文字階層、ネイティブ段落揃え、tracking
 - `FontSpec`: AI7 bridge名とIllustratorのPostScript名を分離した書体指定
 - `rectangle_path` / `ellipse_path` / `polyline_path`: domainに依存しない編集可能な図形primitive
+- `AffineTransform` / `RenderedComponent.transformed()`: path、handle、text、nested groupをまとめて配置するrigid transform
 
 [`examples/conference_badges.py`](../examples/conference_badges.py)では、`Attendee`とrole variantから4枚の`ConferenceBadge`を生成します。[`examples/event_poster.py`](../examples/event_poster.py)では、同じprimitiveから日本語の告知ポスターを生成します。前者は反復・variant・識別番号、後者は文字階層・折り返し・装飾図形が主題です。いずれも表のrow/column modelへ押し込めていません。
 
 [`examples/retail_price_tags.py`](../examples/retail_price_tags.py)は、実務寄りの反復制作例です。商品、価格、販売状態を`Product`として持ち、`PriceTag`が共通体裁とvariantを決定します。`LayerBuilder.add_grouped()`により各棚札は一括移動でき、価格欄も子groupとして独立編集できます。金額はIllustratorのRIGHT段落揃えで保持されるため、桁数を変更しても座標の手調整を前提にしません。
 
 [`examples/quarterly_kpi_report.py`](../examples/quarterly_kpi_report.py)では、`LineChart`が月次値を座標へscaleし、actual series、target、grid、labelへrenderします。線は単なる見た目ではなく、solid/dashed、cap、join、offsetを持つnative strokeとして保持されます。表のcell modelを流用せず、グラフ固有の入力検証とscale規則をPython componentへ置いています。
+
+[`examples/packaging_labels.py`](../examples/packaging_labels.py)では、3つの商品variantからラベルを生成し、縦向きside codeと斜めbadgeを配置します。`AffineTransform.rotation()`はpath anchorとBézier handle、text anchorとrotation、nested groupを同じmatrixで変換します。現時点でtextを含むcomponentは、font sizeやstroke widthを曖昧にscaleしないrigid transform（平行移動・回転）に限定し、非一様scaleは明示的に拒否します。
 
 この形なら、今後の商品カード、値札、名刺、図解、カタログページ等も、それぞれの文脈を持つPython componentとして追加できます。低水準IRとAI writerは特定componentを知りません。
 
@@ -89,7 +92,7 @@ AI7は公開仕様に基づく往復・検査形式として有用ですが、�
 
 `FontSpec`は`postscript_name`を主たる書体IDとし、表示用の`family` / `style`と、必要な場合だけ`legacy_name`を持ちます。たとえば日本語では、AI7 streamのCP932/RKSJ resource名と、native TextFrameへ設定する`KozGoPr6N-Regular`を同じ指定にまとめます。family名や見た目の近い代替書体で曖昧に解決はしません。`py-ai illustrator-fonts`で現在のIllustratorが持つ正確な名前を検索・検証できます。
 
-`py-ai materialize-native`は入力を一時コピーし、Illustratorの`legacyTextItems.convertToNative()`を使ってnative TextFrameへ変換し、PDF-compatible AIとして別名保存します。変換直後、IRのDOM順と対応する各TextFrameの`note`へ`py-ai-text:` identityを設定し、指定されたPostScript名のfontとtrackingを割り当てます。IDと役割名はnative AIの再オープン後も保持され、font欠落、割り当て不一致、tracking不一致は`mismatch`として報告されます。これにより、純Pythonの決定的なAI7経路と、Illustrator環境を使う高編集性の現代AI経路を分離します。
+`py-ai materialize-native`は入力を一時コピーし、Illustratorの`legacyTextItems.convertToNative()`を使ってnative TextFrameへ変換し、PDF-compatible AIとして別名保存します。変換直後、IRのDOM順と対応する各TextFrameの`note`へ`py-ai-text:` identityを設定し、指定されたPostScript名のfont、tracking、rotationを割り当てます。IDと役割名はnative AIの再オープン後も保持され、font欠落、割り当て不一致、tracking・rotation不一致は`mismatch`として報告されます。これにより、純Pythonの決定的なAI7経路と、Illustrator環境を使う高編集性の現代AI経路を分離します。
 
 現行`TextBlock`の折り返しは、各行を独立したpoint textとしてrenderします。Illustrator上で幅変更に追従するarea textではありません。Illustrator 30.7.0はarea textをAI8互換保存するとoutline化するため、area text対応はlegacy serializerではなく、modern AI materialization時にDOM上でframeを再構成する課題として扱います。
 
