@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
@@ -169,12 +170,15 @@ class TextStyle:
     font_size: float = 12.0
     font_name: str = "Helvetica"
     font: FontSpec | None = None
+    tracking: float = 0.0
     fill: ProcessColor = field(default_factory=lambda: Color(0.0, 0.0, 0.0))
     line_height_ratio: float = 1.25
 
     def __post_init__(self) -> None:
         if self.font_size <= 0 or self.line_height_ratio <= 0:
             raise ValueError("Text size and line height must be positive")
+        if not math.isfinite(self.tracking):
+            raise ValueError("tracking must be finite")
 
     @property
     def ai7_font_name(self) -> str:
@@ -239,6 +243,7 @@ class TextBlock:
                 font_size=self.style.font_size,
                 font_name=self.style.ai7_font_name,
                 native_font_name=self.style.native_font_name,
+                tracking=self.style.tracking,
                 fill=self.style.fill,
                 alignment=self.alignment,
             )
@@ -472,6 +477,8 @@ class TableStyle:
     body_font_name: str = "Helvetica"
     header_font: FontSpec | None = None
     body_font: FontSpec | None = None
+    header_tracking: float = 0.0
+    body_tracking: float = 0.0
     header_font_size: float = 11.0
     body_font_size: float = 10.0
 
@@ -487,6 +494,8 @@ class TableStyle:
             raise ValueError("Table heights and font sizes must be positive")
         if self.padding_x < 0 or self.padding_y < 0 or self.border_width < 0:
             raise ValueError("Table padding and border width must not be negative")
+        if not all(math.isfinite(value) for value in (self.header_tracking, self.body_tracking)):
+            raise ValueError("Table tracking must be finite")
 
 
 @dataclass(slots=True)
@@ -698,6 +707,7 @@ class Table:
                         if self.style.header_font is not None
                         else self.style.header_font_name
                     ),
+                    tracking=self.style.header_tracking,
                     fill=self.style.header_text_color,
                     alignment=column.alignment,
                 )
@@ -741,6 +751,7 @@ class Table:
                             if self.style.body_font is not None
                             else self.style.body_font_name
                         ),
+                        tracking=self.style.body_tracking,
                         fill=color,
                         alignment=column.alignment,
                     )

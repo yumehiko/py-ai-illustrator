@@ -81,7 +81,7 @@ point textのIRとAI7 reader/writerを追加し、Illustrator生成AI8の`To` / 
 
 Python意味モデルの最初の実装として`Table` / `TableColumn` / `TableStyle`を追加しました。列formatter/accessor、行variant、header/body/alternate配色、文字色、列幅、余白、行高、罫線、font要求を共有・派生でき、低水準IRへ決定的にrenderします。[`examples/styled_table.py`](../examples/styled_table.py)がsource of truthで、生成AIはPython readerとIllustrator実機の両方で検査します。
 
-表に依存しない`RenderedComponent` / `LayerBuilder` / `TextBlock` / `TextStyle`と矩形・Bézier楕円primitiveを追加しました。参加者とrole variantから4枚を生成する[`examples/conference_badges.py`](../examples/conference_badges.py)と、日本語文字階層・折り返し・装飾図形を持つ[`examples/event_poster.py`](../examples/event_poster.py)を同じ汎用IRへrenderしています。両方ともlegacy構造検査、native materialization、Illustrator再オープン、PDF/PNG visual previewに合格しました。
+表に依存しない`RenderedComponent` / `LayerBuilder` / `TextBlock` / `TextStyle`と矩形・Bézier楕円primitiveを追加しました。参加者とrole variantから4枚を生成する[`examples/conference_badges.py`](../examples/conference_badges.py)と、日本語文字階層・折り返し・装飾図形を持つ[`examples/event_poster.py`](../examples/event_poster.py)を同じ汎用IRへrenderしています。posterの英字series labelはtracking 160を指定し、native AI保存・再オープン後もIllustrator DOMで160を保持しました。両方ともlegacy構造検査、native materialization、Illustrator再オープン、PDF/PNG visual previewに合格しました。
 
 通常groupの`u` / `U`を再帰的な`Group` IRとして読み書きし、path、text、compound、clipping、子groupの異種描画順を保持するようにしました。商品データから6枚を生成する[`examples/retail_price_tags.py`](../examples/retail_price_tags.py)では、棚札と価格欄を2階層のgroupにしています。Illustrator 30.7.0で12 groups / 19 paths / 41 TextFrames、RIGHT段落揃え、variant配色をnative化後も保持し、PDF/PNG visual previewにも合格しました。
 

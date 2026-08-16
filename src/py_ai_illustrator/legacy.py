@@ -308,6 +308,8 @@ def _serialized_text_frame(text: TextFrame, *, locked: bool) -> list[str]:
             f"Invalid PostScript font name for AI7 text: {text.font_name!r}"
         )
     lines = [f"%%py-ai-text-alignment: ({text.alignment})"]
+    if text.tracking != 0:
+        lines.append(f"%%py-ai-text-tracking: {_number(text.tracking)}")
     if text.native_font_name is not None:
         if not _POSTSCRIPT_NAME_RE.fullmatch(text.native_font_name):
             raise UnsupportedLegacyFeature(
@@ -537,6 +539,7 @@ def loads_ai7(data: bytes) -> Document:
     pending_text_name: str | None = None
     pending_text_alignment: str | None = None
     pending_text_native_font_name: str | None = None
+    pending_text_tracking = 0.0
     metadata: dict[str, object] = {}
 
     def active_container() -> Layer | Group:
@@ -773,6 +776,12 @@ def loads_ai7(data: bytes) -> Document:
             value = line.removeprefix("%%py-ai-text-native-font: (")[:-1]
             pending_text_native_font_name = _unescape_postscript_string(value)
             continue
+        if line.startswith("%%py-ai-text-tracking: "):
+            with suppress(ValueError):
+                pending_text_tracking = float(
+                    line.removeprefix("%%py-ai-text-tracking: ")
+                )
+            continue
         if _TEXT_BEGIN_RE.match(line):
             in_text = True
             text_parts = []
@@ -813,6 +822,7 @@ def loads_ai7(data: bytes) -> Document:
                     font_size=text_font_size,
                     font_name=text_font_name,
                     native_font_name=pending_text_native_font_name,
+                    tracking=pending_text_tracking,
                     fill=fill or Color(0.0, 0.0, 0.0),
                     alignment=pending_text_alignment or text_alignment,
                 )
@@ -821,6 +831,7 @@ def loads_ai7(data: bytes) -> Document:
                 pending_text_name = None
                 pending_text_alignment = None
                 pending_text_native_font_name = None
+                pending_text_tracking = 0.0
                 in_text = False
                 continue
         ai8_rgb_match = _AI8_RGB_COLOR_RE.match(line)

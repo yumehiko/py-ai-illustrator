@@ -362,6 +362,9 @@ def _build_javascript(source: Path) -> str:
                         ? attributes.size
                         : null,
                     font_name: attributes && attributes.textFont ? attributes.textFont.name : null,
+                    tracking: attributes && typeof attributes.tracking === "number"
+                        ? attributes.tracking
+                        : null,
                     fill_color: attributes ? colorToObject(attributes.fillColor) : null,
                     justification: paragraphAttributes
                         ? String(paragraphAttributes.justification)
@@ -712,6 +715,7 @@ def _build_native_materialization_javascript(
     text_notes: tuple[str, ...] = (),
     text_contents: tuple[str, ...] = (),
     desired_font_names: tuple[str, ...] = (),
+    desired_trackings: tuple[float, ...] = (),
 ) -> str:
     source_literal = _character_code_expression(source)
     destination_literal = _character_code_expression(destination)
@@ -722,6 +726,7 @@ def _build_native_materialization_javascript(
     desired_font_names_literal = ",".join(
         _character_code_expression(name) for name in desired_font_names
     )
+    desired_trackings_literal = ",".join(str(value) for value in desired_trackings)
     return f"""#target illustrator
 (function () {{
     var source = new File({source_literal});
@@ -737,6 +742,7 @@ def _build_native_materialization_javascript(
         var textNotes = [{text_notes_literal}];
         var textContents = [{text_contents_literal}];
         var desiredFontNames = [{desired_font_names_literal}];
+        var desiredTrackings = [{desired_trackings_literal}];
         var converted = legacyTextCount === 0
             ? true
             : documentRef.legacyTextItems.convertToNative();
@@ -747,6 +753,7 @@ def _build_native_materialization_javascript(
         var assignedFontCount = 0;
         var matchingFontCount = 0;
         var missingFonts = [];
+        var matchingTrackingCount = 0;
         for (
             var noteIndex = 0;
             noteIndex < nativeTextCount && noteIndex < textNotes.length;
@@ -774,6 +781,17 @@ def _build_native_materialization_javascript(
                 }} catch (fontError) {{
                     missingFonts.push(desiredFontNames[noteIndex]);
                 }}
+            }}
+            if (noteIndex < desiredTrackings.length) {{
+                documentRef.textFrames[noteIndex].textRange.characterAttributes.tracking = (
+                    desiredTrackings[noteIndex]
+                );
+                if (
+                    Math.abs(
+                        documentRef.textFrames[noteIndex].textRange.characterAttributes.tracking
+                            - desiredTrackings[noteIndex]
+                    ) < 0.01
+                ) matchingTrackingCount++;
             }}
             if (
                 noteIndex < textContents.length
@@ -813,7 +831,8 @@ def _build_native_materialization_javascript(
             requestedFontCount,
             assignedFontCount,
             matchingFontCount,
-            missingFonts.join(",")
+            missingFonts.join(","),
+            matchingTrackingCount
         ].join(":");
     }} catch (error) {{
         return "error:" + String(error) + ":line:" + String(error.line || "");
@@ -1287,6 +1306,7 @@ def materialize_native_ai(
         text.native_font_name or ("" if "RKSJ-" in text.font_name else text.font_name)
         for text in dom_ordered_text
     )
+    desired_trackings = tuple(text.tracking for text in dom_ordered_text)
 
     destination_path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="py-ai-illustrator-native-") as temp_directory:
@@ -1301,6 +1321,7 @@ def materialize_native_ai(
                     text_notes=text_notes,
                     text_contents=text_contents,
                     desired_font_names=desired_font_names,
+                    desired_trackings=desired_trackings,
                 ),
                 temp_path,
                 timeout=timeout,
@@ -1326,8 +1347,8 @@ def materialize_native_ai(
             "error": "Illustrator reported success but did not create the native AI file.",
         }
 
-    parts = response.split(":", 12)
-    if len(parts) != 13:
+    parts = response.split(":", 13)
+    if len(parts) != 14:
         return {"status": "failed", "illustrator_response": response}
     (
         _,
@@ -1343,6 +1364,7 @@ def materialize_native_ai(
         assigned_fonts,
         matching_fonts,
         missing_fonts,
+        matching_trackings,
     ) = parts
     legacy_text_count = int(legacy_count)
     native_text_count = int(native_count)
@@ -1354,6 +1376,7 @@ def materialize_native_ai(
     assigned_font_count = int(assigned_fonts)
     matching_font_count = int(matching_fonts)
     missing_font_names = missing_fonts.split(",") if missing_fonts else []
+    matching_tracking_count = int(matching_trackings)
     checks = {
         "legacy_conversion_succeeded": converted == "true",
         "text_frame_count": native_text_count == legacy_text_count,
@@ -1363,6 +1386,7 @@ def materialize_native_ai(
         "text_identity_mapping": identity_content_match_count == legacy_text_count,
         "requested_fonts_available": assigned_font_count == requested_font_count,
         "native_font_names": matching_font_count == requested_font_count,
+        "native_tracking": matching_tracking_count == legacy_text_count,
     }
     return {
         "status": "passed" if all(checks.values()) else "mismatch",
@@ -1377,6 +1401,7 @@ def materialize_native_ai(
         "assigned_font_count": assigned_font_count,
         "matching_font_count": matching_font_count,
         "missing_fonts": missing_font_names,
+        "matching_tracking_count": matching_tracking_count,
         "native_justifications": native_justifications,
         "checks": checks,
         "format": inspect_file(destination_path).to_dict(),

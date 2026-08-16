@@ -148,6 +148,18 @@ def test_font_spec_rejects_a_family_name_as_postscript_name() -> None:
         FontSpec(postscript_name="Noto Sans JP")
 
 
+def test_text_style_compiles_tracking_to_each_native_text_line() -> None:
+    rendered = TextBlock(
+        id="eyebrow",
+        text="DESIGN\nSYSTEM",
+        width=120,
+        wrap=False,
+        style=TextStyle(tracking=140),
+    ).render(x=10, top=80)
+
+    assert [frame.tracking for frame in rendered.text_frames] == [140, 140]
+
+
 def test_layer_builder_composes_components_and_rejects_duplicate_ids() -> None:
     builder = LayerBuilder(id="page", name="Page")
     background = rectangle_path(

@@ -87,6 +87,7 @@ def test_native_materialization_assigns_identity_notes_after_conversion(
         text_notes=('py-ai-text:{"id":"price","name":"Price"}',),
         text_contents=("Price",),
         desired_font_names=("Helvetica-Bold",),
+        desired_trackings=(160,),
     )
 
     conversion = javascript.index("legacyTextItems.convertToNative()")
@@ -97,6 +98,7 @@ def test_native_materialization_assigns_identity_notes_after_conversion(
     assert "String.fromCharCode" in javascript
     assert "app.textFonts.getByName" in javascript
     assert "characterAttributes.textFont" in javascript
+    assert "characterAttributes.tracking" in javascript
     assert "String.fromCharCode(72,101,108,118,101,116,105,99,97,45,66,111,108,100)" in javascript
 
 

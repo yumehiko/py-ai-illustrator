@@ -71,7 +71,7 @@ layer = price_table.render_layer(x=40, top=300)
 - `RenderedComponent`: componentが生成したpath、text、描画順、寸法
 - `LayerBuilder`: 複数componentを安定ID付きで一つのlayerへ合成
 - `Group`: path、text、compound、clipping、子groupの描画順を保つ編集単位
-- `TextBlock` / `TextStyle`: 折り返し、文字階層、ネイティブ段落揃え
+- `TextBlock` / `TextStyle`: 折り返し、文字階層、ネイティブ段落揃え、tracking
 - `FontSpec`: AI7 bridge名とIllustratorのPostScript名を分離した書体指定
 - `rectangle_path` / `ellipse_path` / `polyline_path`: domainに依存しない編集可能な図形primitive
 
@@ -89,7 +89,7 @@ AI7は公開仕様に基づく往復・検査形式として有用ですが、�
 
 `FontSpec`は`postscript_name`を主たる書体IDとし、表示用の`family` / `style`と、必要な場合だけ`legacy_name`を持ちます。たとえば日本語では、AI7 streamのCP932/RKSJ resource名と、native TextFrameへ設定する`KozGoPr6N-Regular`を同じ指定にまとめます。family名や見た目の近い代替書体で曖昧に解決はしません。`py-ai illustrator-fonts`で現在のIllustratorが持つ正確な名前を検索・検証できます。
 
-`py-ai materialize-native`は入力を一時コピーし、Illustratorの`legacyTextItems.convertToNative()`を使ってnative TextFrameへ変換し、PDF-compatible AIとして別名保存します。変換直後、IRのDOM順と対応する各TextFrameの`note`へ`py-ai-text:` identityを設定し、指定されたPostScript名のfontを割り当てます。IDと役割名はnative AIの再オープン後も保持され、font欠落や割り当て不一致は`mismatch`として報告されます。これにより、純Pythonの決定的なAI7経路と、Illustrator環境を使う高編集性の現代AI経路を分離します。
+`py-ai materialize-native`は入力を一時コピーし、Illustratorの`legacyTextItems.convertToNative()`を使ってnative TextFrameへ変換し、PDF-compatible AIとして別名保存します。変換直後、IRのDOM順と対応する各TextFrameの`note`へ`py-ai-text:` identityを設定し、指定されたPostScript名のfontとtrackingを割り当てます。IDと役割名はnative AIの再オープン後も保持され、font欠落、割り当て不一致、tracking不一致は`mismatch`として報告されます。これにより、純Pythonの決定的なAI7経路と、Illustrator環境を使う高編集性の現代AI経路を分離します。
 
 現行`TextBlock`の折り返しは、各行を独立したpoint textとしてrenderします。Illustrator上で幅変更に追従するarea textではありません。Illustrator 30.7.0はarea textをAI8互換保存するとoutline化するため、area text対応はlegacy serializerではなく、modern AI materialization時にDOM上でframeを再構成する課題として扱います。
 

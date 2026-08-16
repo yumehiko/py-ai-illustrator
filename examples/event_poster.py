@@ -69,7 +69,12 @@ def build_document() -> Document:
             width=460,
             alignment="right",
             wrap=False,
-            style=TextStyle(font_size=11, font_name="Helvetica-Bold", fill=navy),
+            style=TextStyle(
+                font_size=11,
+                font_name="Helvetica-Bold",
+                tracking=160,
+                fill=navy,
+            ),
         ).render(x=50, top=674)
     )
     builder.add(

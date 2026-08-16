@@ -9,7 +9,7 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 - dash pattern・offset・cap・join・miter limitを持つnative stroke style
 - 複数subpathとpolarityを保持するcompound path IR
 - mask pathとcontent pathsを保持するclipping group IR
-- point textの内容・位置・サイズ・色・ネイティブ段落揃えを持つtext IR
+- point textの内容・位置・サイズ・色・ネイティブ段落揃え・trackingを持つtext IR
 - AI7用font resourceとネイティブPostScript名を分離する`FontSpec`、Illustrator書体検証
 - 通常path・compound・clippingの混在した描画順を保持するlayer `item_order`
 - heterogeneousな要素と子groupを持つ通常group IR、入れ子の描画順
@@ -144,7 +144,7 @@ uv run py-ai test-illustrator examples/quarterly-kpi-report.native.ai
 
 完全往復ではIllustratorによるdocument原点の移動を正規化し、RGBの8-bit量子化を許容して意味属性を比較します。pathの安定IDと名前は標準の`%AI3_Note` path属性へ埋め込み、Illustrator 30.7.0でのAI8再保存後も照合します。layer/containerのID・名前とdocument metadataはまだ比較対象外です。
 
-legacy point textはASCIIに加え、`RKSJ-H` / `RKSJ-V` fontを明示した日本語CP932の読み書きに対応します。writerは`Ta` operatorと揃え基準のanchorを出力します。ただし現行IllustratorでAI7 textを直接開いた状態はlegacy textであり、現代のTextFrameへ変換するまで再編集できません。`materialize-native`は一時コピーだけを開いて全legacy textをnativeへ変換し、PDF-compatible AIとして保存します。変換後の各TextFrameには`py-ai-text:` noteとして安定IDと役割名を設定し、指定されたPostScript名のフォントを明示的に再設定します。フォントが導入されていない場合は黙って代替せず、検証を失敗させて不足名を報告します。Illustrator 30.7.0で、文字内容、LEFT/CENTER/RIGHT段落揃え、identity noteが保存後も保持されることを確認済みです。
+legacy point textはASCIIに加え、`RKSJ-H` / `RKSJ-V` fontを明示した日本語CP932の読み書きに対応します。writerは`Ta` operatorと揃え基準のanchorを出力します。ただし現行IllustratorでAI7 textを直接開いた状態はlegacy textであり、現代のTextFrameへ変換するまで再編集できません。`materialize-native`は一時コピーだけを開いて全legacy textをnativeへ変換し、PDF-compatible AIとして保存します。変換後の各TextFrameには`py-ai-text:` noteとして安定IDと役割名を設定し、指定されたPostScript名のフォントとtrackingを明示的に再設定します。フォントが導入されていない場合は黙って代替せず、検証を失敗させて不足名を報告します。Illustrator 30.7.0で、文字内容、LEFT/CENTER/RIGHT段落揃え、tracking、identity noteが保存後も保持されることを確認済みです。
 
 長文の自動リフローを行うarea textは未対応です。Illustrator 30.7.0でarea textをAI8互換保存するとoutlineへ変換されるため、対応にはmodern AI materialization時にarea textを再構成する別経路が必要です。現行`TextBlock`の折り返しは複数のpoint textとして出力します。
 

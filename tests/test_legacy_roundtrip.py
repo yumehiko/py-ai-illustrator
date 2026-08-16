@@ -544,6 +544,7 @@ def test_point_text_roundtrip_preserves_editable_text_semantics() -> None:
                         y=180,
                         font_name="Helvetica-Bold",
                         font_size=14,
+                        tracking=120,
                         fill=Color(0.1, 0.2, 0.3),
                         alignment="center",
                     )
@@ -555,6 +556,7 @@ def test_point_text_roundtrip_preserves_editable_text_semantics() -> None:
     serialized = dumps_ai7(original)
     assert b"0 To" in serialized
     assert b"/Helvetica-Bold 14 0 0 Tf" in serialized
+    assert b"%%py-ai-text-tracking: 120" in serialized
     assert b"(Table \\(Header\\)) Tx" in serialized
     assert loads_ai7(serialized).to_dict() == original.to_dict()
 

@@ -79,6 +79,7 @@ f
 f
 %%py-ai-text-id: (poster.series.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-tracking: 160
 %%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Series label)
 0 A
