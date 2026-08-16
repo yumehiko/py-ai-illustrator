@@ -32,7 +32,11 @@
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmJhY2tncm91bmQuaGVhZGVyIiwibmFtZSI6ImV2ZW50LXNjaGVkdWxlLmJhY2tncm91bmQuaGVhZGVyIn0=
 0.12 0.15 0.25 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 40 294 m
 520 294 L
 520 330 L
@@ -45,7 +49,11 @@ f
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmJhY2tncm91bmQucm93LTAiLCJuYW1lIjoiZXZlbnQtc2NoZWR1bGUuYmFja2dyb3VuZC5yb3ctMCJ9
 1 1 1 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 40 252.15 m
 520 252.15 L
 520 294 L
@@ -58,7 +66,11 @@ f
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmJhY2tncm91bmQucm93LTEiLCJuYW1lIjoiZXZlbnQtc2NoZWR1bGUuYmFja2dyb3VuZC5yb3ctMSJ9
 0.89 0.95 1 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 40 210.3 m
 520 210.3 L
 520 252.15 L
@@ -71,7 +83,11 @@ f
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmJhY2tncm91bmQucm93LTIiLCJuYW1lIjoiZXZlbnQtc2NoZWR1bGUuYmFja2dyb3VuZC5yb3ctMiJ9
 1 1 1 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 40 168.45 m
 520 168.45 L
 520 210.3 L
@@ -84,7 +100,11 @@ f
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmJhY2tncm91bmQucm93LTMiLCJuYW1lIjoiZXZlbnQtc2NoZWR1bGUuYmFja2dyb3VuZC5yb3ctMyJ9
 1 0.94 0.75 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 40 130.45 m
 520 130.45 L
 520 168.45 L
@@ -96,7 +116,11 @@ f
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQuaG9yaXpvbnRhbC0wIn0=
 0.65 0.7 0.78 XA
+0 J
+0 j
 0.8 w
+4 M
+[] 0 d
 40 330 m
 520 330 L
 S
@@ -105,7 +129,11 @@ S
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQuaG9yaXpvbnRhbC0xIn0=
 0.65 0.7 0.78 XA
+0 J
+0 j
 0.8 w
+4 M
+[] 0 d
 40 294 m
 520 294 L
 S
@@ -114,7 +142,11 @@ S
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQuaG9yaXpvbnRhbC0yIn0=
 0.65 0.7 0.78 XA
+0 J
+0 j
 0.8 w
+4 M
+[] 0 d
 40 252.15 m
 520 252.15 L
 S
@@ -123,7 +155,11 @@ S
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQuaG9yaXpvbnRhbC0zIn0=
 0.65 0.7 0.78 XA
+0 J
+0 j
 0.8 w
+4 M
+[] 0 d
 40 210.3 m
 520 210.3 L
 S
@@ -132,7 +168,11 @@ S
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQuaG9yaXpvbnRhbC00In0=
 0.65 0.7 0.78 XA
+0 J
+0 j
 0.8 w
+4 M
+[] 0 d
 40 168.45 m
 520 168.45 L
 S
@@ -141,7 +181,11 @@ S
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQuaG9yaXpvbnRhbC01In0=
 0.65 0.7 0.78 XA
+0 J
+0 j
 0.8 w
+4 M
+[] 0 d
 40 130.45 m
 520 130.45 L
 S
@@ -150,7 +194,11 @@ S
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQudmVydGljYWwtMCJ9
 0.65 0.7 0.78 XA
+0 J
+0 j
 0.8 w
+4 M
+[] 0 d
 40 330 m
 40 130.45 L
 S
@@ -159,7 +207,11 @@ S
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQudmVydGljYWwtMSJ9
 0.65 0.7 0.78 XA
+0 J
+0 j
 0.8 w
+4 M
+[] 0 d
 114 330 m
 114 130.45 L
 S
@@ -168,7 +220,11 @@ S
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQudmVydGljYWwtMiJ9
 0.65 0.7 0.78 XA
+0 J
+0 j
 0.8 w
+4 M
+[] 0 d
 226 330 m
 226 130.45 L
 S
@@ -177,12 +233,17 @@ S
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImV2ZW50LXNjaGVkdWxlLmdyaWQudmVydGljYWwtMyJ9
 0.65 0.7 0.78 XA
+0 J
+0 j
 0.8 w
+4 M
+[] 0 d
 520 330 m
 520 130.45 L
 S
 %%py-ai-text-id: (event-schedule.header.time)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: SGVhZGVyOiDmmYLliLs=
 0 A
 0 To
@@ -197,6 +258,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.header.category)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: SGVhZGVyOiDljLrliIY=
 0 A
 0 To
@@ -211,6 +273,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.header.description)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: SGVhZGVyOiDlhoXlrrk=
 0 A
 0 To
@@ -225,6 +288,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.row-0.time)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: Um93IDE6IOaZguWIuw==
 0 A
 0 To
@@ -239,6 +303,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.row-0.category)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: Um93IDE6IOWMuuWIhg==
 0 A
 0 To
@@ -253,6 +318,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.row-0.description.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: Um93IDE6IOWGheWuuQ==
 0 A
 0 To
@@ -267,6 +333,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.row-0.description.line-1)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: Um93IDE6IOWGheWuuQ==
 0 A
 0 To
@@ -281,6 +348,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.row-1.time)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: Um93IDI6IOaZguWIuw==
 0 A
 0 To
@@ -295,6 +363,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.row-1.category)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: Um93IDI6IOWMuuWIhg==
 0 A
 0 To
@@ -309,6 +378,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.row-1.description.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: Um93IDI6IOWGheWuuQ==
 0 A
 0 To
@@ -323,6 +393,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.row-1.description.line-1)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: Um93IDI6IOWGheWuuQ==
 0 A
 0 To
@@ -337,6 +408,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.row-2.time)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: Um93IDM6IOaZguWIuw==
 0 A
 0 To
@@ -351,6 +423,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.row-2.category)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: Um93IDM6IOWMuuWIhg==
 0 A
 0 To
@@ -365,6 +438,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.row-2.description.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: Um93IDM6IOWGheWuuQ==
 0 A
 0 To
@@ -379,6 +453,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.row-2.description.line-1)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: Um93IDM6IOWGheWuuQ==
 0 A
 0 To
@@ -393,6 +468,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.row-3.time)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: Um93IDQ6IOaZguWIuw==
 0 A
 0 To
@@ -407,6 +483,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.row-3.category)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: Um93IDQ6IOWMuuWIhg==
 0 A
 0 To
@@ -421,6 +498,7 @@ TP
 TO
 %%py-ai-text-id: (event-schedule.row-3.description)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name-utf8: Um93IDQ6IOWGheWuuQ==
 0 A
 0 To

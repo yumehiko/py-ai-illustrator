@@ -32,7 +32,11 @@
 1 D
 %AI3_Note:py-ai:eyJpZCI6InBvc3Rlci5iYWNrZ3JvdW5kIiwibmFtZSI6IlBhcGVyIGJhY2tncm91bmQifQ==
 0.97 0.95 0.9 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 0 0 m
 560 0 L
 560 720 L
@@ -45,7 +49,11 @@ f
 1 D
 %AI3_Note:py-ai:eyJpZCI6InBvc3Rlci5ibHVlLW9yYml0IiwibmFtZSI6IkJsdWUgb3JiaXQifQ==
 0.12 0.42 0.82 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 576 616 m
 576 681.1696 523.1696 734 458 734 c
 392.8304 734 340 681.1696 340 616 c
@@ -58,7 +66,11 @@ f
 1 D
 %AI3_Note:py-ai:eyJpZCI6InBvc3Rlci5jb3JhbC1vcmJpdCIsIm5hbWUiOiJDb3JhbCBvcmJpdCJ9
 0.96 0.35 0.28 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 150 142 m
 150 174.032515 124.032515 200 92 200 c
 59.967485 200 34 174.032515 34 142 c
@@ -67,6 +79,7 @@ f
 f
 %%py-ai-text-id: (poster.series.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Series label)
 0 A
 0 To
@@ -81,6 +94,7 @@ TP
 TO
 %%py-ai-text-id: (poster.title.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Event title)
 0 A
 0 To
@@ -95,6 +109,7 @@ TP
 TO
 %%py-ai-text-id: (poster.subtitle.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Subtitle)
 0 A
 0 To
@@ -114,7 +129,11 @@ TO
 %AI3_Note:py-ai:eyJpZCI6InBvc3Rlci5zdGF0ZW1lbnQtYmFja2dyb3VuZCIsIm5hbWUiOiJTdGF0ZW1lbnQgcGFuZWwifQ==
 1 1 1 Xa
 0.82 0.8 0.75 XA
+0 J
+0 j
 0.8 w
+4 M
+[] 0 d
 72 280 m
 488 280 L
 488 422 L
@@ -123,6 +142,7 @@ TO
 b
 %%py-ai-text-id: (poster.statement.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Event statement)
 0 A
 0 To
@@ -137,6 +157,7 @@ TP
 TO
 %%py-ai-text-id: (poster.statement.line-1)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Event statement)
 0 A
 0 To
@@ -151,6 +172,7 @@ TP
 TO
 %%py-ai-text-id: (poster.statement.line-2)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Event statement)
 0 A
 0 To
@@ -165,6 +187,7 @@ TP
 TO
 %%py-ai-text-id: (poster.date.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Date)
 0 A
 0 To
@@ -179,6 +202,7 @@ TP
 TO
 %%py-ai-text-id: (poster.venue.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Venue)
 0 A
 0 To
@@ -193,6 +217,7 @@ TP
 TO
 %%py-ai-text-id: (poster.footer.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Registration URL)
 0 A
 0 To

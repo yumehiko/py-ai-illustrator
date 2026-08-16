@@ -1,6 +1,7 @@
 """Python tools for inspecting and translating Adobe Illustrator files."""
 
 from .authoring import (
+    FontSpec,
     LayerBuilder,
     RenderedComponent,
     Table,
@@ -43,6 +44,7 @@ __all__ = [
     "ClippingGroup",
     "Document",
     "FileFormat",
+    "FontSpec",
     "FormatReport",
     "Group",
     "Layer",

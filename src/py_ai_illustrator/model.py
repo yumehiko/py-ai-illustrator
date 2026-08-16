@@ -161,7 +161,13 @@ class Path:
 
 @dataclass(slots=True)
 class TextFrame:
-    """Editable point text positioned in document coordinates."""
+    """Editable point text positioned in document coordinates.
+
+    ``font_name`` is the name written to the legacy AI stream.  Japanese AI7
+    text may need a composite RKSJ name there, so ``native_font_name`` can keep
+    the actual Illustrator PostScript name to apply during native
+    materialization.
+    """
 
     id: str
     text: str
@@ -169,6 +175,7 @@ class TextFrame:
     y: float
     font_size: float = 12.0
     font_name: str = "Helvetica"
+    native_font_name: str | None = None
     fill: ProcessColor = field(default_factory=lambda: Color(0.0, 0.0, 0.0))
     alignment: str = "left"
     name: str | None = None
@@ -189,6 +196,9 @@ class TextFrame:
             y=float(data["y"]),
             font_size=float(data.get("font_size", 12.0)),
             font_name=str(data.get("font_name", "Helvetica")),
+            native_font_name=(
+                str(data["native_font_name"]) if data.get("native_font_name") is not None else None
+            ),
             fill=_process_color_from_dict(
                 data.get("fill", {"red": 0.0, "green": 0.0, "blue": 0.0})
             ),
@@ -283,23 +293,15 @@ class Group:
             self.item_order = [
                 *(LayerItemRef("path", path.id) for path in self.paths),
                 *(LayerItemRef("text", text.id) for text in self.text_frames),
-                *(
-                    LayerItemRef("compound_path", compound.id)
-                    for compound in self.compound_paths
-                ),
-                *(
-                    LayerItemRef("clipping_group", group.id)
-                    for group in self.clipping_groups
-                ),
+                *(LayerItemRef("compound_path", compound.id) for compound in self.compound_paths),
+                *(LayerItemRef("clipping_group", group.id) for group in self.clipping_groups),
                 *(LayerItemRef("group", group.id) for group in self.groups),
             ]
 
     def ordered_items(
         self,
     ) -> list[Path | TextFrame | CompoundPath | ClippingGroup | Group]:
-        typed_items: list[
-            tuple[str, Path | TextFrame | CompoundPath | ClippingGroup | Group]
-        ] = [
+        typed_items: list[tuple[str, Path | TextFrame | CompoundPath | ClippingGroup | Group]] = [
             *(("path", path) for path in self.paths),
             *(("text", text) for text in self.text_frames),
             *(("compound_path", compound) for compound in self.compound_paths),
@@ -323,9 +325,7 @@ class Group:
             id=str(data["id"]),
             name=data.get("name"),
             paths=[Path.from_dict(path) for path in data.get("paths", [])],
-            text_frames=[
-                TextFrame.from_dict(text) for text in data.get("text_frames", [])
-            ],
+            text_frames=[TextFrame.from_dict(text) for text in data.get("text_frames", [])],
             compound_paths=[
                 CompoundPath.from_dict(path) for path in data.get("compound_paths", [])
             ],
@@ -334,8 +334,7 @@ class Group:
             ],
             groups=[Group.from_dict(group) for group in data.get("groups", [])],
             item_order=[
-                LayerItemRef.from_dict(reference)
-                for reference in data.get("item_order", [])
+                LayerItemRef.from_dict(reference) for reference in data.get("item_order", [])
             ],
             unknown=dict(data.get("unknown", {})),
         )
@@ -360,23 +359,15 @@ class Layer:
             self.item_order = [
                 *(LayerItemRef("path", path.id) for path in self.paths),
                 *(LayerItemRef("text", text.id) for text in self.text_frames),
-                *(
-                    LayerItemRef("compound_path", compound.id)
-                    for compound in self.compound_paths
-                ),
-                *(
-                    LayerItemRef("clipping_group", group.id)
-                    for group in self.clipping_groups
-                ),
+                *(LayerItemRef("compound_path", compound.id) for compound in self.compound_paths),
+                *(LayerItemRef("clipping_group", group.id) for group in self.clipping_groups),
                 *(LayerItemRef("group", group.id) for group in self.groups),
             ]
 
     def ordered_items(
         self,
     ) -> list[Path | TextFrame | CompoundPath | ClippingGroup | Group]:
-        typed_items: list[
-            tuple[str, Path | TextFrame | CompoundPath | ClippingGroup | Group]
-        ] = [
+        typed_items: list[tuple[str, Path | TextFrame | CompoundPath | ClippingGroup | Group]] = [
             *(("path", path) for path in self.paths),
             *(("text", text) for text in self.text_frames),
             *(("compound_path", compound) for compound in self.compound_paths),
@@ -400,9 +391,7 @@ class Layer:
             id=str(data["id"]),
             name=str(data["name"]),
             paths=[Path.from_dict(path) for path in data.get("paths", [])],
-            text_frames=[
-                TextFrame.from_dict(text) for text in data.get("text_frames", [])
-            ],
+            text_frames=[TextFrame.from_dict(text) for text in data.get("text_frames", [])],
             compound_paths=[
                 CompoundPath.from_dict(path) for path in data.get("compound_paths", [])
             ],
@@ -411,8 +400,7 @@ class Layer:
             ],
             groups=[Group.from_dict(group) for group in data.get("groups", [])],
             item_order=[
-                LayerItemRef.from_dict(reference)
-                for reference in data.get("item_order", [])
+                LayerItemRef.from_dict(reference) for reference in data.get("item_order", [])
             ],
             visible=bool(data.get("visible", True)),
             locked=bool(data.get("locked", False)),

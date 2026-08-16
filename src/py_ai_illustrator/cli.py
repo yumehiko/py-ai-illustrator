@@ -10,6 +10,7 @@ from typing import Any
 
 from .format import FileFormat, inspect_file
 from .illustrator import (
+    list_illustrator_fonts,
     materialize_native_ai,
     run_illustrator_export_test,
     run_illustrator_roundtrip_test,
@@ -114,6 +115,18 @@ def _materialize_native(args: argparse.Namespace) -> int:
     return 0 if result["status"] == "passed" else 1
 
 
+def _illustrator_fonts(args: argparse.Namespace) -> int:
+    result = list_illustrator_fonts(
+        query=args.query,
+        required=tuple(args.require),
+        timeout=args.timeout,
+        application_name=args.application,
+    )
+    destination = Path(args.output) if args.output else None
+    _write_json(result, destination)
+    return 0 if result["status"] == "passed" else 1
+
+
 def _test_illustrator_export(args: argparse.Namespace) -> int:
     result = run_illustrator_export_test(
         fixture=args.fixture,
@@ -176,6 +189,17 @@ def build_parser() -> argparse.ArgumentParser:
     native_parser.add_argument("--timeout", type=float, default=90.0)
     native_parser.add_argument("--application", default="Adobe Illustrator")
     native_parser.set_defaults(handler=_materialize_native)
+
+    fonts_parser = subparsers.add_parser(
+        "illustrator-fonts",
+        help="list installed Illustrator fonts and validate PostScript names",
+    )
+    fonts_parser.add_argument("--query")
+    fonts_parser.add_argument("--require", action="append", default=[])
+    fonts_parser.add_argument("--timeout", type=float, default=30.0)
+    fonts_parser.add_argument("--application", default="Adobe Illustrator")
+    fonts_parser.add_argument("-o", "--output")
+    fonts_parser.set_defaults(handler=_illustrator_fonts)
 
     illustrator_export_parser = subparsers.add_parser(
         "test-illustrator-export",

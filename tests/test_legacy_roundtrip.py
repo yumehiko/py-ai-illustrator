@@ -476,12 +476,20 @@ def test_clipping_group_roundtrip_preserves_mask_and_content() -> None:
 
 def test_mixed_layer_item_order_is_serialized_and_read_in_file_order() -> None:
     examples = Path(__file__).parents[1] / "examples"
-    compound = Document.from_dict(
-        json.loads((examples / "compound-path.json").read_text(encoding="utf-8"))
-    ).layers[0].compound_paths[0]
-    clipping = Document.from_dict(
-        json.loads((examples / "clipping-group.json").read_text(encoding="utf-8"))
-    ).layers[0].clipping_groups[0]
+    compound = (
+        Document.from_dict(
+            json.loads((examples / "compound-path.json").read_text(encoding="utf-8"))
+        )
+        .layers[0]
+        .compound_paths[0]
+    )
+    clipping = (
+        Document.from_dict(
+            json.loads((examples / "clipping-group.json").read_text(encoding="utf-8"))
+        )
+        .layers[0]
+        .clipping_groups[0]
+    )
     path = sample_document().layers[0].paths[0]
     original = Document(
         width=320,
@@ -503,9 +511,11 @@ def test_mixed_layer_item_order_is_serialized_and_read_in_file_order() -> None:
     )
 
     serialized = dumps_ai7(original)
-    assert serialized.index(b"%%py-ai-clipping-id:") < serialized.index(
-        b"%AI7_Tag: (rectangle)"
-    ) < serialized.index(b"%%py-ai-compound-id:")
+    assert (
+        serialized.index(b"%%py-ai-clipping-id:")
+        < serialized.index(b"%AI7_Tag: (rectangle)")
+        < serialized.index(b"%%py-ai-compound-id:")
+    )
     restored = loads_ai7(serialized)
     assert restored.to_dict() == original.to_dict()
 
@@ -550,7 +560,7 @@ def test_point_text_roundtrip_preserves_editable_text_semantics() -> None:
 
 
 def test_reads_illustrator_native_octal_text_body() -> None:
-    source = br"""%!PS-Adobe-3.0
+    source = rb"""%!PS-Adobe-3.0
 %%BoundingBox: 0 0 320 240
 %AI5_FileFormat 3.0
 %AI5_BeginLayer
@@ -597,6 +607,7 @@ def test_japanese_rksj_point_text_roundtrip() -> None:
                         x=40,
                         y=180,
                         font_name=font_name,
+                        native_font_name="KozGoPr6N-Regular",
                         font_size=16,
                     )
                 ],
@@ -606,7 +617,8 @@ def test_japanese_rksj_point_text_roundtrip() -> None:
 
     serialized = dumps_ai7(original)
     assert f"%AI3_BeginEncoding: {font_name} ".encode() in serialized
-    assert br"(\223\372\226{\214\352\202\314" in serialized
+    assert b"%%py-ai-text-native-font: (KozGoPr6N-Regular)" in serialized
+    assert rb"(\223\372\226{\214\352\202\314" in serialized
     assert loads_ai7(serialized).to_dict() == original.to_dict()
 
 
@@ -618,9 +630,7 @@ def test_non_ascii_text_requires_a_compatible_legacy_font() -> None:
             Layer(
                 id="text",
                 name="Text",
-                text_frames=[
-                    TextFrame(id="unicode", text="日本語", x=10, y=50)
-                ],
+                text_frames=[TextFrame(id="unicode", text="日本語", x=10, y=50)],
             )
         ],
     )

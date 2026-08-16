@@ -30,7 +30,11 @@
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTEuYmFja2dyb3VuZCIsIm5hbWUiOiJCYWRnZTogQXZlcnkgQ2hlbiJ9
 1 1 1 Xa
 0.72 0.75 0.8 XA
+0 J
+0 j
 0.8 w
+4 M
+[] 0 d
 44 216 m
 296 216 L
 296 358 L
@@ -42,7 +46,11 @@ b
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTEuYWNjZW50In0=
 0.94 0.32 0.25 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 44 348 m
 296 348 L
 296 358 L
@@ -56,7 +64,11 @@ f
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTEuYXZhdGFyIiwibmFtZSI6IkF2YXRhcjogQXZlcnkgQ2hlbiJ9
 0.93 0.95 0.98 Xa
 0.94 0.32 0.25 XA
+0 J
+0 j
 2 w
+4 M
+[] 0 d
 111 297 m
 111 310.807119 99.807119 322 86 322 c
 72.192881 322 61 310.807119 61 297 c
@@ -65,6 +77,7 @@ f
 b
 %%py-ai-text-id: (badge-1.initial.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (badge-1.initial)
 0 A
 0 To
@@ -79,6 +92,7 @@ TP
 TO
 %%py-ai-text-id: (badge-1.name.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Attendee name)
 0 A
 0 To
@@ -93,6 +107,7 @@ TP
 TO
 %%py-ai-text-id: (badge-1.organization.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Organization)
 0 A
 0 To
@@ -110,7 +125,11 @@ TO
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTEucm9sZS1iYWNrZ3JvdW5kIn0=
 0.94 0.32 0.25 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 120 243 m
 198 243 L
 198 267 L
@@ -119,6 +138,7 @@ TO
 f
 %%py-ai-text-id: (badge-1.role.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Role)
 0 A
 0 To
@@ -133,6 +153,7 @@ TP
 TO
 %%py-ai-text-id: (badge-1.number.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Badge number)
 0 A
 0 To
@@ -152,7 +173,11 @@ TO
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTIuYmFja2dyb3VuZCIsIm5hbWUiOiJCYWRnZTogTWluYSBQYXRlbCJ9
 1 1 1 Xa
 0.72 0.75 0.8 XA
+0 J
+0 j
 0.8 w
+4 M
+[] 0 d
 316 216 m
 568 216 L
 568 358 L
@@ -164,7 +189,11 @@ b
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTIuYWNjZW50In0=
 0.2 0.42 0.78 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 316 348 m
 568 348 L
 568 358 L
@@ -178,7 +207,11 @@ f
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTIuYXZhdGFyIiwibmFtZSI6IkF2YXRhcjogTWluYSBQYXRlbCJ9
 0.93 0.95 0.98 Xa
 0.2 0.42 0.78 XA
+0 J
+0 j
 2 w
+4 M
+[] 0 d
 383 297 m
 383 310.807119 371.807119 322 358 322 c
 344.192881 322 333 310.807119 333 297 c
@@ -187,6 +220,7 @@ f
 b
 %%py-ai-text-id: (badge-2.initial.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (badge-2.initial)
 0 A
 0 To
@@ -201,6 +235,7 @@ TP
 TO
 %%py-ai-text-id: (badge-2.name.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Attendee name)
 0 A
 0 To
@@ -215,6 +250,7 @@ TP
 TO
 %%py-ai-text-id: (badge-2.organization.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Organization)
 0 A
 0 To
@@ -232,7 +268,11 @@ TO
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTIucm9sZS1iYWNrZ3JvdW5kIn0=
 0.2 0.42 0.78 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 392 243 m
 470 243 L
 470 267 L
@@ -241,6 +281,7 @@ TO
 f
 %%py-ai-text-id: (badge-2.role.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Role)
 0 A
 0 To
@@ -255,6 +296,7 @@ TP
 TO
 %%py-ai-text-id: (badge-2.number.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Badge number)
 0 A
 0 To
@@ -274,7 +316,11 @@ TO
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTMuYmFja2dyb3VuZCIsIm5hbWUiOiJCYWRnZTogTGVvIE1hcnRpbiJ9
 1 1 1 Xa
 0.72 0.75 0.8 XA
+0 J
+0 j
 0.8 w
+4 M
+[] 0 d
 44 54 m
 296 54 L
 296 196 L
@@ -286,7 +332,11 @@ b
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTMuYWNjZW50In0=
 0.15 0.55 0.43 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 44 186 m
 296 186 L
 296 196 L
@@ -300,7 +350,11 @@ f
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTMuYXZhdGFyIiwibmFtZSI6IkF2YXRhcjogTGVvIE1hcnRpbiJ9
 0.93 0.95 0.98 Xa
 0.15 0.55 0.43 XA
+0 J
+0 j
 2 w
+4 M
+[] 0 d
 111 135 m
 111 148.807119 99.807119 160 86 160 c
 72.192881 160 61 148.807119 61 135 c
@@ -309,6 +363,7 @@ f
 b
 %%py-ai-text-id: (badge-3.initial.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (badge-3.initial)
 0 A
 0 To
@@ -323,6 +378,7 @@ TP
 TO
 %%py-ai-text-id: (badge-3.name.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Attendee name)
 0 A
 0 To
@@ -337,6 +393,7 @@ TP
 TO
 %%py-ai-text-id: (badge-3.organization.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Organization)
 0 A
 0 To
@@ -354,7 +411,11 @@ TO
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTMucm9sZS1iYWNrZ3JvdW5kIn0=
 0.15 0.55 0.43 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 120 81 m
 198 81 L
 198 105 L
@@ -363,6 +424,7 @@ TO
 f
 %%py-ai-text-id: (badge-3.role.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Role)
 0 A
 0 To
@@ -377,6 +439,7 @@ TP
 TO
 %%py-ai-text-id: (badge-3.number.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Badge number)
 0 A
 0 To
@@ -396,7 +459,11 @@ TO
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTQuYmFja2dyb3VuZCIsIm5hbWUiOiJCYWRnZTogU29maWEgUm9zc2kifQ==
 1 1 1 Xa
 0.72 0.75 0.8 XA
+0 J
+0 j
 0.8 w
+4 M
+[] 0 d
 316 54 m
 568 54 L
 568 196 L
@@ -408,7 +475,11 @@ b
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTQuYWNjZW50In0=
 0.94 0.32 0.25 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 316 186 m
 568 186 L
 568 196 L
@@ -422,7 +493,11 @@ f
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTQuYXZhdGFyIiwibmFtZSI6IkF2YXRhcjogU29maWEgUm9zc2kifQ==
 0.93 0.95 0.98 Xa
 0.94 0.32 0.25 XA
+0 J
+0 j
 2 w
+4 M
+[] 0 d
 383 135 m
 383 148.807119 371.807119 160 358 160 c
 344.192881 160 333 148.807119 333 135 c
@@ -431,6 +506,7 @@ f
 b
 %%py-ai-text-id: (badge-4.initial.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (badge-4.initial)
 0 A
 0 To
@@ -445,6 +521,7 @@ TP
 TO
 %%py-ai-text-id: (badge-4.name.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Attendee name)
 0 A
 0 To
@@ -459,6 +536,7 @@ TP
 TO
 %%py-ai-text-id: (badge-4.organization.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Organization)
 0 A
 0 To
@@ -476,7 +554,11 @@ TO
 1 D
 %AI3_Note:py-ai:eyJpZCI6ImJhZGdlLTQucm9sZS1iYWNrZ3JvdW5kIn0=
 0.94 0.32 0.25 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 392 81 m
 470 81 L
 470 105 L
@@ -485,6 +567,7 @@ TO
 f
 %%py-ai-text-id: (badge-4.role.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Role)
 0 A
 0 To
@@ -499,6 +582,7 @@ TP
 TO
 %%py-ai-text-id: (badge-4.number.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Badge number)
 0 A
 0 To

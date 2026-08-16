@@ -711,14 +711,16 @@ def _build_native_materialization_javascript(
     *,
     text_notes: tuple[str, ...] = (),
     text_contents: tuple[str, ...] = (),
+    desired_font_names: tuple[str, ...] = (),
 ) -> str:
     source_literal = _character_code_expression(source)
     destination_literal = _character_code_expression(destination)
-    text_notes_literal = ",".join(
-        _character_code_expression(note) for note in text_notes
-    )
+    text_notes_literal = ",".join(_character_code_expression(note) for note in text_notes)
     text_contents_literal = ",".join(
         _character_code_expression(contents) for contents in text_contents
+    )
+    desired_font_names_literal = ",".join(
+        _character_code_expression(name) for name in desired_font_names
     )
     return f"""#target illustrator
 (function () {{
@@ -734,12 +736,17 @@ def _build_native_materialization_javascript(
         var legacyTextCount = documentRef.legacyTextItems.length;
         var textNotes = [{text_notes_literal}];
         var textContents = [{text_contents_literal}];
+        var desiredFontNames = [{desired_font_names_literal}];
         var converted = legacyTextCount === 0
             ? true
             : documentRef.legacyTextItems.convertToNative();
         var nativeTextCount = documentRef.textFrames.length;
         var assignedNoteCount = 0;
         var identityContentMatchCount = 0;
+        var requestedFontCount = 0;
+        var assignedFontCount = 0;
+        var matchingFontCount = 0;
+        var missingFonts = [];
         for (
             var noteIndex = 0;
             noteIndex < nativeTextCount && noteIndex < textNotes.length;
@@ -747,6 +754,27 @@ def _build_native_materialization_javascript(
         ) {{
             documentRef.textFrames[noteIndex].note = textNotes[noteIndex];
             assignedNoteCount++;
+            if (
+                noteIndex < desiredFontNames.length
+                && desiredFontNames[noteIndex] !== ""
+            ) {{
+                requestedFontCount++;
+                try {{
+                    var desiredFont = app.textFonts.getByName(
+                        desiredFontNames[noteIndex]
+                    );
+                    documentRef.textFrames[noteIndex].textRange.characterAttributes.textFont = (
+                        desiredFont
+                    );
+                    assignedFontCount++;
+                    if (
+                        documentRef.textFrames[noteIndex].textRange.characterAttributes
+                            .textFont.name === desiredFontNames[noteIndex]
+                    ) matchingFontCount++;
+                }} catch (fontError) {{
+                    missingFonts.push(desiredFontNames[noteIndex]);
+                }}
+            }}
             if (
                 noteIndex < textContents.length
                 && documentRef.textFrames[noteIndex].contents === textContents[noteIndex]
@@ -781,7 +809,11 @@ def _build_native_materialization_javascript(
             justifications.join(","),
             assignedNoteCount,
             nativeNoteCount,
-            identityContentMatchCount
+            identityContentMatchCount,
+            requestedFontCount,
+            assignedFontCount,
+            matchingFontCount,
+            missingFonts.join(",")
         ].join(":");
     }} catch (error) {{
         return "error:" + String(error) + ":line:" + String(error.line || "");
@@ -792,6 +824,23 @@ def _build_native_materialization_javascript(
         app.userInteractionLevel = previousInteractionLevel;
     }}
 }}());
+"""
+
+
+def _build_font_catalog_javascript() -> str:
+    return """#target illustrator
+(function () {
+    try {
+        var lines = ["ok\\t" + app.version + "\\t" + app.textFonts.length];
+        for (var index = 0; index < app.textFonts.length; index++) {
+            var font = app.textFonts[index];
+            lines.push(font.name + "\\t" + font.family + "\\t" + font.style);
+        }
+        return lines.join("\\n");
+    } catch (error) {
+        return "error\\t" + String(error) + "\\t" + String(error.line || "");
+    }
+}());
 """
 
 
@@ -820,6 +869,79 @@ end timeout
         text=True,
         timeout=timeout + 5,
     )
+
+
+def list_illustrator_fonts(
+    *,
+    query: str | None = None,
+    required: tuple[str, ...] = (),
+    timeout: float = 30.0,
+    application_name: str = "Adobe Illustrator",
+) -> dict[str, Any]:
+    """List installed Illustrator fonts and validate exact PostScript names."""
+
+    if platform.system() != "Darwin":
+        return {
+            "status": "environment-unavailable",
+            "error": "Illustrator font discovery is currently supported on macOS only.",
+        }
+    if timeout <= 0:
+        return {"status": "invalid-input", "error": "timeout must be positive"}
+
+    with tempfile.TemporaryDirectory(prefix="py-ai-illustrator-fonts-") as directory:
+        try:
+            completed = _execute_javascript(
+                _build_font_catalog_javascript(),
+                Path(directory),
+                timeout=timeout,
+                application_name=application_name,
+            )
+        except subprocess.TimeoutExpired:
+            return {
+                "status": "environment-unavailable",
+                "error": f"Illustrator did not answer within {timeout:g} seconds.",
+            }
+
+    if completed.returncode != 0:
+        return {
+            "status": "environment-unavailable",
+            "error": completed.stderr.strip() or "Illustrator AppleScript failed.",
+        }
+    lines = completed.stdout.rstrip("\r\n").splitlines()
+    if not lines or not lines[0].startswith("ok\t"):
+        return {
+            "status": "failed",
+            "illustrator_response": completed.stdout.strip(),
+        }
+    header = lines[0].split("\t")
+    if len(header) != 3:
+        return {"status": "failed", "illustrator_response": lines[0]}
+
+    fonts = []
+    for line in lines[1:]:
+        values = line.split("\t")
+        if len(values) == 3:
+            fonts.append({"postscript_name": values[0], "family": values[1], "style": values[2]})
+    installed_names = {font["postscript_name"] for font in fonts}
+    missing = [name for name in required if name not in installed_names]
+    if query:
+        folded_query = query.casefold()
+        fonts = [
+            font
+            for font in fonts
+            if folded_query
+            in " ".join((font["postscript_name"], font["family"], font["style"])).casefold()
+        ]
+    return {
+        "status": "passed" if not missing else "mismatch",
+        "illustrator_version": header[1],
+        "total_font_count": int(header[2]),
+        "match_count": len(fonts),
+        "query": query,
+        "required": list(required),
+        "missing": missing,
+        "fonts": fonts,
+    }
 
 
 def _compare_structure(expected: dict[str, Any], actual: dict[str, Any]) -> dict[str, bool]:
@@ -875,8 +997,7 @@ def _path_geometry_close(expected: AIPath, actual: AIPath, *, tolerance: float) 
             (expected_point.y - expected_origin.y, actual_point.y - actual_origin.y),
         )
         if not all(
-            math.isclose(left, right, rel_tol=0.0, abs_tol=tolerance)
-            for left, right in coordinates
+            math.isclose(left, right, rel_tol=0.0, abs_tol=tolerance) for left, right in coordinates
         ):
             return False
         for expected_handle, actual_handle in (
@@ -951,8 +1072,7 @@ def _compare_roundtrip_semantics(
         and all(left.alignment == right.alignment for left, right in paired_text),
         "text_fill_colors": same_text_count
         and all(
-            _color_close(left.fill, right.fill, tolerance=tolerance)
-            for left, right in paired_text
+            _color_close(left.fill, right.fill, tolerance=tolerance) for left, right in paired_text
         ),
         "text_positions": same_text_count
         and (
@@ -973,8 +1093,7 @@ def _compare_roundtrip_semantics(
                 for left, right in paired_text
             )
         ),
-        "path_ids": same_path_count
-        and all(left.id == right.id for left, right in paired_paths),
+        "path_ids": same_path_count and all(left.id == right.id for left, right in paired_paths),
         "path_names": same_path_count
         and all(left.name == right.name for left, right in paired_paths),
         "point_counts": same_path_count
@@ -993,15 +1112,11 @@ def _compare_roundtrip_semantics(
             len(left.paths) == len(right.paths)
             for left, right in zip(expected_compounds, actual_compounds, strict=True)
         ),
-        "clipping_group_count": len(expected_clipping_groups)
-        == len(actual_clipping_groups),
-        "clipping_content_counts": len(expected_clipping_groups)
-        == len(actual_clipping_groups)
+        "clipping_group_count": len(expected_clipping_groups) == len(actual_clipping_groups),
+        "clipping_content_counts": len(expected_clipping_groups) == len(actual_clipping_groups)
         and all(
             len(left.paths) == len(right.paths)
-            for left, right in zip(
-                expected_clipping_groups, actual_clipping_groups, strict=True
-            )
+            for left, right in zip(expected_clipping_groups, actual_clipping_groups, strict=True)
         ),
         "group_item_count": len(expected_groups) == len(actual_groups),
         "group_structure": len(expected_groups) == len(actual_groups)
@@ -1045,8 +1160,7 @@ def _compare_roundtrip_semantics(
         ),
         "fill_colors": same_path_count
         and all(
-            _color_close(left.fill, right.fill, tolerance=tolerance)
-            for left, right in paired_paths
+            _color_close(left.fill, right.fill, tolerance=tolerance) for left, right in paired_paths
         ),
         "stroke_colors": same_path_count
         and all(
@@ -1055,8 +1169,7 @@ def _compare_roundtrip_semantics(
         ),
         "path_geometry": same_path_count
         and all(
-            _path_geometry_close(left, right, tolerance=tolerance)
-            for left, right in paired_paths
+            _path_geometry_close(left, right, tolerance=tolerance) for left, right in paired_paths
         ),
     }
 
@@ -1165,12 +1278,15 @@ def materialize_native_ai(
         }
     source_document = load_ai7(source_path)
     expected_justifications = Counter(
-        f"Justification.{text.alignment.upper()}"
-        for text in _document_text_frames(source_document)
+        f"Justification.{text.alignment.upper()}" for text in _document_text_frames(source_document)
     )
     dom_ordered_text = _document_text_frames_dom_order(source_document)
     text_notes = tuple(_text_identity_note(text) for text in dom_ordered_text)
     text_contents = tuple(text.text for text in dom_ordered_text)
+    desired_font_names = tuple(
+        text.native_font_name or ("" if "RKSJ-" in text.font_name else text.font_name)
+        for text in dom_ordered_text
+    )
 
     destination_path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="py-ai-illustrator-native-") as temp_directory:
@@ -1184,6 +1300,7 @@ def materialize_native_ai(
                     destination_path,
                     text_notes=text_notes,
                     text_contents=text_contents,
+                    desired_font_names=desired_font_names,
                 ),
                 temp_path,
                 timeout=timeout,
@@ -1209,8 +1326,8 @@ def materialize_native_ai(
             "error": "Illustrator reported success but did not create the native AI file.",
         }
 
-    parts = response.split(":", 8)
-    if len(parts) != 9:
+    parts = response.split(":", 12)
+    if len(parts) != 13:
         return {"status": "failed", "illustrator_response": response}
     (
         _,
@@ -1222,6 +1339,10 @@ def materialize_native_ai(
         assigned_notes,
         native_notes,
         identity_content_matches,
+        requested_fonts,
+        assigned_fonts,
+        matching_fonts,
+        missing_fonts,
     ) = parts
     legacy_text_count = int(legacy_count)
     native_text_count = int(native_count)
@@ -1229,14 +1350,19 @@ def materialize_native_ai(
     assigned_note_count = int(assigned_notes)
     native_note_count = int(native_notes)
     identity_content_match_count = int(identity_content_matches)
+    requested_font_count = int(requested_fonts)
+    assigned_font_count = int(assigned_fonts)
+    matching_font_count = int(matching_fonts)
+    missing_font_names = missing_fonts.split(",") if missing_fonts else []
     checks = {
         "legacy_conversion_succeeded": converted == "true",
         "text_frame_count": native_text_count == legacy_text_count,
-        "paragraph_justifications": Counter(native_justifications)
-        == expected_justifications,
+        "paragraph_justifications": Counter(native_justifications) == expected_justifications,
         "text_identity_notes": assigned_note_count == legacy_text_count
         and native_note_count == legacy_text_count,
         "text_identity_mapping": identity_content_match_count == legacy_text_count,
+        "requested_fonts_available": assigned_font_count == requested_font_count,
+        "native_font_names": matching_font_count == requested_font_count,
     }
     return {
         "status": "passed" if all(checks.values()) else "mismatch",
@@ -1247,6 +1373,10 @@ def materialize_native_ai(
         "native_text_count": native_text_count,
         "native_text_identity_note_count": native_note_count,
         "text_identity_content_match_count": identity_content_match_count,
+        "requested_font_count": requested_font_count,
+        "assigned_font_count": assigned_font_count,
+        "matching_font_count": matching_font_count,
+        "missing_fonts": missing_font_names,
         "native_justifications": native_justifications,
         "checks": checks,
         "format": inspect_file(destination_path).to_dict(),
@@ -1350,8 +1480,7 @@ def run_illustrator_export_test(
             "legacy_ai_detected": format_report.format is FileFormat.LEGACY_AI,
             "artwork_bounds": document.width > 0 and document.height > 0,
             "layer_count": len(document.layers) == 1,
-            "layer_name": bool(document.layers)
-            and document.layers[0].name == expected_layer_name,
+            "layer_name": bool(document.layers) and document.layers[0].name == expected_layer_name,
             "path_item_count": len(paths)
             == (
                 2
@@ -1390,8 +1519,7 @@ def run_illustrator_export_test(
         elif fixture == "stroke-style":
             checks.update(
                 {
-                    "dash_pattern": path is not None
-                    and path.dash_pattern == [18.0, 8.0, 4.0, 8.0],
+                    "dash_pattern": path is not None and path.dash_pattern == [18.0, 8.0, 4.0, 8.0],
                     "dash_offset": path is not None and path.dash_offset == 3.0,
                     "line_cap": path is not None and path.line_cap == "round",
                     "line_join": path is not None and path.line_join == "bevel",
@@ -1406,8 +1534,7 @@ def run_illustrator_export_test(
                     "compound_path_count": len(compound_paths) == 1,
                     "component_count": compound is not None and len(compound.paths) == 2,
                     "component_polarities": compound is not None
-                    and [path.polarity for path in compound.paths]
-                    == ["positive", "negative"],
+                    and [path.polarity for path in compound.paths] == ["positive", "negative"],
                     "filled": compound is not None
                     and all(path.fill is not None for path in compound.paths),
                     "unstroked": compound is not None
@@ -1425,8 +1552,7 @@ def run_illustrator_export_test(
                     "mask_unpainted": group is not None
                     and group.clipping_path.fill is None
                     and group.clipping_path.stroke is None,
-                    "content_filled": group is not None
-                    and group.paths[0].fill is not None,
+                    "content_filled": group is not None and group.paths[0].fill is not None,
                 }
             )
         elif fixture == "group":
@@ -1435,29 +1561,20 @@ def run_illustrator_export_test(
             checks.update(
                 {
                     "group_item_count": len(groups) == 1,
-                    "group_child_count": group is not None
-                    and len(group.item_order) == 2,
-                    "group_path_count": group is not None
-                    and len(group.paths) == 2,
+                    "group_child_count": group is not None and len(group.item_order) == 2,
+                    "group_path_count": group is not None and len(group.paths) == 2,
                 }
             )
         elif fixture in {"point-text", "unicode-text"}:
             text_frames = _document_text_frames(document)
-            expected_text = (
-                "Table Header" if fixture == "point-text" else "日本語の表見出し"
-            )
+            expected_text = "Table Header" if fixture == "point-text" else "日本語の表見出し"
             expected_size = 14.0 if fixture == "point-text" else 16.0
             checks.update(
                 {
                     "text_frame_count": bool(text_frames),
-                    "text_contents": "".join(text.text for text in text_frames)
-                    == expected_text,
-                    "font_size": all(
-                        text.font_size == expected_size for text in text_frames
-                    ),
-                    "rgb_fill": all(
-                        isinstance(text.fill, Color) for text in text_frames
-                    ),
+                    "text_contents": "".join(text.text for text in text_frames) == expected_text,
+                    "font_size": all(text.font_size == expected_size for text in text_frames),
+                    "rgb_fill": all(isinstance(text.fill, Color) for text in text_frames),
                 }
             )
         passed = all(checks.values())
@@ -1560,9 +1677,7 @@ def run_illustrator_roundtrip_test(
 
         checks = _compare_roundtrip_semantics(expected, actual)
         advisory_keys = {"text_font_names", "text_alignments"}
-        advisory_checks = {
-            key: checks.pop(key) for key in advisory_keys if key in checks
-        }
+        advisory_checks = {key: checks.pop(key) for key in advisory_keys if key in checks}
         passed = format_report.format is FileFormat.LEGACY_AI and all(checks.values())
         return {
             "status": "passed" if passed else "mismatch",

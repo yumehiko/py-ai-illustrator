@@ -42,6 +42,7 @@
 f
 %%py-ai-text-id: (report.eyebrow.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Report period)
 0 A
 0 To
@@ -56,6 +57,7 @@ TP
 TO
 %%py-ai-text-id: (report.title.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Report title)
 0 A
 0 To
@@ -91,6 +93,7 @@ u
 b
 %%py-ai-text-id: (metric-1.label.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Metric label)
 0 A
 0 To
@@ -105,6 +108,7 @@ TP
 TO
 %%py-ai-text-id: (metric-1.value.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Metric value)
 0 A
 0 To
@@ -119,6 +123,7 @@ TP
 TO
 %%py-ai-text-id: (metric-1.change.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Metric change)
 0 A
 0 To
@@ -155,6 +160,7 @@ u
 b
 %%py-ai-text-id: (metric-2.label.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Metric label)
 0 A
 0 To
@@ -169,6 +175,7 @@ TP
 TO
 %%py-ai-text-id: (metric-2.value.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Metric value)
 0 A
 0 To
@@ -183,6 +190,7 @@ TP
 TO
 %%py-ai-text-id: (metric-2.change.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Metric change)
 0 A
 0 To
@@ -219,6 +227,7 @@ u
 b
 %%py-ai-text-id: (metric-3.label.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Metric label)
 0 A
 0 To
@@ -233,6 +242,7 @@ TP
 TO
 %%py-ai-text-id: (metric-3.value.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Metric value)
 0 A
 0 To
@@ -247,6 +257,7 @@ TP
 TO
 %%py-ai-text-id: (metric-3.change.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Metric change)
 0 A
 0 To
@@ -280,6 +291,7 @@ U
 b
 %%py-ai-text-id: (chart.title.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Chart title)
 0 A
 0 To
@@ -294,6 +306,7 @@ TP
 TO
 %%py-ai-text-id: (chart.legend.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica-Bold)
 %%py-ai-text-name: (Target legend)
 0 A
 0 To
@@ -325,6 +338,7 @@ u
 S
 %%py-ai-text-id: (operating-index.tick-60.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Y axis value)
 0 A
 0 To
@@ -353,6 +367,7 @@ TO
 S
 %%py-ai-text-id: (operating-index.tick-80.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Y axis value)
 0 A
 0 To
@@ -381,6 +396,7 @@ TO
 S
 %%py-ai-text-id: (operating-index.tick-100.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Y axis value)
 0 A
 0 To
@@ -409,6 +425,7 @@ TO
 S
 %%py-ai-text-id: (operating-index.tick-120.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Y axis value)
 0 A
 0 To
@@ -473,6 +490,7 @@ S
 b
 %%py-ai-text-id: (operating-index.label-0.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Month label)
 0 A
 0 To
@@ -505,6 +523,7 @@ TO
 b
 %%py-ai-text-id: (operating-index.label-1.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Month label)
 0 A
 0 To
@@ -537,6 +556,7 @@ TO
 b
 %%py-ai-text-id: (operating-index.label-2.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Month label)
 0 A
 0 To
@@ -569,6 +589,7 @@ TO
 b
 %%py-ai-text-id: (operating-index.label-3.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Month label)
 0 A
 0 To
@@ -601,6 +622,7 @@ TO
 b
 %%py-ai-text-id: (operating-index.label-4.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Month label)
 0 A
 0 To
@@ -633,6 +655,7 @@ TO
 b
 %%py-ai-text-id: (operating-index.label-5.line-0)
 %%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Month label)
 0 A
 0 To
@@ -648,6 +671,7 @@ TO
 U
 %%py-ai-text-id: (report.source.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (Data source)
 0 A
 0 To

@@ -1,6 +1,7 @@
 import pytest
 
 from py_ai_illustrator.authoring import (
+    FontSpec,
     LayerBuilder,
     Table,
     TableColumn,
@@ -120,9 +121,31 @@ def test_text_block_wraps_and_uses_alignment_anchor() -> None:
     assert len(rendered.text_frames) > 1
     assert all(frame.x == 130 for frame in rendered.text_frames)
     assert all(frame.alignment == "right" for frame in rendered.text_frames)
-    assert rendered.text_frames[1].y == pytest.approx(
-        rendered.text_frames[0].y - 14
+    assert rendered.text_frames[1].y == pytest.approx(rendered.text_frames[0].y - 14)
+
+
+def test_font_spec_keeps_legacy_encoding_and_native_font_separate() -> None:
+    font = FontSpec(
+        postscript_name="KozGoPr6N-Regular",
+        family="小塚ゴシック Pr6N",
+        style="R",
+        legacy_name="_KozGoPr6N-Regular-83pv-RKSJ-H",
     )
+    rendered = TextBlock(
+        id="heading",
+        text="見出し",
+        width=100,
+        wrap=False,
+        style=TextStyle(font=font),
+    ).render(x=10, top=80)
+
+    assert rendered.text_frames[0].font_name == font.legacy_name
+    assert rendered.text_frames[0].native_font_name == font.postscript_name
+
+
+def test_font_spec_rejects_a_family_name_as_postscript_name() -> None:
+    with pytest.raises(ValueError, match="PostScript"):
+        FontSpec(postscript_name="Noto Sans JP")
 
 
 def test_layer_builder_composes_components_and_rejects_duplicate_ids() -> None:

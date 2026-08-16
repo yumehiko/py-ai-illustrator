@@ -6,6 +6,7 @@ from pathlib import Path
 from py_ai_illustrator import (
     Color,
     Document,
+    FontSpec,
     LayerBuilder,
     RenderedComponent,
     TextBlock,
@@ -14,7 +15,12 @@ from py_ai_illustrator import (
 )
 from py_ai_illustrator.legacy import dump_ai7
 
-JAPANESE_FONT = "_KozGoPr6N-Regular-83pv-RKSJ-H"
+JAPANESE_FONT = FontSpec(
+    postscript_name="KozGoPr6N-Regular",
+    family="小塚ゴシック Pr6N",
+    style="R",
+    legacy_name="_KozGoPr6N-Regular-83pv-RKSJ-H",
+)
 INK = Color(0.08, 0.1, 0.14)
 MUTED = Color(0.38, 0.4, 0.45)
 PAPER = Color(0.97, 0.96, 0.93)
@@ -73,7 +79,7 @@ class PriceTag:
                 wrap=False,
                 style=TextStyle(
                     font_size=8,
-                    font_name=JAPANESE_FONT,
+                    font=JAPANESE_FONT,
                     fill=accent,
                 ),
             ).render(x=x + 7, top=top - 8)
@@ -89,7 +95,7 @@ class PriceTag:
                     wrap=False,
                     style=TextStyle(
                         font_size=7,
-                        font_name=JAPANESE_FONT,
+                        font=JAPANESE_FONT,
                         fill=MUTED,
                     ),
                 ).render(x=x + 65, top=top - 6)
@@ -104,7 +110,7 @@ class PriceTag:
                 wrap=False,
                 style=TextStyle(
                     font_size=22,
-                    font_name=JAPANESE_FONT,
+                    font=JAPANESE_FONT,
                     fill=accent,
                 ),
             ).render(x=x + 7, top=top - 18)
@@ -119,7 +125,7 @@ class PriceTag:
                 wrap=False,
                 style=TextStyle(
                     font_size=6,
-                    font_name=JAPANESE_FONT,
+                    font=JAPANESE_FONT,
                     fill=MUTED,
                 ),
             ).render(x=x + 7, top=top - 39)
@@ -170,7 +176,7 @@ class PriceTag:
                 wrap=False,
                 style=TextStyle(
                     font_size=8,
-                    font_name=JAPANESE_FONT,
+                    font=JAPANESE_FONT,
                     fill=MUTED,
                 ),
             ).render(x=x + 12, top=top - 16)
@@ -185,7 +191,7 @@ class PriceTag:
                 wrap=True,
                 style=TextStyle(
                     font_size=12,
-                    font_name=JAPANESE_FONT,
+                    font=JAPANESE_FONT,
                     fill=INK,
                     line_height_ratio=1.25,
                 ),
@@ -247,7 +253,7 @@ def build_document() -> Document:
             width=552,
             alignment="right",
             wrap=False,
-            style=TextStyle(font_size=10, font_name=JAPANESE_FONT, fill=MUTED),
+            style=TextStyle(font_size=10, font=JAPANESE_FONT, fill=MUTED),
         ).render(x=30, top=392)
     )
     positions = [

@@ -4,6 +4,7 @@ from subprocess import CompletedProcess, TimeoutExpired
 from py_ai_illustrator import illustrator
 from py_ai_illustrator.illustrator import (
     _build_export_javascript,
+    _build_font_catalog_javascript,
     _build_javascript,
     _build_native_materialization_javascript,
     _build_roundtrip_javascript,
@@ -85,16 +86,53 @@ def test_native_materialization_assigns_identity_notes_after_conversion(
         tmp_path / "native.ai",
         text_notes=('py-ai-text:{"id":"price","name":"Price"}',),
         text_contents=("Price",),
+        desired_font_names=("Helvetica-Bold",),
     )
 
     conversion = javascript.index("legacyTextItems.convertToNative()")
-    assignment = javascript.index(
-        "documentRef.textFrames[noteIndex].note = textNotes[noteIndex]"
-    )
+    assignment = javascript.index("documentRef.textFrames[noteIndex].note = textNotes[noteIndex]")
     assert conversion < assignment
     assert 'py-ai-text:{"id":"price","name":"Price"}' not in javascript
-    assert 'var textContents = [String.fromCharCode(80,114,105,99,101)]' in javascript
+    assert "var textContents = [String.fromCharCode(80,114,105,99,101)]" in javascript
     assert "String.fromCharCode" in javascript
+    assert "app.textFonts.getByName" in javascript
+    assert "characterAttributes.textFont" in javascript
+    assert "String.fromCharCode(72,101,108,118,101,116,105,99,97,45,66,111,108,100)" in javascript
+
+
+def test_font_catalog_javascript_does_not_touch_documents() -> None:
+    javascript = _build_font_catalog_javascript()
+
+    assert "app.textFonts" in javascript
+    assert 'lines.join("\\n")' in javascript
+    assert "app.open" not in javascript
+    assert "saveAs" not in javascript
+
+
+def test_font_catalog_filters_and_validates_exact_names(monkeypatch) -> None:
+    response = "\n".join(
+        (
+            "ok\t30.7.0\t3",
+            "Helvetica\tHelvetica\tRegular",
+            "KozGoPr6N-Regular\t小塚ゴシック Pr6N\tR",
+            "NotoSansJP-Regular\tNoto Sans JP\tRegular",
+        )
+    )
+
+    monkeypatch.setattr(illustrator.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(
+        illustrator,
+        "_execute_javascript",
+        lambda *args, **kwargs: CompletedProcess([], 0, stdout=response, stderr=""),
+    )
+
+    result = illustrator.list_illustrator_fonts(
+        query="小塚", required=("KozGoPr6N-Regular", "Missing-Bold")
+    )
+
+    assert result["status"] == "mismatch"
+    assert result["missing"] == ["Missing-Bold"]
+    assert [font["postscript_name"] for font in result["fonts"]] == ["KozGoPr6N-Regular"]
 
 
 def test_expected_structure_comes_from_legacy_reader() -> None:
@@ -182,9 +220,7 @@ def test_runner_distinguishes_an_unready_environment(monkeypatch) -> None:
     assert "sign in" in result["next_action"]
 
 
-def test_export_runner_refuses_to_overwrite_existing_output(
-    monkeypatch, tmp_path: Path
-) -> None:
+def test_export_runner_refuses_to_overwrite_existing_output(monkeypatch, tmp_path: Path) -> None:
     output = tmp_path / "existing.ai"
     output.write_bytes(b"user data")
     monkeypatch.setattr(illustrator.platform, "system", lambda: "Darwin")
@@ -294,9 +330,7 @@ def test_roundtrip_comparison_reports_mixed_item_type_reordering() -> None:
     assert checks["path_geometry"] is True
 
 
-def test_roundtrip_runner_refuses_to_overwrite_existing_output(
-    monkeypatch, tmp_path: Path
-) -> None:
+def test_roundtrip_runner_refuses_to_overwrite_existing_output(monkeypatch, tmp_path: Path) -> None:
     source = Path(__file__).parents[1] / "examples" / "rectangle.ai"
     output = tmp_path / "existing.ai"
     output.write_bytes(b"user data")

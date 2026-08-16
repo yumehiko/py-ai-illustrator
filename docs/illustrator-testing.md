@@ -19,6 +19,15 @@ osascript -e 'with timeout of 10 seconds' \
 
 ## 実行
 
+利用可能なフォントをfamily・style・PostScript名で検索し、制作物の必須フォントを検証できます。書体名はfamily表示名ではなく、`postscript_name`を`FontSpec`へ渡します。
+
+```bash
+uv run py-ai illustrator-fonts --query "Noto Sans JP"
+uv run py-ai illustrator-fonts \
+  --require KozGoPr6N-Regular \
+  --require Helvetica-Bold
+```
+
 ```bash
 uv run py-ai test-illustrator examples/rectangle.ai
 uv run py-ai test-illustrator examples/cmyk-curve.ai
@@ -60,7 +69,7 @@ uv run py-ai test-illustrator examples/retail-price-tags.native.ai
 uv run py-ai test-illustrator examples/quarterly-kpi-report.native.ai
 ```
 
-`materialize-native`はAI7の`Ta`段落属性を含むlegacy textを`convertToNative()`で現代TextFrameへ変換します。変換後は再帰的なIllustrator DOM順に基づき、各TextFrameの`note`へ`py-ai-text:` identity（安定ID・役割名）を設定します。出力はPDF-compatible AIで、既存出力の上書きを拒否します。
+`materialize-native`はAI7の`Ta`段落属性を含むlegacy textを`convertToNative()`で現代TextFrameへ変換します。変換後は再帰的なIllustrator DOM順に基づき、各TextFrameの`note`へ`py-ai-text:` identity（安定ID・役割名）を設定し、`FontSpec.postscript_name`のfontを割り当てます。指定fontが見つからない場合や割り当て後の名前が一致しない場合は`mismatch`にします。出力はPDF-compatible AIで、既存出力の上書きを拒否します。
 
 調査用にIllustrator生成AIを残す場合は、既存ファイルではない出力先を指定します。上書きは拒否されます。
 

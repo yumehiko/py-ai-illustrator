@@ -122,9 +122,7 @@ class LayerBuilder:
             elif reference.kind == "group":
                 self.add_group(groups[reference.id])
             else:
-                raise ValueError(
-                    f"Rendered components do not yet support {reference.kind!r} items"
-                )
+                raise ValueError(f"Rendered components do not yet support {reference.kind!r} items")
 
     def build(self) -> Layer:
         return Layer(
@@ -138,17 +136,53 @@ class LayerBuilder:
 
 
 @dataclass(frozen=True, slots=True)
+class FontSpec:
+    """A font that works in both the legacy bridge and native Illustrator.
+
+    ``postscript_name`` is Illustrator's installed font name. ``legacy_name``
+    is only needed when the AI7 bridge requires a different composite font
+    name, as it does for RKSJ-encoded Japanese text.
+    """
+
+    postscript_name: str
+    family: str | None = None
+    style: str | None = None
+    legacy_name: str | None = None
+
+    def __post_init__(self) -> None:
+        for label, value in (
+            ("postscript_name", self.postscript_name),
+            ("legacy_name", self.legacy_name),
+        ):
+            if value is not None and (not value or any(char.isspace() for char in value)):
+                raise ValueError(f"{label} must be a non-empty PostScript name")
+
+    @property
+    def ai7_name(self) -> str:
+        return self.legacy_name or self.postscript_name
+
+
+@dataclass(frozen=True, slots=True)
 class TextStyle:
     """Reusable typography for semantic text blocks."""
 
     font_size: float = 12.0
     font_name: str = "Helvetica"
+    font: FontSpec | None = None
     fill: ProcessColor = field(default_factory=lambda: Color(0.0, 0.0, 0.0))
     line_height_ratio: float = 1.25
 
     def __post_init__(self) -> None:
         if self.font_size <= 0 or self.line_height_ratio <= 0:
             raise ValueError("Text size and line height must be positive")
+
+    @property
+    def ai7_font_name(self) -> str:
+        return self.font.ai7_name if self.font is not None else self.font_name
+
+    @property
+    def native_font_name(self) -> str:
+        return self.font.postscript_name if self.font is not None else self.font_name
 
 
 @dataclass(frozen=True, slots=True)
@@ -179,9 +213,7 @@ class TextBlock:
                 max_width=self.width,
                 font_size=self.style.font_size,
             )
-        return tuple(
-            self.text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
-        )
+        return tuple(self.text.replace("\r\n", "\n").replace("\r", "\n").split("\n"))
 
     @property
     def height(self) -> float:
@@ -205,7 +237,8 @@ class TextBlock:
                 x=anchor_x,
                 y=top - self.style.font_size * 0.8 - index * line_height,
                 font_size=self.style.font_size,
-                font_name=self.style.font_name,
+                font_name=self.style.ai7_font_name,
+                native_font_name=self.style.native_font_name,
                 fill=self.style.fill,
                 alignment=self.alignment,
             )
@@ -426,27 +459,19 @@ class TableStyle:
     padding_x: float = 10.0
     padding_y: float = 6.0
     line_height_ratio: float = 1.25
-    header_fill: ProcessColor = field(
-        default_factory=lambda: Color(0.08, 0.16, 0.28)
-    )
+    header_fill: ProcessColor = field(default_factory=lambda: Color(0.08, 0.16, 0.28))
     body_fill: ProcessColor = field(default_factory=lambda: Color(1.0, 1.0, 1.0))
-    alternate_fill: ProcessColor | None = field(
-        default_factory=lambda: Color(0.96, 0.97, 0.98)
-    )
+    alternate_fill: ProcessColor | None = field(default_factory=lambda: Color(0.96, 0.97, 0.98))
     variant_fills: Mapping[str, ProcessColor] = field(default_factory=dict)
-    header_text_color: ProcessColor = field(
-        default_factory=lambda: Color(1.0, 1.0, 1.0)
-    )
-    body_text_color: ProcessColor = field(
-        default_factory=lambda: Color(0.12, 0.15, 0.2)
-    )
+    header_text_color: ProcessColor = field(default_factory=lambda: Color(1.0, 1.0, 1.0))
+    body_text_color: ProcessColor = field(default_factory=lambda: Color(0.12, 0.15, 0.2))
     variant_text_colors: Mapping[str, ProcessColor] = field(default_factory=dict)
-    border_color: ProcessColor = field(
-        default_factory=lambda: Color(0.72, 0.75, 0.8)
-    )
+    border_color: ProcessColor = field(default_factory=lambda: Color(0.72, 0.75, 0.8))
     border_width: float = 0.75
     header_font_name: str = "Helvetica-Bold"
     body_font_name: str = "Helvetica"
+    header_font: FontSpec | None = None
+    body_font: FontSpec | None = None
     header_font_size: float = 11.0
     body_font_size: float = 10.0
 
@@ -490,9 +515,7 @@ class Table:
     def _layout(self) -> _TableLayout:
         def lines_for(column: TableColumn, value: str, font_size: float) -> tuple[str, ...]:
             if not column.wrap:
-                return tuple(
-                    value.replace("\r\n", "\n").replace("\r", "\n").split("\n")
-                )
+                return tuple(value.replace("\r\n", "\n").replace("\r", "\n").split("\n"))
             return _wrap_text(
                 value,
                 max_width=max(column.width - 2 * self.style.padding_x, 1.0),
@@ -505,8 +528,7 @@ class Table:
             return content + 2 * self.style.padding_y
 
         header_lines = tuple(
-            lines_for(column, column.title, self.style.header_font_size)
-            for column in self.columns
+            lines_for(column, column.title, self.style.header_font_size) for column in self.columns
         )
         header_height = max(
             self.style.header_height,
@@ -591,10 +613,7 @@ class Table:
         horizontal_positions = [
             top,
             top - layout.header_height,
-            *(
-                row_top - layout.row_heights[index]
-                for index, row_top in enumerate(row_tops)
-            ),
+            *(row_top - layout.row_heights[index] for index, row_top in enumerate(row_tops)),
         ]
         for line_index, line_y in enumerate(horizontal_positions):
             line = Path(
@@ -657,9 +676,7 @@ class Table:
                 self.style.header_font_size,
                 len(lines),
             )
-            for line_index, (value, line_y) in enumerate(
-                zip(lines, line_baselines, strict=True)
-            ):
+            for line_index, (value, line_y) in enumerate(zip(lines, line_baselines, strict=True)):
                 suffix = f".line-{line_index}" if len(lines) > 1 else ""
                 text = TextFrame(
                     id=f"{self.id}.header.{column.key}{suffix}",
@@ -671,7 +688,16 @@ class Table:
                     ),
                     y=line_y,
                     font_size=self.style.header_font_size,
-                    font_name=self.style.header_font_name,
+                    font_name=(
+                        self.style.header_font.ai7_name
+                        if self.style.header_font is not None
+                        else self.style.header_font_name
+                    ),
+                    native_font_name=(
+                        self.style.header_font.postscript_name
+                        if self.style.header_font is not None
+                        else self.style.header_font_name
+                    ),
                     fill=self.style.header_text_color,
                     alignment=column.alignment,
                 )
@@ -680,9 +706,7 @@ class Table:
 
         for row_index, row in enumerate(self.rows):
             variant = str(row.get(self.variant_key, "")) if self.variant_key else ""
-            color = self.style.variant_text_colors.get(
-                variant, self.style.body_text_color
-            )
+            color = self.style.variant_text_colors.get(variant, self.style.body_text_color)
             row_top = row_tops[row_index]
             row_height = layout.row_heights[row_index]
             for column_index, column in enumerate(self.columns):
@@ -707,7 +731,16 @@ class Table:
                         ),
                         y=line_y,
                         font_size=self.style.body_font_size,
-                        font_name=self.style.body_font_name,
+                        font_name=(
+                            self.style.body_font.ai7_name
+                            if self.style.body_font is not None
+                            else self.style.body_font_name
+                        ),
+                        native_font_name=(
+                            self.style.body_font.postscript_name
+                            if self.style.body_font is not None
+                            else self.style.body_font_name
+                        ),
                         fill=color,
                         alignment=column.alignment,
                     )

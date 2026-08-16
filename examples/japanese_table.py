@@ -2,10 +2,15 @@
 
 from pathlib import Path
 
-from py_ai_illustrator import Color, Document, Table, TableColumn, TableStyle
+from py_ai_illustrator import Color, Document, FontSpec, Table, TableColumn, TableStyle
 from py_ai_illustrator.legacy import dump_ai7
 
-JAPANESE_FONT = "_KozGoPr6N-Regular-83pv-RKSJ-H"
+JAPANESE_FONT = FontSpec(
+    postscript_name="KozGoPr6N-Regular",
+    family="小塚ゴシック Pr6N",
+    style="R",
+    legacy_name="_KozGoPr6N-Regular-83pv-RKSJ-H",
+)
 
 
 def build_document() -> Document:
@@ -58,8 +63,8 @@ def build_document() -> Document:
             body_text_color=Color(0.12, 0.14, 0.2),
             border_color=Color(0.65, 0.7, 0.78),
             border_width=0.8,
-            header_font_name=JAPANESE_FONT,
-            body_font_name=JAPANESE_FONT,
+            header_font=JAPANESE_FONT,
+            body_font=JAPANESE_FONT,
             header_font_size=12,
             body_font_size=11,
         ),

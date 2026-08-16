@@ -5,6 +5,7 @@ from pathlib import Path
 from py_ai_illustrator import (
     Color,
     Document,
+    FontSpec,
     LayerBuilder,
     TextBlock,
     TextStyle,
@@ -13,7 +14,12 @@ from py_ai_illustrator import (
 )
 from py_ai_illustrator.legacy import dump_ai7
 
-JAPANESE_FONT = "_KozGoPr6N-Regular-83pv-RKSJ-H"
+JAPANESE_FONT = FontSpec(
+    postscript_name="KozGoPr6N-Regular",
+    family="小塚ゴシック Pr6N",
+    style="R",
+    legacy_name="_KozGoPr6N-Regular-83pv-RKSJ-H",
+)
 
 
 def build_document() -> Document:
@@ -74,7 +80,7 @@ def build_document() -> Document:
             width=460,
             alignment="center",
             wrap=False,
-            style=TextStyle(font_size=38, font_name=JAPANESE_FONT, fill=navy),
+            style=TextStyle(font_size=38, font=JAPANESE_FONT, fill=navy),
         ).render(x=50, top=548)
     )
     builder.add(
@@ -85,7 +91,7 @@ def build_document() -> Document:
             width=420,
             alignment="center",
             wrap=False,
-            style=TextStyle(font_size=16, font_name=JAPANESE_FONT, fill=blue),
+            style=TextStyle(font_size=16, font=JAPANESE_FONT, fill=blue),
         ).render(x=70, top=486)
     )
     builder.add_path(
@@ -114,7 +120,7 @@ def build_document() -> Document:
             wrap=True,
             style=TextStyle(
                 font_size=13,
-                font_name=JAPANESE_FONT,
+                font=JAPANESE_FONT,
                 fill=navy,
                 line_height_ratio=1.65,
             ),
@@ -128,7 +134,7 @@ def build_document() -> Document:
             width=350,
             alignment="center",
             wrap=False,
-            style=TextStyle(font_size=18, font_name=JAPANESE_FONT, fill=navy),
+            style=TextStyle(font_size=18, font=JAPANESE_FONT, fill=navy),
         ).render(x=105, top=232)
     )
     builder.add(
@@ -139,7 +145,7 @@ def build_document() -> Document:
             width=350,
             alignment="center",
             wrap=False,
-            style=TextStyle(font_size=11, font_name=JAPANESE_FONT, fill=navy),
+            style=TextStyle(font_size=11, font=JAPANESE_FONT, fill=navy),
         ).render(x=105, top=196)
     )
     builder.add(

@@ -168,9 +168,9 @@ def _parse_path_note(note: str) -> tuple[str | None, str | None]:
     if not note.startswith(_PATH_NOTE_PREFIX):
         return None, None
     try:
-        decoded = base64.b64decode(
-            note.removeprefix(_PATH_NOTE_PREFIX), validate=True
-        ).decode("utf-8")
+        decoded = base64.b64decode(note.removeprefix(_PATH_NOTE_PREFIX), validate=True).decode(
+            "utf-8"
+        )
         payload = json.loads(decoded)
     except (ValueError, UnicodeError, json.JSONDecodeError):
         return None, None
@@ -308,6 +308,12 @@ def _serialized_text_frame(text: TextFrame, *, locked: bool) -> list[str]:
             f"Invalid PostScript font name for AI7 text: {text.font_name!r}"
         )
     lines = [f"%%py-ai-text-alignment: ({text.alignment})"]
+    if text.native_font_name is not None:
+        if not _POSTSCRIPT_NAME_RE.fullmatch(text.native_font_name):
+            raise UnsupportedLegacyFeature(
+                f"Invalid native PostScript font name for AI7 text: {text.native_font_name!r}"
+            )
+        lines.append(f"%%py-ai-text-native-font: ({text.native_font_name})")
     if text.id.isascii():
         lines.insert(0, f"%%py-ai-text-id: ({_escape_postscript_string(text.id)})")
     else:
@@ -349,10 +355,7 @@ def _serialized_item(
     if isinstance(item, CompoundPath):
         lines = [f"%%py-ai-compound-id: ({_escape_postscript_string(item.id)})"]
         if item.name is not None:
-            lines.append(
-                "%%py-ai-compound-name: "
-                f"({_escape_postscript_string(item.name)})"
-            )
+            lines.append(f"%%py-ai-compound-name: ({_escape_postscript_string(item.name)})")
         lines.append("*u")
         for path in item.paths:
             lines.extend(_serialized_path(path, locked=locked))
@@ -361,10 +364,7 @@ def _serialized_item(
     if isinstance(item, ClippingGroup):
         lines = [f"%%py-ai-clipping-id: ({_escape_postscript_string(item.id)})"]
         if item.name is not None:
-            lines.append(
-                "%%py-ai-clipping-name: "
-                f"({_escape_postscript_string(item.name)})"
-            )
+            lines.append(f"%%py-ai-clipping-name: ({_escape_postscript_string(item.name)})")
         lines.append("q")
         lines.extend(_serialized_clipping_path(item.clipping_path, locked=locked))
         for path in item.paths:
@@ -379,9 +379,7 @@ def _serialized_item(
         lines = [f"%%py-ai-group-id-utf8: {encoded_id}"]
     if item.name is not None:
         if item.name.isascii():
-            lines.append(
-                f"%%py-ai-group-name: ({_escape_postscript_string(item.name)})"
-            )
+            lines.append(f"%%py-ai-group-name: ({_escape_postscript_string(item.name)})")
         else:
             encoded_name = base64.b64encode(item.name.encode("utf-8")).decode("ascii")
             lines.append(f"%%py-ai-group-name-utf8: {encoded_name}")
@@ -538,6 +536,7 @@ def loads_ai7(data: bytes) -> Document:
     pending_text_id: str | None = None
     pending_text_name: str | None = None
     pending_text_alignment: str | None = None
+    pending_text_native_font_name: str | None = None
     metadata: dict[str, object] = {}
 
     def active_container() -> Layer | Group:
@@ -770,6 +769,10 @@ def loads_ai7(data: bytes) -> Document:
             if candidate in {"left", "center", "right"}:
                 pending_text_alignment = candidate
             continue
+        if line.startswith("%%py-ai-text-native-font: (") and line.endswith(")"):
+            value = line.removeprefix("%%py-ai-text-native-font: (")[:-1]
+            pending_text_native_font_name = _unescape_postscript_string(value)
+            continue
         if _TEXT_BEGIN_RE.match(line):
             in_text = True
             text_parts = []
@@ -796,9 +799,7 @@ def loads_ai7(data: bytes) -> Document:
             text_content_match = _TEXT_CONTENT_RE.match(line)
             if text_content_match:
                 text_parts.append(
-                    _unescape_postscript_text(
-                        text_content_match.group(1), font_name=text_font_name
-                    )
+                    _unescape_postscript_text(text_content_match.group(1), font_name=text_font_name)
                 )
                 continue
             if line == "TO":
@@ -811,6 +812,7 @@ def loads_ai7(data: bytes) -> Document:
                     y=text_y,
                     font_size=text_font_size,
                     font_name=text_font_name,
+                    native_font_name=pending_text_native_font_name,
                     fill=fill or Color(0.0, 0.0, 0.0),
                     alignment=pending_text_alignment or text_alignment,
                 )
@@ -818,6 +820,7 @@ def loads_ai7(data: bytes) -> Document:
                 pending_text_id = None
                 pending_text_name = None
                 pending_text_alignment = None
+                pending_text_native_font_name = None
                 in_text = False
                 continue
         ai8_rgb_match = _AI8_RGB_COLOR_RE.match(line)
@@ -849,14 +852,10 @@ def loads_ai7(data: bytes) -> Document:
             stroke_width = float(width_match.group(1))
         line_cap_match = _LINE_CAP_RE.search(line)
         if line_cap_match:
-            line_cap = {"0": "butt", "1": "round", "2": "projecting"}[
-                line_cap_match.group(1)
-            ]
+            line_cap = {"0": "butt", "1": "round", "2": "projecting"}[line_cap_match.group(1)]
         line_join_match = _LINE_JOIN_RE.search(line)
         if line_join_match:
-            line_join = {"0": "miter", "1": "round", "2": "bevel"}[
-                line_join_match.group(1)
-            ]
+            line_join = {"0": "miter", "1": "round", "2": "bevel"}[line_join_match.group(1)]
         miter_limit_match = _MITER_LIMIT_RE.search(line)
         if miter_limit_match:
             miter_limit = float(miter_limit_match.group(1))

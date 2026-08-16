@@ -77,7 +77,7 @@ legacy .ai bytes
 
 一方、独自DSCコメントだけに保存しているlayer ID、compound/clipping containerのID・名前、document metadataはIllustrator再保存で除去されます。元のdocument title/boundsも保存先名とartwork boundsへ変わるため、引き続き既知のlossです。
 
-point textのIRとAI7 reader/writerを追加し、Illustrator生成AI8の`To` / `Tp` / `Tf` / `Ta` / `Tx`を読み取れるようにしました。Python生成表は16個のpath（背景・罫線）と20個のlegacy textとしてIllustrator 30.7.0で認識されます。AI7は現行Illustratorで直接はlegacy textになるため、`materialize-native`で20個すべてを現代の編集可能なTextFrameへ変換しました。再オープン後もLEFT/CENTER/RIGHTのparagraph justification、文字内容、配置が保持されます。従来のAI8 legacy再保存経路におけるfont置換・alignment正規化は、引き続きadvisoryとして区別します。
+point textのIRとAI7 reader/writerを追加し、Illustrator生成AI8の`To` / `Tp` / `Tf` / `Ta` / `Tx`を読み取れるようにしました。Python生成表は16個のpath（背景・罫線）と20個のlegacy textとしてIllustrator 30.7.0で認識されます。AI7は現行Illustratorで直接はlegacy textになるため、`materialize-native`で20個すべてを現代の編集可能なTextFrameへ変換しました。再オープン後もLEFT/CENTER/RIGHTのparagraph justification、文字内容、配置が保持されます。`FontSpec`とfont catalog検査を追加し、native化した6作例の全132 TextFramesへ指定PostScript fontを割り当てました。保存後の再オープンでも、日本語予定表18個が`KozGoPr6N-Regular`、英字表20個が`Helvetica` / `Helvetica-Bold`を保持しています。従来のAI8 legacy再保存経路におけるfont置換・alignment正規化は、引き続きadvisoryとして区別します。
 
 Python意味モデルの最初の実装として`Table` / `TableColumn` / `TableStyle`を追加しました。列formatter/accessor、行variant、header/body/alternate配色、文字色、列幅、余白、行高、罫線、font要求を共有・派生でき、低水準IRへ決定的にrenderします。[`examples/styled_table.py`](../examples/styled_table.py)がsource of truthで、生成AIはPython readerとIllustrator実機の両方で検査します。
 

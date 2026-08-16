@@ -32,7 +32,11 @@
 1 D
 %AI3_Note:py-ai:eyJpZCI6InNoZWV0LmJhY2tncm91bmQiLCJuYW1lIjoiU2hlZXQgYmFja2dyb3VuZCJ9
 0.97 0.96 0.93 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 0 0 m
 612 0 L
 612 410 L
@@ -41,6 +45,7 @@
 f
 %%py-ai-text-id: (sheet.title.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Sheet title)
 0 A
 0 To
@@ -63,7 +68,11 @@ u
 %AI3_Note:py-ai:eyJpZCI6InRhZy0xLmJhY2tncm91bmQiLCJuYW1lIjoiU2hlbGYgdGFnOiDmsLTlh7rjgZfjgqLjgqTjgrnjgrPjg7zjg5Ljg7wg54Sh57OWIn0=
 1 1 1 Xa
 0.72 0.72 0.7 XA
+0 J
+0 j
 0.7 w
+4 M
+[] 0 d
 30 210 m
 204 210 L
 204 360 L
@@ -76,7 +85,11 @@ b
 1 D
 %AI3_Note:py-ai:eyJpZCI6InRhZy0xLmFjY2VudCIsIm5hbWUiOiJWYXJpYW50IGFjY2VudCJ9
 0.12 0.32 0.54 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 30 353 m
 204 353 L
 204 360 L
@@ -85,6 +98,7 @@ b
 f
 %%py-ai-text-id: (tag-1.category.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Product category)
 0 A
 0 To
@@ -99,6 +113,7 @@ TP
 TO
 %%py-ai-text-id: (tag-1.name.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Product name)
 0 A
 0 To
@@ -113,6 +128,7 @@ TP
 TO
 %%py-ai-text-id: (tag-1.sku.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (SKU)
 0 A
 0 To
@@ -134,7 +150,11 @@ u
 1 D
 %AI3_Note:py-ai:eyJpZCI6InRhZy0xLnByaWNlLWJhY2tncm91bmQiLCJuYW1lIjoiUHJpY2UgYmFja2dyb3VuZCJ9
 0.96 0.97 0.98 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 40 218 m
 194 218 L
 194 266 L
@@ -143,6 +163,7 @@ u
 f
 %%py-ai-text-id: (tag-1.variant.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Sales status)
 0 A
 0 To
@@ -157,6 +178,7 @@ TP
 TO
 %%py-ai-text-id: (tag-1.price.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Current price)
 0 A
 0 To
@@ -171,6 +193,7 @@ TP
 TO
 %%py-ai-text-id: (tag-1.tax.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Tax note)
 0 A
 0 To
@@ -195,7 +218,11 @@ u
 %AI3_Note:py-ai:eyJpZCI6InRhZy0yLmJhY2tncm91bmQiLCJuYW1lIjoiU2hlbGYgdGFnOiDngKzmiLjlhoXjg6zjg6Ljg7Pjga7jg5Djgr/jg7zjgrXjg5bjg6wifQ==
 1 1 1 Xa
 0.72 0.72 0.7 XA
+0 J
+0 j
 0.7 w
+4 M
+[] 0 d
 219 210 m
 393 210 L
 393 360 L
@@ -208,7 +235,11 @@ b
 1 D
 %AI3_Note:py-ai:eyJpZCI6InRhZy0yLmFjY2VudCIsIm5hbWUiOiJWYXJpYW50IGFjY2VudCJ9
 0.88 0.18 0.14 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 219 353 m
 393 353 L
 393 360 L
@@ -217,6 +248,7 @@ b
 f
 %%py-ai-text-id: (tag-2.category.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Product category)
 0 A
 0 To
@@ -231,6 +263,7 @@ TP
 TO
 %%py-ai-text-id: (tag-2.name.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Product name)
 0 A
 0 To
@@ -245,6 +278,7 @@ TP
 TO
 %%py-ai-text-id: (tag-2.name.line-1)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Product name)
 0 A
 0 To
@@ -259,6 +293,7 @@ TP
 TO
 %%py-ai-text-id: (tag-2.sku.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (SKU)
 0 A
 0 To
@@ -280,7 +315,11 @@ u
 1 D
 %AI3_Note:py-ai:eyJpZCI6InRhZy0yLnByaWNlLWJhY2tncm91bmQiLCJuYW1lIjoiUHJpY2UgYmFja2dyb3VuZCJ9
 0.96 0.97 0.98 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 229 218 m
 383 218 L
 383 266 L
@@ -289,6 +328,7 @@ u
 f
 %%py-ai-text-id: (tag-2.variant.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Sales status)
 0 A
 0 To
@@ -303,6 +343,7 @@ TP
 TO
 %%py-ai-text-id: (tag-2.original-price.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Original price)
 0 A
 0 To
@@ -317,6 +358,7 @@ TP
 TO
 %%py-ai-text-id: (tag-2.price.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Current price)
 0 A
 0 To
@@ -331,6 +373,7 @@ TP
 TO
 %%py-ai-text-id: (tag-2.tax.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Tax note)
 0 A
 0 To
@@ -355,7 +398,11 @@ u
 %AI3_Note:py-ai:eyJpZCI6InRhZy0zLmJhY2tncm91bmQiLCJuYW1lIjoiU2hlbGYgdGFnOiDnq7nnuYrntq3jga7jgq3jg4Pjg4Hjg7Pjgq/jg63jgrkgM+aemue1hCJ9
 1 1 1 Xa
 0.72 0.72 0.7 XA
+0 J
+0 j
 0.7 w
+4 M
+[] 0 d
 408 210 m
 582 210 L
 582 360 L
@@ -368,7 +415,11 @@ b
 1 D
 %AI3_Note:py-ai:eyJpZCI6InRhZy0zLmFjY2VudCIsIm5hbWUiOiJWYXJpYW50IGFjY2VudCJ9
 0.12 0.32 0.54 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 408 353 m
 582 353 L
 582 360 L
@@ -377,6 +428,7 @@ b
 f
 %%py-ai-text-id: (tag-3.category.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Product category)
 0 A
 0 To
@@ -391,6 +443,7 @@ TP
 TO
 %%py-ai-text-id: (tag-3.name.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Product name)
 0 A
 0 To
@@ -405,6 +458,7 @@ TP
 TO
 %%py-ai-text-id: (tag-3.name.line-1)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Product name)
 0 A
 0 To
@@ -419,6 +473,7 @@ TP
 TO
 %%py-ai-text-id: (tag-3.sku.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (SKU)
 0 A
 0 To
@@ -440,7 +495,11 @@ u
 1 D
 %AI3_Note:py-ai:eyJpZCI6InRhZy0zLnByaWNlLWJhY2tncm91bmQiLCJuYW1lIjoiUHJpY2UgYmFja2dyb3VuZCJ9
 0.96 0.97 0.98 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 418 218 m
 572 218 L
 572 266 L
@@ -449,6 +508,7 @@ u
 f
 %%py-ai-text-id: (tag-3.variant.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Sales status)
 0 A
 0 To
@@ -463,6 +523,7 @@ TP
 TO
 %%py-ai-text-id: (tag-3.price.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Current price)
 0 A
 0 To
@@ -477,6 +538,7 @@ TP
 TO
 %%py-ai-text-id: (tag-3.tax.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Tax note)
 0 A
 0 To
@@ -501,7 +563,11 @@ u
 %AI3_Note:py-ai:eyJpZCI6InRhZy00LmJhY2tncm91bmQiLCJuYW1lIjoiU2hlbGYgdGFnOiDlm73nlKPjgbvjgYbjgZjojLYg44OG44Kj44O844OQ44OD44KwIn0=
 1 1 1 Xa
 0.72 0.72 0.7 XA
+0 J
+0 j
 0.7 w
+4 M
+[] 0 d
 30 40 m
 204 40 L
 204 190 L
@@ -514,7 +580,11 @@ b
 1 D
 %AI3_Note:py-ai:eyJpZCI6InRhZy00LmFjY2VudCIsIm5hbWUiOiJWYXJpYW50IGFjY2VudCJ9
 0.88 0.5 0.08 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 30 183 m
 204 183 L
 204 190 L
@@ -523,6 +593,7 @@ b
 f
 %%py-ai-text-id: (tag-4.category.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Product category)
 0 A
 0 To
@@ -537,6 +608,7 @@ TP
 TO
 %%py-ai-text-id: (tag-4.name.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Product name)
 0 A
 0 To
@@ -551,6 +623,7 @@ TP
 TO
 %%py-ai-text-id: (tag-4.sku.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (SKU)
 0 A
 0 To
@@ -572,7 +645,11 @@ u
 1 D
 %AI3_Note:py-ai:eyJpZCI6InRhZy00LnByaWNlLWJhY2tncm91bmQiLCJuYW1lIjoiUHJpY2UgYmFja2dyb3VuZCJ9
 0.96 0.97 0.98 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 40 48 m
 194 48 L
 194 96 L
@@ -581,6 +658,7 @@ u
 f
 %%py-ai-text-id: (tag-4.variant.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Sales status)
 0 A
 0 To
@@ -595,6 +673,7 @@ TP
 TO
 %%py-ai-text-id: (tag-4.price.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Current price)
 0 A
 0 To
@@ -609,6 +688,7 @@ TP
 TO
 %%py-ai-text-id: (tag-4.tax.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Tax note)
 0 A
 0 To
@@ -633,7 +713,11 @@ u
 %AI3_Note:py-ai:eyJpZCI6InRhZy01LmJhY2tncm91bmQiLCJuYW1lIjoiU2hlbGYgdGFnOiDmpI3niannlLHmnaXjga7jg4/jg7Pjg4njgr3jg7zjg5cifQ==
 1 1 1 Xa
 0.72 0.72 0.7 XA
+0 J
+0 j
 0.7 w
+4 M
+[] 0 d
 219 40 m
 393 40 L
 393 190 L
@@ -646,7 +730,11 @@ b
 1 D
 %AI3_Note:py-ai:eyJpZCI6InRhZy01LmFjY2VudCIsIm5hbWUiOiJWYXJpYW50IGFjY2VudCJ9
 0.88 0.18 0.14 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 219 183 m
 393 183 L
 393 190 L
@@ -655,6 +743,7 @@ b
 f
 %%py-ai-text-id: (tag-5.category.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Product category)
 0 A
 0 To
@@ -669,6 +758,7 @@ TP
 TO
 %%py-ai-text-id: (tag-5.name.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Product name)
 0 A
 0 To
@@ -683,6 +773,7 @@ TP
 TO
 %%py-ai-text-id: (tag-5.sku.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (SKU)
 0 A
 0 To
@@ -704,7 +795,11 @@ u
 1 D
 %AI3_Note:py-ai:eyJpZCI6InRhZy01LnByaWNlLWJhY2tncm91bmQiLCJuYW1lIjoiUHJpY2UgYmFja2dyb3VuZCJ9
 0.96 0.97 0.98 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 229 48 m
 383 48 L
 383 96 L
@@ -713,6 +808,7 @@ u
 f
 %%py-ai-text-id: (tag-5.variant.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Sales status)
 0 A
 0 To
@@ -727,6 +823,7 @@ TP
 TO
 %%py-ai-text-id: (tag-5.original-price.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Original price)
 0 A
 0 To
@@ -741,6 +838,7 @@ TP
 TO
 %%py-ai-text-id: (tag-5.price.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Current price)
 0 A
 0 To
@@ -755,6 +853,7 @@ TP
 TO
 %%py-ai-text-id: (tag-5.tax.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Tax note)
 0 A
 0 To
@@ -779,7 +878,11 @@ u
 %AI3_Note:py-ai:eyJpZCI6InRhZy02LmJhY2tncm91bmQiLCJuYW1lIjoiU2hlbGYgdGFnOiDmlrnnnLzjg47jg7zjg4ggQTUg5YaN55Sf57SZIn0=
 1 1 1 Xa
 0.72 0.72 0.7 XA
+0 J
+0 j
 0.7 w
+4 M
+[] 0 d
 408 40 m
 582 40 L
 582 190 L
@@ -792,7 +895,11 @@ b
 1 D
 %AI3_Note:py-ai:eyJpZCI6InRhZy02LmFjY2VudCIsIm5hbWUiOiJWYXJpYW50IGFjY2VudCJ9
 0.12 0.32 0.54 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 408 183 m
 582 183 L
 582 190 L
@@ -801,6 +908,7 @@ b
 f
 %%py-ai-text-id: (tag-6.category.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Product category)
 0 A
 0 To
@@ -815,6 +923,7 @@ TP
 TO
 %%py-ai-text-id: (tag-6.name.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Product name)
 0 A
 0 To
@@ -829,6 +938,7 @@ TP
 TO
 %%py-ai-text-id: (tag-6.sku.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica)
 %%py-ai-text-name: (SKU)
 0 A
 0 To
@@ -850,7 +960,11 @@ u
 1 D
 %AI3_Note:py-ai:eyJpZCI6InRhZy02LnByaWNlLWJhY2tncm91bmQiLCJuYW1lIjoiUHJpY2UgYmFja2dyb3VuZCJ9
 0.96 0.97 0.98 Xa
+0 J
+0 j
 1 w
+4 M
+[] 0 d
 418 48 m
 572 48 L
 572 96 L
@@ -859,6 +973,7 @@ u
 f
 %%py-ai-text-id: (tag-6.variant.line-0)
 %%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Sales status)
 0 A
 0 To
@@ -873,6 +988,7 @@ TP
 TO
 %%py-ai-text-id: (tag-6.price.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Current price)
 0 A
 0 To
@@ -887,6 +1003,7 @@ TP
 TO
 %%py-ai-text-id: (tag-6.tax.line-0)
 %%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
 %%py-ai-text-name: (Tax note)
 0 A
 0 To
