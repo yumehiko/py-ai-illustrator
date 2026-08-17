@@ -1644,6 +1644,36 @@ class TranslatePath:
             raise ValueError("expected_points must not be empty")
 
 
+ContainerType = Literal["layer", "group", "compound_path", "clipping_group"]
+TranslationMember = tuple[Literal["path", "text", "linked_image"], str]
+
+
+@dataclass(frozen=True, slots=True)
+class TranslateContainer:
+    """Translate all leaf artwork in a source-backed container."""
+
+    container_type: ContainerType
+    container_id: str
+    dx: float
+    dy: float
+    expected_members: frozenset[TranslationMember]
+
+    def __post_init__(self) -> None:
+        if self.container_type not in {"layer", "group", "compound_path", "clipping_group"}:
+            raise ValueError("container_type is not translatable")
+        if not self.container_id:
+            raise ValueError("container_id must not be empty")
+        if not math.isfinite(self.dx) or not math.isfinite(self.dy):
+            raise ValueError("translation offsets must be finite")
+        if not self.expected_members:
+            raise ValueError("expected_members must not be empty")
+        if any(
+            kind not in {"path", "text", "linked_image"} or not node_id
+            for kind, node_id in self.expected_members
+        ):
+            raise ValueError("expected_members must contain supported node types and non-empty ids")
+
+
 @dataclass(frozen=True, slots=True)
 class ReplaceLinkedImageSource:
     """Typed local linked-image source edit with an explicit precondition."""
@@ -1712,6 +1742,53 @@ def _matching_paths(result: LegacyReadResult, path_id: str) -> list[Path]:
     ]
 
 
+LegacyContainer = Layer | Group | CompoundPath | ClippingGroup
+
+
+def _nested_groups(container: Layer | Group) -> list[Group]:
+    groups = list(container.groups)
+    for group in container.groups:
+        groups.extend(_nested_groups(group))
+    return groups
+
+
+def _container_candidates(
+    result: LegacyReadResult, container_type: ContainerType
+) -> list[LegacyContainer]:
+    if container_type == "layer":
+        return list(result.document.layers)
+    groups = [group for layer in result.document.layers for group in _nested_groups(layer)]
+    if container_type == "group":
+        return groups
+    containers: list[Layer | Group] = [*result.document.layers, *groups]
+    if container_type == "compound_path":
+        return [compound for container in containers for compound in container.compound_paths]
+    return [clipping for container in containers for clipping in container.clipping_groups]
+
+
+def _translation_leaves(
+    container: LegacyContainer,
+) -> tuple[list[Path], list[TextFrame], list[LinkedImage]]:
+    if isinstance(container, (Layer, Group)):
+        return (
+            _container_paths(container),
+            _container_text_frames(container),
+            _container_linked_images(container),
+        )
+    if isinstance(container, CompoundPath):
+        return list(container.paths), [], []
+    return [container.clipping_path, *container.paths], [], []
+
+
+def _translation_members(container: LegacyContainer) -> list[TranslationMember]:
+    paths, text_frames, images = _translation_leaves(container)
+    return [
+        *(("path", path.id) for path in paths),
+        *(("text", text.id) for text in text_frames),
+        *(("linked_image", image.id) for image in images),
+    ]
+
+
 def _unique_origin(
     result: LegacyReadResult, *, node_type: str, node_id: str
 ) -> LegacyNodeOrigin:
@@ -1755,6 +1832,20 @@ def _validate_patch_field(
             f"{node_label} {field_name} span intersects unsupported source syntax."
         )
     return field_origin
+
+
+def _validate_patch_origin(
+    result: LegacyReadResult, *, origin: LegacyNodeOrigin, node_label: str
+) -> None:
+    intersecting = [
+        diagnostic
+        for diagnostic in result.diagnostics
+        if diagnostic.start < origin.end and diagnostic.end > origin.start
+    ]
+    if intersecting:
+        raise UnsupportedLegacyFeature(
+            f"{node_label} source span intersects unsupported source syntax."
+        )
 
 
 def patch_path_fill(result: LegacyReadResult, operation: SetPathFill) -> LegacySource:
@@ -1868,15 +1959,7 @@ def patch_path_translate(result: LegacyReadResult, operation: TranslatePath) -> 
         )
 
     origin = _unique_origin(result, node_type="path", node_id=operation.path_id)
-    intersecting = [
-        diagnostic
-        for diagnostic in result.diagnostics
-        if diagnostic.start < origin.end and diagnostic.end > origin.start
-    ]
-    if intersecting:
-        raise UnsupportedLegacyFeature(
-            f"Path {operation.path_id!r} source span intersects unsupported source syntax."
-        )
+    _validate_patch_origin(result, origin=origin, node_label=f"Path {operation.path_id!r}")
 
     geometry_origins = origin.fields_with_prefix("geometry.")
     if not geometry_origins:
@@ -1912,6 +1995,235 @@ def patch_path_translate(result: LegacyReadResult, operation: TranslatePath) -> 
             )
         )
     return result.source.patched(replacements)
+
+
+def _geometry_translation_replacements(
+    result: LegacyReadResult,
+    *,
+    origin: LegacyNodeOrigin,
+    node_label: str,
+    dx: float,
+    dy: float,
+) -> list[SourceReplacement]:
+    geometry_origins = origin.fields_with_prefix("geometry.")
+    if not geometry_origins:
+        raise UnsupportedLegacyFeature(f"{node_label} does not have local source geometry spans.")
+    replacements: list[SourceReplacement] = []
+    for index, geometry_origin in enumerate(geometry_origins):
+        if geometry_origin.field != f"geometry.{index}":
+            raise UnsupportedLegacyFeature(f"{node_label} has incomplete source geometry spans.")
+        validated = _validate_patch_field(
+            result,
+            origin=origin,
+            field_name=geometry_origin.field,
+            node_label=node_label,
+        )
+        replacements.append(
+            SourceReplacement(
+                validated.start,
+                validated.end,
+                (
+                    validated.expected
+                    if dx == 0 and dy == 0
+                    else _translated_geometry_statement(validated.expected, dx=dx, dy=dy)
+                ),
+            )
+        )
+    return replacements
+
+
+def _translated_text_position(statement: bytes, *, dx: float, dy: float) -> bytes:
+    parts = statement.decode("latin-1").split()
+    recognized = (parts[-1:] == ["Tp"] and len(parts) == 8) or (
+        parts[-1:] == ["Tm"] and len(parts) == 7
+    )
+    if not recognized:
+        raise UnsupportedLegacyFeature(
+            "Text position source precondition failed; the statement is no longer recognized."
+        )
+    x_index, y_index = 4, 5
+    try:
+        parts[x_index] = _number(float(parts[x_index]) + dx)
+        parts[y_index] = _number(float(parts[y_index]) + dy)
+    except ValueError as error:
+        raise UnsupportedLegacyFeature(
+            "Text position source precondition failed; coordinates are invalid."
+        ) from error
+    return " ".join(parts).encode("ascii")
+
+
+def _text_translation_replacements(
+    result: LegacyReadResult,
+    *,
+    origin: LegacyNodeOrigin,
+    text_id: str,
+    dx: float,
+    dy: float,
+) -> list[SourceReplacement]:
+    node_label = f"Text {text_id!r}"
+    replacements: list[SourceReplacement] = []
+    for field_name in ("position", "matrix"):
+        field = _validate_patch_field(
+            result,
+            origin=origin,
+            field_name=field_name,
+            node_label=node_label,
+        )
+        replacements.append(
+            SourceReplacement(
+                field.start,
+                field.end,
+                (
+                    field.expected
+                    if dx == 0 and dy == 0
+                    else _translated_text_position(field.expected, dx=dx, dy=dy)
+                ),
+            )
+        )
+    return replacements
+
+
+def _image_translation_replacements(
+    result: LegacyReadResult,
+    *,
+    origin: LegacyNodeOrigin,
+    image: LinkedImage,
+    dx: float,
+    dy: float,
+) -> list[SourceReplacement]:
+    node_label = f"Linked image {image.id!r}"
+    metadata = _validate_patch_field(
+        result,
+        origin=origin,
+        field_name="metadata",
+        node_label=node_label,
+    )
+    try:
+        payload = json.loads(base64.b64decode(metadata.expected, validate=True).decode("utf-8"))
+    except (ValueError, UnicodeError, json.JSONDecodeError) as error:
+        raise UnsupportedLegacyFeature(f"{node_label} metadata precondition failed.") from error
+    if (
+        not isinstance(payload, dict)
+        or payload.get("id") != image.id
+        or payload.get("x") != image.x
+        or payload.get("y") != image.y
+    ):
+        raise UnsupportedLegacyFeature(f"{node_label} metadata precondition failed.")
+    payload["x"] = image.x + dx
+    payload["y"] = image.y + dy
+    replacement = base64.b64encode(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    )
+    return [
+        SourceReplacement(
+            metadata.start,
+            metadata.end,
+            metadata.expected if dx == 0 and dy == 0 else replacement,
+        ),
+        *_geometry_translation_replacements(
+            result,
+            origin=origin,
+            node_label=node_label,
+            dx=dx,
+            dy=dy,
+        ),
+    ]
+
+
+def patch_container_translate(
+    result: LegacyReadResult, operation: TranslateContainer
+) -> LegacySource:
+    """Translate one uniquely selected container through leaf field replacements."""
+
+    matching = [
+        container
+        for container in _container_candidates(result, operation.container_type)
+        if container.id == operation.container_id
+    ]
+    if len(matching) != 1:
+        raise UnsupportedLegacyFeature(
+            f"{operation.container_type} selector id={operation.container_id!r} matched "
+            f"{len(matching)} nodes; exactly one is required."
+        )
+    container = matching[0]
+    members = _translation_members(container)
+    member_set = frozenset(members)
+    if len(member_set) != len(members):
+        raise UnsupportedLegacyFeature(
+            f"Container {operation.container_id!r} has duplicate leaf ids; "
+            "translation is ambiguous."
+        )
+    if member_set != operation.expected_members:
+        raise UnsupportedLegacyFeature(
+            f"Container {operation.container_id!r} members precondition failed: expected "
+            f"{sorted(operation.expected_members)!r}, found {sorted(member_set)!r}."
+        )
+
+    container_origin = _unique_origin(
+        result,
+        node_type=operation.container_type,
+        node_id=operation.container_id,
+    )
+    _validate_patch_origin(
+        result,
+        origin=container_origin,
+        node_label=f"Container {operation.container_id!r}",
+    )
+    paths, text_frames, images = _translation_leaves(container)
+    replacements: list[SourceReplacement] = []
+    for node_type, nodes in (
+        ("path", paths),
+        ("text", text_frames),
+        ("linked_image", images),
+    ):
+        for node in nodes:
+            origin = _unique_origin(result, node_type=node_type, node_id=node.id)
+            if origin.start < container_origin.start or origin.end > container_origin.end:
+                raise UnsupportedLegacyFeature(
+                    f"Container {operation.container_id!r} member {node.id!r} has an "
+                    "out-of-range source span."
+                )
+            _validate_patch_origin(
+                result,
+                origin=origin,
+                node_label=f"{node_type} {node.id!r}",
+            )
+            if isinstance(node, Path):
+                replacements.extend(
+                    _geometry_translation_replacements(
+                        result,
+                        origin=origin,
+                        node_label=f"Path {node.id!r}",
+                        dx=operation.dx,
+                        dy=operation.dy,
+                    )
+                )
+            elif isinstance(node, TextFrame):
+                replacements.extend(
+                    _text_translation_replacements(
+                        result,
+                        origin=origin,
+                        text_id=node.id,
+                        dx=operation.dx,
+                        dy=operation.dy,
+                    )
+                )
+            else:
+                replacements.extend(
+                    _image_translation_replacements(
+                        result,
+                        origin=origin,
+                        image=node,
+                        dx=operation.dx,
+                        dy=operation.dy,
+                    )
+                )
+    try:
+        return result.source.patched(replacements)
+    except ValueError as error:
+        raise UnsupportedLegacyFeature(
+            f"Container {operation.container_id!r} produced conflicting or out-of-range patches."
+        ) from error
 
 
 def patch_linked_image_source(

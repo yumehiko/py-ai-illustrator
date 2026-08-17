@@ -9,9 +9,11 @@ from py_ai_illustrator.legacy import (
     ReplaceText,
     SetPathFill,
     SetPathStroke,
+    TranslateContainer,
     TranslatePath,
     UnsupportedLegacyFeature,
     dumps_ai7,
+    patch_container_translate,
     patch_linked_image_source,
     patch_path_fill,
     patch_path_stroke,
@@ -114,6 +116,78 @@ def linked_image_document(*, image_id: str = "hero") -> Document:
                         rotation=-5,
                     )
                 ],
+            )
+        ],
+    )
+
+
+def translatable_group_document() -> Document:
+    path = AIPath(
+        id="shape",
+        points=[Point(10, 10), Point(30, 10), Point(30, 30), Point(10, 30)],
+        fill=Color(1, 0, 0),
+    )
+    text = TextFrame(id="label", text="Label", x=12, y=24)
+    image = LinkedImage(
+        id="photo",
+        source="Links/photo.png",
+        x=40,
+        y=60,
+        width=30,
+        height=20,
+    )
+    group = Group(
+        id="card",
+        paths=[path],
+        text_frames=[text],
+        linked_images=[image],
+        item_order=[
+            LayerItemRef("path", path.id),
+            LayerItemRef("text", text.id),
+            LayerItemRef("image", image.id),
+        ],
+    )
+    return Document(
+        width=100,
+        height=80,
+        layers=[
+            Layer(
+                id="artwork",
+                name="Artwork",
+                groups=[group],
+                item_order=[LayerItemRef("group", group.id)],
+            )
+        ],
+    )
+
+
+def translatable_path_containers_document() -> Document:
+    ordinary = AIPath(id="ordinary", points=[Point(5, 5), Point(15, 5)])
+    compound = CompoundPath(
+        id="compound",
+        paths=[
+            AIPath(id="compound-a", points=[Point(20, 20), Point(30, 20)]),
+            AIPath(id="compound-b", points=[Point(20, 30), Point(30, 30)]),
+        ],
+    )
+    clipping = ClippingGroup(
+        id="clipping",
+        clipping_path=AIPath(
+            id="mask",
+            points=[Point(40, 40), Point(60, 40), Point(60, 60), Point(40, 60)],
+        ),
+        paths=[AIPath(id="clipped", points=[Point(45, 45), Point(55, 55)])],
+    )
+    return Document(
+        width=100,
+        height=80,
+        layers=[
+            Layer(
+                id="artwork",
+                name="Artwork",
+                paths=[ordinary],
+                compound_paths=[compound],
+                clipping_groups=[clipping],
             )
         ],
     )
@@ -649,6 +723,203 @@ def test_zero_path_translation_is_byte_preserving() -> None:
             dx=0,
             dy=0,
             expected_points=tuple(path.points),
+        ),
+    )
+
+    assert patched.data == data
+
+
+def test_group_translate_moves_all_leaf_types_and_preserves_bytes_outside_container() -> None:
+    data = dumps_ai7(translatable_group_document()).replace(
+        b"%%EndSetup\n",
+        b"%%EndSetup\n12 34 FutureOperator % outside \xff\n",
+    )
+    result = reads_ai7(data)
+    group_origin = next(
+        origin
+        for origin in result.origins
+        if origin.node_type == "group" and origin.node_id == "card"
+    )
+
+    patched = patch_container_translate(
+        result,
+        TranslateContainer(
+            container_type="group",
+            container_id="card",
+            dx=5,
+            dy=-3,
+            expected_members=frozenset(
+                {("path", "shape"), ("text", "label"), ("linked_image", "photo")}
+            ),
+        ),
+    )
+
+    assert patched.data[: group_origin.start] == data[: group_origin.start]
+    suffix_length = len(data) - group_origin.end
+    assert patched.data[-suffix_length:] == data[group_origin.end :]
+    assert b"FutureOperator % outside \xff" in patched.data
+    assert b"1 0 0 1 17 21 Tm" in patched.data
+    assert b"45 37 m" in patched.data
+    assert b"75 57 L" in patched.data
+    restored_group = reads_ai7(patched.data).document.layers[0].groups[0]
+    assert restored_group.paths[0].points == [
+        Point(15, 7),
+        Point(35, 7),
+        Point(35, 27),
+        Point(15, 27),
+    ]
+    assert (restored_group.text_frames[0].x, restored_group.text_frames[0].y) == (17, 21)
+    assert (restored_group.linked_images[0].x, restored_group.linked_images[0].y) == (
+        45,
+        57,
+    )
+
+
+@pytest.mark.parametrize(
+    ("container_type", "container_id", "expected_ids", "moved_ids"),
+    [
+        (
+            "compound_path",
+            "compound",
+            {"compound-a", "compound-b"},
+            {"compound-a", "compound-b"},
+        ),
+        ("clipping_group", "clipping", {"mask", "clipped"}, {"mask", "clipped"}),
+        (
+            "layer",
+            "artwork",
+            {"ordinary", "compound-a", "compound-b", "mask", "clipped"},
+            {"ordinary", "compound-a", "compound-b", "mask", "clipped"},
+        ),
+    ],
+)
+def test_path_container_types_translate_exactly_their_descendants(
+    container_type: str,
+    container_id: str,
+    expected_ids: set[str],
+    moved_ids: set[str],
+) -> None:
+    result = reads_ai7(dumps_ai7(translatable_path_containers_document()))
+    layer = result.document.layers[0]
+    before_paths = {
+        path.id: tuple(path.points)
+        for path in [
+            *layer.paths,
+            *layer.compound_paths[0].paths,
+            layer.clipping_groups[0].clipping_path,
+            *layer.clipping_groups[0].paths,
+        ]
+    }
+
+    patched = patch_container_translate(
+        result,
+        TranslateContainer(
+            container_type=container_type,
+            container_id=container_id,
+            dx=3,
+            dy=4,
+            expected_members=frozenset(("path", path_id) for path_id in expected_ids),
+        ),
+    )
+
+    restored_layer = reads_ai7(patched.data).document.layers[0]
+    after_paths = {
+        path.id: tuple(path.points)
+        for path in [
+            *restored_layer.paths,
+            *restored_layer.compound_paths[0].paths,
+            restored_layer.clipping_groups[0].clipping_path,
+            *restored_layer.clipping_groups[0].paths,
+        ]
+    }
+    for path_id, before in before_paths.items():
+        if path_id in moved_ids:
+            assert after_paths[path_id] == tuple(
+                Point(point.x + 3, point.y + 4, point.in_handle, point.out_handle, point.smooth)
+                for point in before
+            )
+        else:
+            assert after_paths[path_id] == before
+
+
+def test_container_translate_requires_an_exact_member_precondition() -> None:
+    result = reads_ai7(dumps_ai7(translatable_group_document()))
+
+    with pytest.raises(UnsupportedLegacyFeature, match="members precondition failed"):
+        patch_container_translate(
+            result,
+            TranslateContainer(
+                container_type="group",
+                container_id="card",
+                dx=5,
+                dy=5,
+                expected_members=frozenset({("path", "shape"), ("text", "label")}),
+            ),
+        )
+
+
+def test_container_translate_rejects_unsupported_syntax_inside_container() -> None:
+    data = dumps_ai7(translatable_group_document()).replace(
+        b"10 10 m",
+        b"12 34 FutureOperator\n10 10 m",
+    )
+    result = reads_ai7(data)
+
+    with pytest.raises(UnsupportedLegacyFeature, match="intersects unsupported"):
+        patch_container_translate(
+            result,
+            TranslateContainer(
+                container_type="group",
+                container_id="card",
+                dx=5,
+                dy=5,
+                expected_members=frozenset(
+                    {("path", "shape"), ("text", "label"), ("linked_image", "photo")}
+                ),
+            ),
+        )
+
+
+def test_container_translate_rejects_a_member_origin_outside_the_container() -> None:
+    result = reads_ai7(dumps_ai7(translatable_group_document()))
+    path_origin = next(
+        origin
+        for origin in result.origins
+        if origin.node_type == "path" and origin.node_id == "shape"
+    )
+    stale_origins = tuple(
+        replace(origin, start=0) if origin is path_origin else origin for origin in result.origins
+    )
+
+    with pytest.raises(UnsupportedLegacyFeature, match="out-of-range source span"):
+        patch_container_translate(
+            replace(result, origins=stale_origins),
+            TranslateContainer(
+                container_type="group",
+                container_id="card",
+                dx=5,
+                dy=5,
+                expected_members=frozenset(
+                    {("path", "shape"), ("text", "label"), ("linked_image", "photo")}
+                ),
+            ),
+        )
+
+
+def test_zero_container_translation_is_byte_preserving() -> None:
+    data = dumps_ai7(translatable_group_document()).replace(b"10 10 m", b"10.000 10.0 m")
+    result = reads_ai7(data)
+
+    patched = patch_container_translate(
+        result,
+        TranslateContainer(
+            container_type="group",
+            container_id="card",
+            dx=0,
+            dy=0,
+            expected_members=frozenset(
+                {("path", "shape"), ("text", "label"), ("linked_image", "photo")}
+            ),
         ),
     )
 
