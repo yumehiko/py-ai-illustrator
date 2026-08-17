@@ -113,4 +113,6 @@ lossless source prototypeは元bytesを所有し、各物理行を`start/content
 
 範囲外・重複spanを拒否する`SourceReplacement` / `LegacySource.patched()`で、既知operatorだけを差し替え、未知byteと改行を完全維持する局所patchも実証しました。これは意味検証をしない低レベルprimitiveであり、IR nodeのsource spanやtyped editとの接続は次段階です。
 
+`LegacyReadResult`は、意味IRの`document`、完全一致する`source`、operator/resource inventoryを持つ`coverage`、source span付き`diagnostics`を一体で返します。未対応featureがある結果は`partially_parsed`となり、`reserialize_ai7()`とCLIのJSON exportは既定で拒否します。破棄を意図する場合のみ`loss_policy="discard"`または`--allow-partial`を明示します。
+
 最初の試験では閉じた矩形が3 anchorsとして読まれました。AI7の閉じパスに開始点へ戻る明示的な最終segmentを出力するようwriterを修正し、4 anchorsで再試験に合格しています。また、日本語環境でExtendScript内のreverse solidusが円記号として解釈される問題を避けるため、検査用JSXは該当文字とファイルパスを文字コードから構築します。詳細は [Illustrator 適合試験](illustrator-testing.md) を参照してください。

@@ -1,154 +1,258 @@
 # 開発ロードマップ
 
-## 近接マイルストーン
+更新日: 2026-08-17
 
-### MVP-A: Create — 新規の編集可能なAIを作る
+## 目的と進め方
 
-- [x] point text / native AreaText
-- [x] PNG/JPEG linked imageと同一出力先の`Links/` package
-- [x] 基本図形・Bézier・塗り・線
-- [x] layer / nested group / stacking order / multiple Artboards
-- [x] Illustrator保存・再オープン・PDF/PNG visual QA
-- [ ] linked imageのcontain / cover / clipping crop
-- [ ] missing / modified linkをまとめたcompatibility report
-- [ ] package移動後にsibling `Links/`へ安全に再リンクするmanifest / command
+このプロジェクトは、次の三つの基盤を段階的に成立させます。
 
-### MVP-B: Edit — 対応要素を安全に編集する
+1. **Conversion Core**: PythonのグラフィックIRとIllustrator sourceを安全に相互変換する
+2. **Authoring**: 意味・規則・再利用可能な体裁を持つPython componentからIRを生成する
+3. **Safe Edit / Agent**: 検証可能な編集APIとCLIを、エージェントから安全に利用する
+
+旧Phase制は実装順と実際の進捗がずれたため、今後は三つの開発トラックと、トラック間の品質ゲートで管理します。各トラックは並行して進められますが、エージェント向けskillはConversion CoreとSafe Edit APIを迂回してファイルを操作しません。
+
+## 現在地
+
+| トラック | 状態 | 現在の到達点 | 主な未完了 |
+| --- | --- | --- | --- |
+| Conversion Core | 限定subsetで実証済み | legacy AI7/AI8 subsetのIR/JSON往復、形式判定、source付きreader result、parse coverage、未知feature診断、Illustrator 30.7.0適合試験 | node source span、typed patch、modern AI semantic reader/writer |
+| Authoring | Create MVP成立 | Table、共通component境界、point/area text、linked image、group、Artboard、rigid transform、複数の実制作例 | image crop、link診断、semantic manifest、高度なlayout/resource共有 |
+| Safe Edit / Agent | 設計段階 | inspect/export/validateとIllustrator検証CLI | selector、typed edit、precondition、dry-run、diff、preview、skill/plugin |
+
+2026-08-17時点のローカル基準は、`pytest` 99件成功、`ruff check`成功です。
+
+現在の変換保証は、次のように区別します。
+
+- **対応subsetの意味往復**: Python IR -> legacy AI7/AI8 -> Python IRは自動テスト済み
+- **Illustratorを介したlegacy往復**: Python生成AIをIllustrator 30.7.0でAI8互換保存し、Python IRへ戻す経路を実機確認済み
+- **native materialization**: legacy AIからIllustratorを介してPDF-compatible native AIを生成可能
+- **modern AI往復**: 未実装。現時点ではcontainer判定のみ
+- **任意AIのlossless往復**: 未実装。未知operatorを保持したsemantic edit/writeには未到達
+
+## 品質ゲート
+
+### Gate A: Trusted Legacy Conversion
+
+任意のlegacy AIを「変換可能」「部分的に解析可能」「変換不可」に安全に分類できる状態です。次の機能追加より、黙った情報損失を防ぐことを優先します。
+
+- [x] readerが`document + source + coverage + diagnostics`相当の結果を返す
+- [x] 認識済み・未認識operator/resourceをcompatibility reportへ列挙する
+- [x] unsupported featureを含む通常のIR再serializeは既定で拒否する
+- [ ] 全IR nodeへorigin/source spanを接続する
+- [ ] text / image / pathのtyped editを局所source patchへ変換する
+- [ ] patchのprecondition、競合、範囲外変更を検出する
+- [ ] read-onlyでは元bytesが完全一致し、局所編集では対象span外が一致する
+- [ ] 対応feature profileとIllustrator対象バージョンを文書化する
+
+終了条件:
+
+- 未対応featureが存在するファイルを「validだから安全に再保存可能」と誤判定しない
+- 対応subsetではsemantic round-trip、未知領域を含むファイルではbyte-preserving patchを自動検証できる
+- エラー、warning、変換policyのいずれにも分類されない損失がない
+
+### Gate B: Safe Editing Surface
+
+エージェントを使わなくても、同じ安全性で編集できるPython API / CLIを成立させます。
 
 - [ ] stable selector (`id`, name, type, bounds, hierarchy)
-- [ ] text / image / pathのtyped editとprecondition
-- [ ] dry-run、impact report、semantic diff、preview
-- [ ] component identityとsidecar semantic manifest
-
-### MVP-C: Modern AI — 既存modern AIを高忠実度で往復する
-
-- [ ] PrivateData semantic reader
-- [ ] node-level CSTとsource spanベースの局所patch
-- [ ] 未知featureのlossless保持とIllustrator再保存検証
-
-## Phase 0: 技術スパイク
-
-目標: 2〜3 種類の `.ai` で構造抽出と変更可能性を実証する。
-
-- `inkai` を隔離した検証環境で動かす
-- 単純な Illustrator fixtures を用意する
-  - 長方形 1 個
-  - 2 artboards + 2 layers
-  - path + text + linked image
-- PDF object tree と PrivateData をダンプ
-- 同一ファイルを Illustrator で一項目ずつ変え、差分を記録
-- `parse -> IR -> JSON` の POC
-- AI8 writer で長方形と path を新規生成
+- [ ] selectorが0件または複数件の場合の明示的停止
+- [ ] `replace_text` / `set_fill` / `translate` / image差し替えのtyped operation
+- [ ] operation preconditionと入力上書き禁止
+- [ ] dry-runとimpact report
+- [ ] before/after semantic diff
+- [ ] compatibility report
+- [ ] raster/PDF previewとvisual diff
+- [ ] `inspect -> plan -> apply -> validate -> preview`をCLIだけで完結させる
 
 終了条件:
 
-- Illustrator なしで fixture の主要 node を列挙できる
-- Python から生成した AI8 ファイルを現行 Illustrator で開ける
-- reader の採用方針とライセンス方針を決定できる
-
-進捗（2026-08-15）:
-
-- 完了: 依存ゼロの形式判定、最小Python IR、legacy AIサブセットreader/writer、JSON往復、CLI、自動テスト、Illustrator 30.7.0実機適合試験、MITライセンス決定
-- 実証済みsubset: RGB/CMYK、直線/Bézier、native stroke style、compound、clipping、ASCII/CP932 point/area text intent、異種itemのstacking order、path ID・名前のAI8再保存保持
-- 意味モデル実装済み: Python `Table`、共通`RenderedComponent` / `LayerBuilder`、`TextBlock` / `AreaTextBlock`、名札・ポスター・入れ子棚札・KPI chart・誌面作例からIRへのdeterministic render
-- native出力実証済み: legacy textをIllustrator経由でnative point/area TextFrameへ変換し、font/size/fill/leading/揃えと安定IDを設定してPDF-compatible AIとして保存
-- 基盤実装済み: legacy元bytes・物理行改行・operator byte spanを保持するlossless source map、resource limit、非重複local patch primitive
-- 実証済み画像subset: PNG/JPEGを`Links/`へpackageし、placeholderからlinked `PlacedItem`へnative復元。埋め込みは既定にしない
-- 未完了: 現代AI fixtureのPrivateData semantic reader、`inkai`比較環境、node-level CSTとtyped patch、CP932以外のtext、image crop、non-rigid transform
-- 詳細: [Phase 0 の実装状況](phase0-status.md)
-
-## Phase 1: Reader + IR + inspection CLI
-
-- format detector
-- lossless token model
-- document / artboard / layer / group / path
-- fill / stroke / transform
-- resource table
-- `inspect`, `export --to json`, `diff --semantic`
-- malformed input と resource limit
-
-終了条件:
-
-- 対応 fixture の parse 結果が deterministic
-- 未知 operator が欠落せず保持される
-- 同じ入力の read-only round trip で PrivateData が同一、または意味的同一
-
-## Phase 2: 限定 writer
-
-- AI7/AI8 serializer
-- SVG writer
-- PDF writer
-- raster preview
-- compatibility report
-- `validate`, `render`, visual diff
-
-終了条件:
-
-- 基本図形、パス、色、レイヤー、単純テキストを Illustrator で開ける
-- サポート外表現は黙って壊さず、error/warning/policy のいずれかになる
-
-## Phase 3: Agent editing API
-
-- selector (`id`, name, type, bounds, hierarchy)
-- typed edit operations
-- operation preconditions
-- dry-run と impact report
-- before/after semantic diff
-- プレビューを含む agent workflow
-- Python component / templateからIRへのdeterministic render境界
-- semantic metadataとsidecar manifest
-
-終了条件:
-
-- 「ロゴの色変更」「見出し差し替え」「レイヤー移動」などの標準シナリオを、自然言語から安全に実行できる
-- 同名 node が複数ある場合に誤編集せず停止できる
-- Pythonで定義した表やカードのvariantを、共有styleから再現可能に生成できる
-
-## Phase 4: modern AI patch writer
-
-- 対応 operator の serializer
-- source span ベースの局所更新
-- PDF content の再生成または同期
-- metadata / xref / stream compression 更新
-- Illustrator ありの適合試験
-
-終了条件:
-
-- 対応 feature に限り、既存 modern `.ai` を編集して Illustrator で警告なく開ける
-- 未編集の未知 feature が保持される
-- Illustrator 再保存後の semantic diff が許容範囲内
-
-## Phase 5: plugin 化
-
-- Python package / CLI を安定版として固定
-- Codex plugin manifest、skill、必要なら MCP server を追加
-- inspect → plan → apply → validate → preview のワークフローを skill 化
-- fixture 作成・互換性レポート作成の開発者向け skill
-
-終了条件:
-
-- プラグインを外しても CLI 単体で同じ操作が可能
-- プラグインが入力を直接上書きしない
+- 「ロゴの色変更」「見出し差し替え」「レイヤー移動」の標準シナリオを曖昧な対象へ誤適用しない
+- 未対応featureと変更範囲が交差する場合は停止する
 - 検証失敗時に出力を成功扱いしない
 
-## 最初の意思決定
+## Track A: Conversion Core
 
-実装前に次を決めます。
+### A0. Legacy subset spike — 完了
 
-1. ライセンス（決定済み）
-   - 本体は MIT
-   - permissive な独自 core を維持し、GPL の `inkai` は任意の隔離 adapter として評価する
-2. MVP writer
-   - AI8 を正式成果物にする
-   - SVG/PDF を正式成果物、AI8 を互換出力にする
-3. 対応保証
-   - Illustrator の対象バージョン
-   - OS とフォント環境
-   - 対応 feature profile
-4. fixture の権利
-   - 自作・生成 fixture のみリポジトリへ格納
-   - 顧客ファイルはハッシュ・構造 manifest のみ保持
+- [x] 内容に基づくlegacy AI / PDF-compatible AI / PDF / EPSの形式判定
+- [x] 最小グラフィックIRとJSON serialization
+- [x] legacy AI7 subset reader/writer
+- [x] RGB/CMYK、直線/Bézier、stroke style
+- [x] group、compound path、clipping、異種item stacking order
+- [x] ASCII/CP932 point textとarea text intent
+- [x] named Artboardとlinked image intent
+- [x] 元bytes・物理行・operator spanを保持するlossless source prototype
+- [x] resource limitと非重複local replacement primitive
+- [x] Illustrator 30.7.0での構造・再保存・visual QA
+- [x] MITライセンスとGPL実装をコア依存に含めない方針
 
-## 推奨する次の一手
+### A1. Trusted legacy conversion — 最優先
 
-MVP-Aの文字・linked image・図形を含む最小作成セットがIllustrator 30.7で成立しました。次はlinked imageのcontain / cover / clipping cropとlink診断を追加し、同時に未知operatorを保持するlossless token/CSTをtext / image / pathのtyped editへ接続します。
+Gate Aを満たします。
+
+- [x] parse coverageとunknown operator/resource inventory
+- [ ] node-level CST/source span
+- [x] source付きreader resultと新規作成IRの明確な区別
+- [x] strict-by-default reserializeと明示的な`discard` loss policy
+- [ ] typed patch writer
+- [ ] semantic diffとcompatibility report
+- [ ] Illustrator生成fixtureの種類と対象バージョンを拡張
+
+### A2. Modern AI reader
+
+- [ ] 再配布可能なmodern AI fixtureと期待structure manifestを整備
+- [ ] PDF object tree、PieceInfo、Illustrator PrivateDataを抽出
+- [ ] Flate / zstd streamをresource limit付きで展開
+- [ ] PrivateData lexer/CSTとbyte spanを保持
+- [ ] 対応nodeを共通グラフィックIRへ投影
+- [ ] PDF表示表現をpreview/fallbackとして抽出
+- [ ] PrivateDataとPDF表示表現の不一致を診断
+- [ ] `inkai`等の先行実装を隔離環境で比較し、ライセンス境界を維持
+
+終了条件:
+
+- 対応fixtureの主要nodeをIllustratorなしでdeterministicに列挙できる
+- 未解釈PrivateDataを欠落させず保持できる
+- container検査とsemantic検査を明確に区別できる
+
+### A3. Modern AI patch writer
+
+- [ ] 対応operatorのserializer
+- [ ] source spanベースの局所更新
+- [ ] PDF contentの再生成または同期
+- [ ] metadata / xref / stream compression更新
+- [ ] 未知sectionのbyte-preserving保持
+- [ ] Illustratorありの適合試験
+
+終了条件:
+
+- 対応featureに限り既存modern AIを編集し、Illustratorで警告なく開ける
+- 未編集の未知featureが保持される
+- Illustrator再保存後のsemantic / visual diffが許容範囲内になる
+
+### A4. 交換形式writer
+
+- [ ] SVG writer
+- [ ] PDF writer
+- [ ] raster preview renderer
+- [ ] flatten / outline / unsupported feature policy
+- [ ] spot color、ICC、overprint等を追加する前のcolor policy整理
+
+## Track B: Authoring
+
+### B0. Create MVP — 成立
+
+- [x] `RenderedComponent` / `LayerBuilder`
+- [x] `Table` / `TableColumn` / `TableStyle`
+- [x] `TextBlock` / native `AreaTextBlock` / `FontSpec`
+- [x] rectangle / ellipse / polyline primitives
+- [x] nested editable groupとstable item order
+- [x] rigid affine transformとtext rotation
+- [x] PNG/JPEG linked imageと同一出力先の`Links/` package
+- [x] multiple Artboardsとnative materialization
+- [x] 表、名札、ポスター、棚札、KPI、パッケージ、誌面、variant、カタログの作例
+
+### B1. Create workflow completion — 次点
+
+- [ ] linked imageのcontain / cover / clipping crop
+- [ ] missing / modified link診断
+- [ ] package移動後にsibling `Links/`へ安全に再リンクするmanifest / command
+- [ ] component identityとsidecar semantic manifest
+- [ ] font、color、spacing、document contextの共有resource/theme境界
+- [ ] page分割と複合cell/component layout
+- [ ] CP932以外のtext encoding profile
+- [ ] textを含む非rigid transformの明示的policy
+
+終了条件:
+
+- Python sourceと入力データから同一IRをdeterministicに再生成できる
+- 生成物のlink、font、semantic identityの欠損をcompatibility reportで検出できる
+- Illustratorでの手修正後に、保持された意味metadataと失われたmetadataを区別できる
+
+## Track C: Safe Edit / Agent
+
+### C1. Agent-independent editing API
+
+Gate Bを満たします。エージェント固有コードより先に、Python APIとCLIを安定させます。
+
+想定コマンド:
+
+```text
+py-ai inspect input.ai --json
+py-ai plan input.ai operations.json
+py-ai apply input.ai operations.json -o output.ai
+py-ai validate output.ai --profile illustrator
+py-ai diff input.ai output.ai --semantic --visual
+py-ai render output.ai -o preview.png
+```
+
+### C2. Codex skill / plugin
+
+- [ ] Python package / CLIの対応APIを固定
+- [ ] Codex plugin manifestとskillを追加
+- [ ] 必要性が確認できた場合のみMCP serverを追加
+- [ ] `inspect -> plan -> apply -> validate -> preview`をskill workflow化
+- [ ] fixture作成・互換性レポート作成の開発者向けskill
+- [ ] pluginを外してもCLI単体で同じ操作が可能であることを確認
+
+エージェントadapterの責務は、対象の曖昧性解消、操作計画、CLI実行、結果説明に限定します。ファイル解析、変換、検証ロジックをplugin内へ重複実装しません。
+
+## パッケージとリポジトリ方針
+
+当面はmono-repoを維持し、物理リポジトリより先に依存方向を分離します。
+
+```text
+packages/
+  py-ai-core/                # IR、source/CST、reader/writer、validation
+  py-ai-authoring/           # component、template、layout、style
+  py-ai-illustrator-bridge/  # Illustrator起動、native化、実機適合試験
+plugins/
+  codex-illustrator/         # CLI/APIを呼ぶ薄いagent adapter
+```
+
+依存方向は次に限定します。
+
+```text
+codex-illustrator ---------> public CLI/API
+py-ai-authoring -----------> py-ai-core
+py-ai-illustrator-bridge --> py-ai-core
+py-ai-core ----------------> 他の層へ依存しない
+```
+
+別リポジトリ化は、次の条件が揃った時点で再評価します。
+
+- グラフィックIRとpublic APIの互換性方針を固定できた
+- 独立したrelease cadenceまたは利用者が生じた
+- plugin marketplace配布など、Python packageと異なる配布要件が確定した
+
+## 継続的な監視項目
+
+この文書を更新するときは、少なくとも次を確認します。
+
+- `uv run pytest`と`uv run ruff check .`の結果
+- 新規実装がどのtrack / gateを前進させたか
+- 対応feature profileと未対応featureが明記されているか
+- round-tripがbyte、graphic semantics、design semanticsのどれを検証したか
+- Illustrator実機試験のversion、OS、font、保存option
+- fixtureが自作・生成物で、再配布条件を満たすか
+- public APIの層間依存が逆転していないか
+- README、architecture、authoring model、phase statusとの記述差分
+
+進捗更新では、単に「往復成功」とせず、次のどれかを必ず記録します。
+
+1. byte-preserving round-trip
+2. graphic semantic round-trip
+3. visual round-trip
+4. native editability round-trip
+5. design semantic round-trip
+
+## 現在の推奨着手順
+
+1. Gate A / A1のnode source spanとtyped patchの最小縦切り
+2. B1のimage crop・link診断を並行実装
+3. Gate B / C1のselector、precondition、dry-run
+4. A2のmodern AI reader縦切り
+5. CLIが安定してからC2のCodex skill/plugin
+
+Phase 0の詳細な実機試験記録は[Phase 0の実装状況](phase0-status.md)と[Illustrator適合試験](illustrator-testing.md)へ残します。

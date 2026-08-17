@@ -9,8 +9,10 @@ import math
 import re
 from contextlib import suppress
 from pathlib import Path as FilePath
+from typing import Literal
 
-from .lossless import tokenize_legacy
+from .compatibility import LegacyReadResult, analyze_legacy_source
+from .lossless import LegacySource, tokenize_legacy
 from .model import (
     Artboard,
     ClippingGroup,
@@ -589,10 +591,10 @@ def dump_ai7(
     destination_path.write_bytes(dumps_ai7(serialized_document))
 
 
-def loads_ai7(data: bytes) -> Document:
+def _loads_ai7_source(source: LegacySource) -> Document:
     """Parse files emitted by this project and a conservative AI7 path subset."""
 
-    source = tokenize_legacy(data)
+    data = source.data
     text = data.decode("latin-1")
     if not text.startswith("%!PS-Adobe") or "%AI" not in text:
         raise UnsupportedLegacyFeature("Not a recognizable legacy Illustrator document")
@@ -1178,6 +1180,59 @@ def loads_ai7(data: bytes) -> Document:
         metadata=metadata,
         artboards=artboards,
     )
+
+
+def reads_ai7(data: bytes) -> LegacyReadResult:
+    """Parse legacy data and retain exact source, coverage, and diagnostics."""
+
+    source = tokenize_legacy(data)
+    document = _loads_ai7_source(source)
+    coverage, diagnostics = analyze_legacy_source(source)
+    return LegacyReadResult(
+        document=document,
+        source=source,
+        coverage=coverage,
+        diagnostics=diagnostics,
+    )
+
+
+def loads_ai7(data: bytes) -> Document:
+    """Parse only the modeled IR; use :func:`reads_ai7` for safety evidence."""
+
+    return _loads_ai7_source(tokenize_legacy(data))
+
+
+def reserialize_ai7(
+    result: LegacyReadResult,
+    *,
+    loss_policy: Literal["reject", "discard"] = "reject",
+) -> bytes:
+    """Serialize parsed IR, rejecting unsupported source features by default."""
+
+    if loss_policy not in {"reject", "discard"}:
+        raise ValueError("loss_policy must be 'reject' or 'discard'")
+    if loss_policy == "reject" and not result.safe_to_reserialize:
+        unsupported = sorted(
+            {
+                diagnostic.feature_name
+                for diagnostic in result.diagnostics
+                if diagnostic.code.startswith("unsupported-")
+            }
+        )
+        detail = ", ".join(repr(name) for name in unsupported[:5])
+        if len(unsupported) > 5:
+            detail += f", and {len(unsupported) - 5} more"
+        raise UnsupportedLegacyFeature(
+            "Refusing to reserialize parsed legacy IR because unsupported source features "
+            f"would be discarded: {detail}. Use loss_policy='discard' explicitly to allow loss."
+        )
+    return dumps_ai7(result.document)
+
+
+def read_ai7(source: str | FilePath) -> LegacyReadResult:
+    """Read a legacy file with exact source and compatibility evidence."""
+
+    return reads_ai7(FilePath(source).read_bytes())
 
 
 def load_ai7(source: str | FilePath) -> Document:

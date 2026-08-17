@@ -20,6 +20,8 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 - PNG/JPEGを`Links/`へ安全にpackageし、Illustratorのlinked `PlacedItem`へ復元する画像IR
 - AI7のlegacy textを現代Illustratorの編集可能なTextFrameへ変換するnative materialization
 - 未知行や非UTF-8 byteを変更せず、物理行のbyte spanを索引化するlossless source prototype
+- `document + source + coverage + diagnostics`を返すlegacy reader resultとoperator/resource互換性レポート
+- 未対応source featureを含むIR再serializeを既定で拒否する明示的loss policy
 - 公開仕様に沿った Illustrator 7 互換サブセットと JSON IR の往復変換
 - `inspect` / `export` / `validate` / `test-illustrator` CLI
 - 対応範囲の意味的 round-trip テスト
@@ -105,6 +107,22 @@ line = next(line for line in source.lines if source.operator(line) == b"m")
 assert line.operator_start is not None and line.operator_end is not None
 patched = source.patched([SourceReplacement(line.operator_start, line.operator_end, b"L")])
 ```
+
+既存legacy AIを意味IRへ読む場合は、元sourceと解析coverageを分離せずに扱えます。
+
+```python
+from py_ai_illustrator.legacy import read_ai7, reserialize_ai7
+
+result = read_ai7("input.ai")
+print(result.compatibility_report())
+
+# 未対応operator/resourceがあれば例外。破棄を許す場合だけloss policyを明示する
+output = reserialize_ai7(result)
+# output = reserialize_ai7(result, loss_policy="discard")
+```
+
+`py-ai export input.ai --to json`も既定では部分解析結果を拒否します。診断を確認したうえで
+意味IRに含まれないfeatureの破棄を許す場合のみ、`--allow-partial`を指定します。
 
 既定では入力64 MiB、1行8 MiB、200万行を上限とし、超過時は`SourceLimitExceeded`を返します。`patched()`は範囲外・重複spanを拒否しますが、operatorの意味検証を行わない低レベルprimitiveです。IR編集を安全なspan変更へ変換する高レベルpatch writerは未実装です。
 

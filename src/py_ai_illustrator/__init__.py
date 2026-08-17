@@ -20,6 +20,12 @@ from .authoring import (
     transform_path,
     transform_text,
 )
+from .compatibility import (
+    LegacyDiagnostic,
+    LegacyFeatureOccurrence,
+    LegacyParseCoverage,
+    LegacyReadResult,
+)
 from .format import FileFormat, FormatReport, inspect_file
 from .lossless import (
     LegacyLineToken,
@@ -64,6 +70,10 @@ __all__ = [
     "LayerItemRef",
     "LinkedImage",
     "LegacyLineToken",
+    "LegacyDiagnostic",
+    "LegacyFeatureOccurrence",
+    "LegacyParseCoverage",
+    "LegacyReadResult",
     "LegacySource",
     "Path",
     "PackagedLink",

@@ -96,6 +96,8 @@ Adobe Illustrator 7 specification の DSC comments と operator を読みます�
 
 `SourceReplacement`と`LegacySource.patched()`は、範囲内かつ非重複のspanだけを差し替えてsource mapを再構築します。これはlossless patch writerの低レベルprimitiveで、operatorの妥当性やIR preconditionは検証しません。次段階ではnode source spanとtyped editを結び、高レベル操作からのみreplacementを生成します。
 
+semantic readerの公開境界は`LegacyReadResult(document, source, coverage, diagnostics)`です。新規作成`Document`にはsource provenanceがなく、既存ファイル由来の結果には元bytesと互換性証拠があります。operator/resource inventoryに未対応項目がある場合、通常の再serializeは既定で拒否し、明示的なloss policyなしに未知sourceを捨てません。
+
 ## Writer 戦略
 
 ### Writer A: AI7/AI8

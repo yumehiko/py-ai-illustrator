@@ -16,7 +16,7 @@ from .illustrator import (
     run_illustrator_roundtrip_test,
     run_illustrator_test,
 )
-from .legacy import UnsupportedLegacyFeature, dump_ai7, load_ai7
+from .legacy import UnsupportedLegacyFeature, dump_ai7, read_ai7
 from .model import Document
 
 
@@ -53,7 +53,15 @@ def _export(args: argparse.Namespace) -> int:
                 "Phase 0 JSON export currently supports legacy Illustrator files only; "
                 f"detected {report.format.value}."
             )
-        _write_json(load_ai7(source).to_dict(), destination)
+        result = read_ai7(source)
+        if not result.safe_to_reserialize and not args.allow_partial:
+            features = sorted({item.feature_name for item in result.diagnostics})
+            summary = ", ".join(repr(feature) for feature in features[:5])
+            raise UnsupportedLegacyFeature(
+                "Refusing partial JSON export because unsupported source features would not be "
+                f"represented in the IR: {summary}. Use --allow-partial after reviewing validate."
+            )
+        _write_json(result.document.to_dict(), destination)
         return 0
 
     if args.to == "ai7":
@@ -69,10 +77,13 @@ def _validate(args: argparse.Namespace) -> int:
     report = inspect_file(args.input)
     errors: list[str] = []
     warnings = list(report.notes)
+    compatibility: dict[str, object] | None = None
     if report.format is FileFormat.LEGACY_AI:
         try:
-            document = load_ai7(args.input)
-            if not document.layers:
+            parsed = read_ai7(args.input)
+            compatibility = parsed.compatibility_report()
+            warnings.extend(diagnostic.message for diagnostic in parsed.diagnostics)
+            if not parsed.document.layers:
                 warnings.append("No layers were parsed by the Phase 0 reader.")
         except (ValueError, UnicodeError) as error:
             errors.append(str(error))
@@ -85,12 +96,23 @@ def _validate(args: argparse.Namespace) -> int:
 
     result = {
         "valid": not errors,
+        "safe_to_reserialize": bool(
+            not errors
+            and compatibility is not None
+            and compatibility["safe_to_reserialize"]
+        ),
+        "classification": (
+            compatibility["classification"]
+            if compatibility is not None and not errors
+            else "unconvertible"
+        ),
         "format": report.format.value,
         "errors": errors,
         "warnings": warnings,
+        "compatibility": compatibility,
     }
     _write_json(result, None)
-    return 0 if not errors else 1
+    return 0 if result["safe_to_reserialize"] else 1
 
 
 def _test_illustrator(args: argparse.Namespace) -> int:
@@ -164,6 +186,11 @@ def build_parser() -> argparse.ArgumentParser:
     export_parser.add_argument("input")
     export_parser.add_argument("--to", choices=("json", "ai7"), required=True)
     export_parser.add_argument("-o", "--output")
+    export_parser.add_argument(
+        "--allow-partial",
+        action="store_true",
+        help="allow JSON export that omits diagnosed unsupported source features",
+    )
     export_parser.set_defaults(handler=_export)
 
     validate_parser = subparsers.add_parser("validate", help="run available structural checks")
