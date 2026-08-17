@@ -668,6 +668,13 @@ def test_linked_image_source_patch_changes_only_the_metadata_payload() -> None:
     )
     metadata_origin = origin.field("metadata")
     assert metadata_origin is not None
+    assert [field.field for field in origin.fields_with_prefix("geometry.")] == [
+        "geometry.0",
+        "geometry.1",
+        "geometry.2",
+        "geometry.3",
+        "geometry.4",
+    ]
 
     patched = patch_linked_image_source(
         result,
@@ -825,8 +832,14 @@ def test_text_origin_and_typed_patch_preserve_every_byte_outside_content() -> No
         if origin.node_type == "text" and origin.node_id == "headline"
     )
     text_origin = origin.field("text")
+    position_origin = origin.field("position")
+    matrix_origin = origin.field("matrix")
     assert text_origin is not None
+    assert position_origin is not None
+    assert matrix_origin is not None
     assert data[text_origin.start : text_origin.end] == rb"Original \(copy\)"
+    assert data[position_origin.start : position_origin.end].endswith(b"10 50 0 Tp")
+    assert data[matrix_origin.start : matrix_origin.end].endswith(b"10 50 Tm")
 
     replacement = rb"Revised \(draft\)"
     patched = patch_text(

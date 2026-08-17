@@ -661,6 +661,8 @@ def _loads_ai7_source(
     text_rotation = 0.0
     current_text_source_start: int | None = None
     current_text_content_origins: list[LegacyFieldOrigin] = []
+    current_text_position_origin: LegacyFieldOrigin | None = None
+    current_text_matrix_origin: LegacyFieldOrigin | None = None
     pending_text_id: str | None = None
     pending_text_name: str | None = None
     pending_text_alignment: str | None = None
@@ -1102,6 +1104,8 @@ def _loads_ai7_source(
             text_parts = []
             current_text_source_start = token.start
             current_text_content_origins = []
+            current_text_position_origin = None
+            current_text_matrix_origin = None
             text_x = 0.0
             text_y = 0.0
             text_rotation = 0.0
@@ -1111,6 +1115,10 @@ def _loads_ai7_source(
             if text_position_match:
                 text_x = float(text_position_match.group(1))
                 text_y = float(text_position_match.group(2))
+                if token.operator_end is not None:
+                    current_text_position_origin = statement_field_origin(
+                        "position", token.start, token.content_end, token.operator_end
+                    )
                 continue
             text_matrix_match = _TEXT_MATRIX_RE.match(line)
             if text_matrix_match:
@@ -1120,6 +1128,10 @@ def _loads_ai7_source(
                         float(text_matrix_match.group(1)),
                     )
                 )
+                if token.operator_end is not None:
+                    current_text_matrix_origin = statement_field_origin(
+                        "matrix", token.start, token.content_end, token.operator_end
+                    )
                 continue
             text_font_match = _TEXT_FONT_RE.match(line)
             if text_font_match:
@@ -1182,16 +1194,27 @@ def _loads_ai7_source(
                     source_end=token.end,
                 )
                 if origins is not None:
-                    text_fields = tuple(current_text_content_origins)
-                    if len(text_fields) == 1:
-                        text_fields = (
+                    text_content_fields = tuple(current_text_content_origins)
+                    if len(text_content_fields) == 1:
+                        text_content_fields = (
                             LegacyFieldOrigin(
                                 field="text",
-                                start=text_fields[0].start,
-                                end=text_fields[0].end,
-                                expected=text_fields[0].expected,
+                                start=text_content_fields[0].start,
+                                end=text_content_fields[0].end,
+                                expected=text_content_fields[0].expected,
                             ),
                         )
+                    text_fields = (
+                        *(
+                            field
+                            for field in (
+                                current_text_position_origin,
+                                current_text_matrix_origin,
+                            )
+                            if field is not None
+                        ),
+                        *text_content_fields,
+                    )
                     origins.append(
                         LegacyNodeOrigin(
                             node_type="text",
@@ -1216,6 +1239,8 @@ def _loads_ai7_source(
                 pending_text_leading = None
                 current_text_source_start = None
                 current_text_content_origins = []
+                current_text_position_origin = None
+                current_text_matrix_origin = None
                 in_text = False
                 continue
         ai8_rgb_match = _AI8_RGB_COLOR_RE.match(line)
@@ -1435,7 +1460,10 @@ def _loads_ai7_source(
                                 else pending_linked_image_metadata_origin.start
                             ),
                             end=token.end,
-                            fields=(pending_linked_image_metadata_origin,),
+                            fields=(
+                                pending_linked_image_metadata_origin,
+                                *current_geometry_origins,
+                            ),
                         )
                     )
                 pending_linked_image = None
