@@ -124,6 +124,31 @@ output = reserialize_ai7(result)
 `py-ai export input.ai --to json`も既定では部分解析結果を拒否します。診断を確認したうえで
 意味IRに含まれないfeatureの破棄を許す場合のみ、`--allow-partial`を指定します。
 
+既存のfill operatorを一つのpathだけが使用している場合は、typed operationから局所patchを
+生成できます。path IDが0件・複数件、意味precondition不一致、または色operatorが複数nodeで
+共有されている場合は停止します。
+
+```python
+from pathlib import Path
+
+from py_ai_illustrator import Color, SetPathFill, patch_path_fill, read_ai7
+
+result = read_ai7("input.ai")
+patched = patch_path_fill(
+    result,
+    SetPathFill(
+        path_id="logo-shape",
+        expected_fill=Color(1, 0, 0),
+        fill=Color(0, 0.4, 1),
+    ),
+)
+Path("output.ai").write_bytes(patched.to_bytes())
+```
+
+このpatchはfill field spanだけを差し替え、対象spanの前後にある改行、未知operator、非UTF-8
+byteをそのまま保持します。現時点では既存fillの変更だけが対象で、fill追加、共有color stateの
+分離、text/stroke/geometry編集は未実装です。
+
 既定では入力64 MiB、1行8 MiB、200万行を上限とし、超過時は`SourceLimitExceeded`を返します。`patched()`は範囲外・重複spanを拒否しますが、operatorの意味検証を行わない低レベルprimitiveです。IR編集を安全なspan変更へ変換する高レベルpatch writerは未実装です。
 
 ## 最初の往復変換

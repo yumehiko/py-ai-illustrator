@@ -23,10 +23,13 @@ from .authoring import (
 from .compatibility import (
     LegacyDiagnostic,
     LegacyFeatureOccurrence,
+    LegacyFieldOrigin,
+    LegacyNodeOrigin,
     LegacyParseCoverage,
     LegacyReadResult,
 )
 from .format import FileFormat, FormatReport, inspect_file
+from .legacy import SetPathFill, patch_path_fill, read_ai7, reserialize_ai7
 from .lossless import (
     LegacyLineToken,
     LegacySource,
@@ -72,6 +75,8 @@ __all__ = [
     "LegacyLineToken",
     "LegacyDiagnostic",
     "LegacyFeatureOccurrence",
+    "LegacyFieldOrigin",
+    "LegacyNodeOrigin",
     "LegacyParseCoverage",
     "LegacyReadResult",
     "LegacySource",
@@ -84,6 +89,7 @@ __all__ = [
     "TextStyle",
     "SourceLimitExceeded",
     "SourceReplacement",
+    "SetPathFill",
     "Table",
     "TableColumn",
     "TableStyle",
@@ -91,8 +97,11 @@ __all__ = [
     "inspect_file",
     "iter_linked_images",
     "package_linked_images",
+    "patch_path_fill",
     "polyline_path",
     "rectangle_path",
+    "read_ai7",
+    "reserialize_ai7",
     "transform_group",
     "transform_image",
     "transform_path",

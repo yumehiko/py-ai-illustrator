@@ -20,7 +20,7 @@
 | Authoring | Create MVP成立 | Table、共通component境界、point/area text、linked image、group、Artboard、rigid transform、複数の実制作例 | image crop、link診断、semantic manifest、高度なlayout/resource共有 |
 | Safe Edit / Agent | 設計段階 | inspect/export/validateとIllustrator検証CLI | selector、typed edit、precondition、dry-run、diff、preview、skill/plugin |
 
-2026-08-17時点のローカル基準は、`pytest` 99件成功、`ruff check`成功です。
+2026-08-17時点のローカル基準は、`pytest` 104件成功、`ruff check`成功です。
 
 現在の変換保証は、次のように区別します。
 
@@ -39,8 +39,8 @@
 - [x] readerが`document + source + coverage + diagnostics`相当の結果を返す
 - [x] 認識済み・未認識operator/resourceをcompatibility reportへ列挙する
 - [x] unsupported featureを含む通常のIR再serializeは既定で拒否する
-- [ ] 全IR nodeへorigin/source spanを接続する
-- [ ] text / image / pathのtyped editを局所source patchへ変換する
+- [ ] 全IR nodeへorigin/source spanを接続する（`Path` nodeと排他的fill spanの縦切りは完了）
+- [ ] text / image / pathのtyped editを局所source patchへ変換する（`SetPathFill`は完了）
 - [ ] patchのprecondition、競合、範囲外変更を検出する
 - [ ] read-onlyでは元bytesが完全一致し、局所編集では対象span外が一致する
 - [ ] 対応feature profileとIllustrator対象バージョンを文書化する
@@ -92,10 +92,10 @@
 Gate Aを満たします。
 
 - [x] parse coverageとunknown operator/resource inventory
-- [ ] node-level CST/source span
+- [ ] node-level CST/source span（`Path` originと排他的fill field spanは実装済み）
 - [x] source付きreader resultと新規作成IRの明確な区別
 - [x] strict-by-default reserializeと明示的な`discard` loss policy
-- [ ] typed patch writer
+- [ ] typed patch writer（`SetPathFill`のselector・precondition・局所patchは実装済み）
 - [ ] semantic diffとcompatibility report
 - [ ] Illustrator生成fixtureの種類と対象バージョンを拡張
 
@@ -249,10 +249,11 @@ py-ai-core ----------------> 他の層へ依存しない
 
 ## 現在の推奨着手順
 
-1. Gate A / A1のnode source spanとtyped patchの最小縦切り
-2. B1のimage crop・link診断を並行実装
-3. Gate B / C1のselector、precondition、dry-run
-4. A2のmodern AI reader縦切り
-5. CLIが安定してからC2のCodex skill/plugin
+1. Gate A / A1のsource spanをtext/image/path geometryへ拡張する
+2. typed patchを`replace_text` / stroke / translateへ拡張する
+3. B1のimage crop・link診断を並行実装
+4. Gate B / C1のselector、dry-run、impact report
+5. A2のmodern AI reader縦切り
+6. CLIが安定してからC2のCodex skill/plugin
 
 Phase 0の詳細な実機試験記録は[Phase 0の実装状況](phase0-status.md)と[Illustrator適合試験](illustrator-testing.md)へ残します。

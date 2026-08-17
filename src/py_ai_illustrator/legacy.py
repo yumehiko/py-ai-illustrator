@@ -8,11 +8,17 @@ import json
 import math
 import re
 from contextlib import suppress
+from dataclasses import dataclass
 from pathlib import Path as FilePath
 from typing import Literal
 
-from .compatibility import LegacyReadResult, analyze_legacy_source
-from .lossless import LegacySource, tokenize_legacy
+from .compatibility import (
+    LegacyFieldOrigin,
+    LegacyNodeOrigin,
+    LegacyReadResult,
+    analyze_legacy_source,
+)
+from .lossless import LegacySource, SourceReplacement, tokenize_legacy
 from .model import (
     Artboard,
     ClippingGroup,
@@ -591,7 +597,11 @@ def dump_ai7(
     destination_path.write_bytes(dumps_ai7(serialized_document))
 
 
-def _loads_ai7_source(source: LegacySource) -> Document:
+def _loads_ai7_source(
+    source: LegacySource,
+    *,
+    origins: list[LegacyNodeOrigin] | None = None,
+) -> Document:
     """Parse files emitted by this project and a conservative AI7 path subset."""
 
     data = source.data
@@ -654,6 +664,29 @@ def _loads_ai7_source(source: LegacySource) -> Document:
     pending_linked_image: LinkedImage | None = None
     metadata: dict[str, object] = {}
     artboards: list[Artboard] = []
+    current_path_source_start: int | None = None
+    current_fill_origin: LegacyFieldOrigin | None = None
+    path_origin_candidates: list[tuple[str, int, int, LegacyFieldOrigin | None]] = []
+    fill_origin_use_counts: dict[tuple[int, int], int] = {}
+
+    def field_origin(
+        token_start: int, token_content_end: int, token_operator_end: int
+    ) -> LegacyFieldOrigin:
+        start = token_start
+        while start < token_content_end and data[start] in b"\x00\t\x0c ":
+            start += 1
+        return LegacyFieldOrigin(
+            field="fill",
+            start=start,
+            end=token_operator_end,
+            expected=data[start:token_operator_end],
+        )
+
+    def count_fill_origin_use() -> None:
+        if current_fill_origin is None:
+            return
+        key = (current_fill_origin.start, current_fill_origin.end)
+        fill_origin_use_counts[key] = fill_origin_use_counts.get(key, 0) + 1
 
     def active_container() -> Layer | Group:
         nonlocal current_layer
@@ -977,6 +1010,7 @@ def _loads_ai7_source(source: LegacySource) -> Document:
                 continue
             if line == "TO":
                 text_counter += 1
+                count_fill_origin_use()
                 text_frame = TextFrame(
                     id=pending_text_id or f"text-{text_counter}",
                     name=pending_text_name,
@@ -1015,6 +1049,10 @@ def _loads_ai7_source(source: LegacySource) -> Document:
             color = Color(*(float(ai8_rgb_match.group(index)) for index in range(5, 8)))
             if ai8_rgb_match.group(8) == "Xa":
                 fill = color
+                if token.operator_end is not None:
+                    current_fill_origin = field_origin(
+                        token.start, token.content_end, token.operator_end
+                    )
             else:
                 stroke = color
             continue
@@ -1023,6 +1061,10 @@ def _loads_ai7_source(source: LegacySource) -> Document:
             color = Color(*(float(color_match.group(index)) for index in range(1, 4)))
             if color_match.group(4) == "Xa":
                 fill = color
+                if token.operator_end is not None:
+                    current_fill_origin = field_origin(
+                        token.start, token.content_end, token.operator_end
+                    )
             else:
                 stroke = color
             continue
@@ -1031,6 +1073,10 @@ def _loads_ai7_source(source: LegacySource) -> Document:
             color = CmykColor(*(float(cmyk_match.group(index)) for index in range(1, 5)))
             if cmyk_match.group(5) == "k":
                 fill = color
+                if token.operator_end is not None:
+                    current_fill_origin = field_origin(
+                        token.start, token.content_end, token.operator_end
+                    )
             else:
                 stroke = color
             continue
@@ -1069,6 +1115,7 @@ def _loads_ai7_source(source: LegacySource) -> Document:
             )
             if operator == "m":
                 current_points = [point]
+                current_path_source_start = token.start
             else:
                 current_points.append(point)
             continue
@@ -1136,6 +1183,8 @@ def _loads_ai7_source(source: LegacySource) -> Document:
                 ]
             has_fill = not is_clipping_mask and line in {"b", "f", "B", "F"}
             has_stroke = not is_clipping_mask and line in {"b", "s", "B", "S"}
+            if has_fill:
+                count_fill_origin_use()
             parsed_path = Path(
                 id=pending_id or f"path-{path_counter}",
                 points=path_points,
@@ -1154,16 +1203,27 @@ def _loads_ai7_source(source: LegacySource) -> Document:
             if pending_linked_image is not None and not is_clipping_mask:
                 append_item("image", pending_linked_image)
                 pending_linked_image = None
-            elif is_clipping_mask:
-                current_clipping_path = parsed_path
-                clipping_mask_closed = None
-            elif current_compound_paths is not None:
-                current_compound_paths.append(parsed_path)
-            elif current_clipping_paths is not None:
-                current_clipping_paths.append(parsed_path)
             else:
-                append_item("path", parsed_path)
+                if origins is not None:
+                    path_origin_candidates.append(
+                        (
+                            parsed_path.id,
+                            current_path_source_start or token.start,
+                            token.end,
+                            current_fill_origin if has_fill else None,
+                        )
+                    )
+                if is_clipping_mask:
+                    current_clipping_path = parsed_path
+                    clipping_mask_closed = None
+                elif current_compound_paths is not None:
+                    current_compound_paths.append(parsed_path)
+                elif current_clipping_paths is not None:
+                    current_clipping_paths.append(parsed_path)
+                else:
+                    append_item("path", parsed_path)
             current_points = []
+            current_path_source_start = None
             pending_id = None
             pending_name = None
             polarity = "positive"
@@ -1172,6 +1232,27 @@ def _loads_ai7_source(source: LegacySource) -> Document:
         layers.append(current_layer)
     if width is None or height is None:
         raise UnsupportedLegacyFeature("A numeric %%BoundingBox is required in Phase 0")
+    if origins is not None:
+        for path_id, geometry_start, end, fill_origin in path_origin_candidates:
+            unique_fill_origin = (
+                fill_origin
+                if fill_origin is not None
+                and fill_origin_use_counts[(fill_origin.start, fill_origin.end)] == 1
+                else None
+            )
+            origins.append(
+                LegacyNodeOrigin(
+                    node_type="path",
+                    node_id=path_id,
+                    start=(
+                        min(geometry_start, unique_fill_origin.start)
+                        if unique_fill_origin is not None
+                        else geometry_start
+                    ),
+                    end=end,
+                    fields=(unique_fill_origin,) if unique_fill_origin is not None else (),
+                )
+            )
     return Document(
         width=width,
         height=height,
@@ -1186,13 +1267,15 @@ def reads_ai7(data: bytes) -> LegacyReadResult:
     """Parse legacy data and retain exact source, coverage, and diagnostics."""
 
     source = tokenize_legacy(data)
-    document = _loads_ai7_source(source)
+    origins: list[LegacyNodeOrigin] = []
+    document = _loads_ai7_source(source, origins=origins)
     coverage, diagnostics = analyze_legacy_source(source)
     return LegacyReadResult(
         document=document,
         source=source,
         coverage=coverage,
         diagnostics=diagnostics,
+        origins=tuple(origins),
     )
 
 
@@ -1200,6 +1283,91 @@ def loads_ai7(data: bytes) -> Document:
     """Parse only the modeled IR; use :func:`reads_ai7` for safety evidence."""
 
     return _loads_ai7_source(tokenize_legacy(data))
+
+
+@dataclass(frozen=True, slots=True)
+class SetPathFill:
+    """Typed local edit with an explicit semantic precondition."""
+
+    path_id: str
+    fill: ProcessColor
+    expected_fill: ProcessColor
+
+    def __post_init__(self) -> None:
+        if not self.path_id:
+            raise ValueError("path_id must not be empty")
+
+
+def _container_paths(container: Layer | Group) -> list[Path]:
+    paths = [
+        *container.paths,
+        *(path for compound in container.compound_paths for path in compound.paths),
+        *(
+            path
+            for clipping in container.clipping_groups
+            for path in [clipping.clipping_path, *clipping.paths]
+        ),
+    ]
+    for group in container.groups:
+        paths.extend(_container_paths(group))
+    return paths
+
+
+def patch_path_fill(result: LegacyReadResult, operation: SetPathFill) -> LegacySource:
+    """Patch one uniquely selected path fill while preserving all other source bytes."""
+
+    matching_paths = [
+        path
+        for layer in result.document.layers
+        for path in _container_paths(layer)
+        if path.id == operation.path_id
+    ]
+    if len(matching_paths) != 1:
+        raise UnsupportedLegacyFeature(
+            f"Path selector id={operation.path_id!r} matched {len(matching_paths)} nodes; "
+            "exactly one is required."
+        )
+    path = matching_paths[0]
+    if path.fill != operation.expected_fill:
+        raise UnsupportedLegacyFeature(
+            f"Path {operation.path_id!r} fill precondition failed: "
+            f"expected {operation.expected_fill!r}, found {path.fill!r}."
+        )
+
+    matching_origins = [
+        origin
+        for origin in result.origins
+        if origin.node_type == "path" and origin.node_id == operation.path_id
+    ]
+    if len(matching_origins) != 1:
+        raise UnsupportedLegacyFeature(
+            f"Path {operation.path_id!r} has {len(matching_origins)} source origins; "
+            "exactly one is required."
+        )
+    fill_origin = matching_origins[0].field("fill")
+    if fill_origin is None:
+        raise UnsupportedLegacyFeature(
+            f"Path {operation.path_id!r} does not have an exclusive source fill span."
+        )
+    actual = result.source.data[fill_origin.start : fill_origin.end]
+    if actual != fill_origin.expected:
+        raise UnsupportedLegacyFeature(
+            f"Path {operation.path_id!r} source precondition failed; the fill span changed."
+        )
+    intersecting = [
+        diagnostic
+        for diagnostic in result.diagnostics
+        if diagnostic.start < fill_origin.end and diagnostic.end > fill_origin.start
+    ]
+    if intersecting:
+        raise UnsupportedLegacyFeature(
+            f"Path {operation.path_id!r} fill span intersects unsupported source syntax."
+        )
+
+    replacement = _color_operator(operation.fill, stroke=False).encode("ascii")
+    return result.source.patched(
+        [SourceReplacement(fill_origin.start, fill_origin.end, replacement)]
+    )
 
 
 def reserialize_ai7(

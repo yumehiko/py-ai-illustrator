@@ -13,6 +13,60 @@ FeatureSupport = Literal["modeled", "structural", "unsupported"]
 
 
 @dataclass(frozen=True, slots=True)
+class LegacyFieldOrigin:
+    """Exact source span and precondition bytes for one modeled node field."""
+
+    field: str
+    start: int
+    end: int
+    expected: bytes
+
+    def __post_init__(self) -> None:
+        if not 0 <= self.start < self.end:
+            raise ValueError("field origin span must be ordered and non-empty")
+        if len(self.expected) != self.end - self.start:
+            raise ValueError("field origin bytes must match its source span")
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "field": self.field,
+            "span": {"start": self.start, "end": self.end},
+            "expected_hex": self.expected.hex(),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class LegacyNodeOrigin:
+    """Source provenance for one parsed semantic node."""
+
+    node_type: str
+    node_id: str
+    start: int
+    end: int
+    fields: tuple[LegacyFieldOrigin, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not 0 <= self.start < self.end:
+            raise ValueError("node origin span must be ordered and non-empty")
+        if any(field.start < self.start or field.end > self.end for field in self.fields):
+            raise ValueError("field origins must be inside their node origin")
+
+    def field(self, name: str) -> LegacyFieldOrigin | None:
+        matches = [field for field in self.fields if field.field == name]
+        if len(matches) > 1:
+            raise ValueError(f"node origin contains duplicate {name!r} fields")
+        return matches[0] if matches else None
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "node_type": self.node_type,
+            "node_id": self.node_id,
+            "span": {"start": self.start, "end": self.end},
+            "fields": [field.to_dict() for field in self.fields],
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class LegacyFeatureOccurrence:
     """Inventory entry for one operator or comment/resource name."""
 
@@ -105,6 +159,7 @@ class LegacyReadResult:
     source: LegacySource
     coverage: LegacyParseCoverage
     diagnostics: tuple[LegacyDiagnostic, ...]
+    origins: tuple[LegacyNodeOrigin, ...] = ()
 
     @property
     def safe_to_reserialize(self) -> bool:
@@ -122,6 +177,7 @@ class LegacyReadResult:
             "safe_to_reserialize": self.safe_to_reserialize,
             "coverage": self.coverage.to_dict(),
             "diagnostics": [diagnostic.to_dict() for diagnostic in self.diagnostics],
+            "origins": [origin.to_dict() for origin in self.origins],
         }
 
 

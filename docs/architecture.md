@@ -98,6 +98,8 @@ Adobe Illustrator 7 specification の DSC comments と operator を読みます�
 
 semantic readerの公開境界は`LegacyReadResult(document, source, coverage, diagnostics)`です。新規作成`Document`にはsource provenanceがなく、既存ファイル由来の結果には元bytesと互換性証拠があります。operator/resource inventoryに未対応項目がある場合、通常の再serializeは既定で拒否し、明示的なloss policyなしに未知sourceを捨てません。
 
+node provenanceはIR dataclassへ直接混在させず、`LegacyReadResult.origins`のside tableに保持します。最初の縦切りでは`Path` node spanと排他的なfill field spanを索引化し、`SetPathFill`から`SourceReplacement`を生成します。同じcolor stateを複数nodeが参照する場合はfield originをpatch可能として公開せず、局所性を証明できる操作だけを許可します。
+
 ## Writer 戦略
 
 ### Writer A: AI7/AI8
