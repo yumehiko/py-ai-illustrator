@@ -13,6 +13,7 @@ from pathlib import Path as FilePath
 from typing import Literal
 
 from .compatibility import (
+    LegacyDiagnostic,
     LegacyFieldOrigin,
     LegacyNodeOrigin,
     LegacyReadResult,
@@ -170,6 +171,423 @@ def _unescape_postscript_text(value: str, *, font_name: str) -> str:
     except UnicodeDecodeError:
         decoded = raw.decode("latin-1")
     return decoded.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _decode_base64_json_object(encoded: str) -> dict[str, object] | None:
+    try:
+        value = json.loads(base64.b64decode(encoded, validate=True).decode("utf-8"))
+    except (ValueError, UnicodeError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def _structured_resource_supported(line: str) -> bool | None:
+    """Return whether a semantics-bearing recognized resource is modeled."""
+
+    string_prefixes = (
+        "%%py-ai-layer-id: ",
+        "%%py-ai-path-name: ",
+        "%%py-ai-compound-id: ",
+        "%%py-ai-compound-name: ",
+        "%%py-ai-clipping-id: ",
+        "%%py-ai-clipping-name: ",
+        "%%py-ai-group-id: ",
+        "%%py-ai-group-name: ",
+        "%%py-ai-text-id: ",
+        "%%py-ai-text-name: ",
+    )
+    utf8_prefixes = (
+        "%%py-ai-path-id-utf8: ",
+        "%%py-ai-path-name-utf8: ",
+        "%%py-ai-group-id-utf8: ",
+        "%%py-ai-group-name-utf8: ",
+        "%%py-ai-text-id-utf8: ",
+        "%%py-ai-text-name-utf8: ",
+    )
+    if line.startswith("%%Title:"):
+        return line.startswith("%%Title: (") and line.endswith(")")
+    if line.startswith("%%py-ai-metadata: "):
+        return _decode_base64_json_object(line.removeprefix("%%py-ai-metadata: ")) is not None
+    if line.startswith("%%py-ai-artboard: "):
+        payload = _decode_base64_json_object(line.removeprefix("%%py-ai-artboard: "))
+        if payload is None:
+            return False
+        try:
+            Artboard.from_dict(payload)
+        except (KeyError, TypeError, ValueError):
+            return False
+        return True
+    if line.startswith("%%py-ai-linked-image: "):
+        payload = _decode_base64_json_object(line.removeprefix("%%py-ai-linked-image: "))
+        if payload is None:
+            return False
+        try:
+            LinkedImage.from_dict(payload)
+        except (KeyError, TypeError, ValueError):
+            return False
+        return True
+    for prefix in string_prefixes:
+        if line.startswith(prefix):
+            return line.startswith(prefix + "(") and line.endswith(")")
+    for prefix in utf8_prefixes:
+        if line.startswith(prefix):
+            try:
+                base64.b64decode(line.removeprefix(prefix), validate=True).decode("utf-8")
+            except (ValueError, UnicodeError):
+                return False
+            return True
+    if line.startswith("%%py-ai-text-alignment: "):
+        return re.fullmatch(r"%%py-ai-text-alignment: \((left|center|right)\)", line) is not None
+    if line.startswith("%%py-ai-text-native-font: "):
+        match = re.fullmatch(r"%%py-ai-text-native-font: \(([^()]*)\)", line)
+        return match is not None and _POSTSCRIPT_NAME_RE.fullmatch(match.group(1)) is not None
+    if line.startswith(("%%py-ai-text-tracking: ", "%%py-ai-text-rotation: ")):
+        try:
+            value = float(line.split(": ", 1)[1])
+        except ValueError:
+            return False
+        return math.isfinite(value)
+    if line.startswith("%%py-ai-text-area: "):
+        try:
+            width, height = (float(value) for value in line.split(": ", 1)[1].split())
+        except (TypeError, ValueError):
+            return False
+        return math.isfinite(width) and math.isfinite(height) and width > 0 and height > 0
+    if line.startswith("%%py-ai-text-leading: "):
+        try:
+            leading = float(line.removeprefix("%%py-ai-text-leading: "))
+        except ValueError:
+            return False
+        return math.isfinite(leading) and leading > 0
+    if line.startswith("%AI7_Tag:"):
+        return line.startswith("%AI7_Tag: (") and line.endswith(")")
+    if line.startswith("%AI3_Note:"):
+        note = line.removeprefix("%AI3_Note:").lstrip()
+        note_id, _ = _parse_path_note(note)
+        placeholder = re.fullmatch(r"py-ai-image-placeholder:[0-9a-f]{64}", note)
+        return note_id is not None or placeholder is not None
+    return None
+
+
+def _structured_resource_node_types(line: str) -> frozenset[str] | None:
+    if line.startswith("%%py-ai-artboard: "):
+        return frozenset({"artboard"})
+    if line.startswith("%%py-ai-layer-id: "):
+        return frozenset({"layer"})
+    if line.startswith(("%%py-ai-path-", "%AI7_Tag:")):
+        return frozenset({"path", "linked_image"})
+    if line.startswith("%AI3_Note:"):
+        note = line.removeprefix("%AI3_Note:").lstrip()
+        if note.startswith("py-ai-image-placeholder:"):
+            return frozenset({"linked_image"})
+        return frozenset({"path"})
+    if line.startswith("%%py-ai-compound-"):
+        return frozenset({"compound_path"})
+    if line.startswith("%%py-ai-clipping-"):
+        return frozenset({"clipping_group"})
+    if line.startswith("%%py-ai-group-"):
+        return frozenset({"group"})
+    if line.startswith("%%py-ai-text-"):
+        return frozenset({"text"})
+    if line.startswith("%%py-ai-linked-image: "):
+        return frozenset({"linked_image"})
+    return None
+
+
+def _semantic_legacy_diagnostics(
+    source: LegacySource, origins: tuple[LegacyNodeOrigin, ...]
+) -> tuple[LegacyDiagnostic, ...]:
+    """Find known operators whose syntax or context is not modeled without loss."""
+
+    diagnostics: list[LegacyDiagnostic] = []
+    in_text = False
+    path_open = False
+    text_font: tuple[str, str] | None = None
+    text_alignment = "0"
+    fill_signature: tuple[str, ...] | None = None
+    text_run_signatures: set[tuple[object, ...]] = set()
+    text_start: tuple[int, int, int, str] | None = None
+    path_start: tuple[int, int, int, str] | None = None
+    group_starts: list[tuple[int, int, int, str]] = []
+    compound_start: tuple[int, int, int, str] | None = None
+    clipping_start: tuple[int, int, int, str] | None = None
+    layer_start: tuple[int, int, int, str] | None = None
+    layer_locked = False
+
+    def add(
+        token_start: int,
+        token_end: int,
+        line_number: int,
+        name: str,
+        message: str,
+        *,
+        feature_kind: Literal["operator", "resource"] = "operator",
+        code: str = "unmodeled-operator-semantics",
+    ) -> None:
+        diagnostics.append(
+            LegacyDiagnostic(
+                code=code,
+                severity="warning",
+                message=message,
+                line_number=line_number,
+                start=token_start,
+                end=token_end,
+                feature_kind=feature_kind,
+                feature_name=name,
+            )
+        )
+
+    for token in source.lines:
+        if token.kind == "comment":
+            line = source.line_content(token).decode("latin-1").strip()
+            resource_supported = _structured_resource_supported(line)
+            if resource_supported is False:
+                add(
+                    token.start,
+                    token.end,
+                    token.line_number,
+                    line.split(":", 1)[0].split()[0],
+                    "Recognized legacy resource contains metadata the current IR cannot preserve.",
+                    feature_kind="resource",
+                    code="unmodeled-resource-semantics",
+                )
+            elif resource_supported is True:
+                expected_node_types = _structured_resource_node_types(line)
+                if expected_node_types is not None and not any(
+                    origin.node_type in expected_node_types
+                    and origin.start <= token.start
+                    and token.end <= origin.end
+                    for origin in origins
+                ):
+                    add(
+                        token.start,
+                        token.end,
+                        token.line_number,
+                        line.split(":", 1)[0].split()[0],
+                        "Recognized legacy metadata is not attached to a modeled IR node.",
+                        feature_kind="resource",
+                        code="unmodeled-resource-semantics",
+                    )
+            if line == "%AI5_BeginLayer":
+                if layer_start is not None:
+                    add(
+                        token.start,
+                        token.end,
+                        token.line_number,
+                        "%AI5_BeginLayer",
+                        "A legacy layer begins before the previous layer is closed.",
+                        feature_kind="resource",
+                        code="unmodeled-resource-semantics",
+                    )
+                else:
+                    layer_start = (token.start, token.end, token.line_number, "%AI5_BeginLayer")
+            elif line == "%AI5_EndLayer":
+                if layer_start is None:
+                    add(
+                        token.start,
+                        token.end,
+                        token.line_number,
+                        "%AI5_EndLayer",
+                        "A legacy layer close has no matching begin resource.",
+                        feature_kind="resource",
+                        code="unmodeled-resource-semantics",
+                    )
+                else:
+                    layer_start = None
+            continue
+        if token.kind != "statement":
+            continue
+        raw_operator = source.operator(token)
+        if raw_operator is None:
+            continue
+        operator = raw_operator.decode("latin-1")
+        line = source.line_content(token).decode("latin-1").strip()
+        supported = True
+
+        if operator == "To":
+            supported = line == "0 To" and not in_text and not path_open
+            if supported:
+                in_text = True
+                text_start = (token.start, token.end, token.line_number, operator)
+                text_font = None
+                text_alignment = "0"
+                text_run_signatures = set()
+        elif operator == "TO":
+            supported = line == "TO" and in_text
+            if supported:
+                if len(text_run_signatures) > 1:
+                    add(
+                        token.start,
+                        token.end,
+                        token.line_number,
+                        operator,
+                        "Text uses multiple styled Tx runs that the current IR cannot represent.",
+                    )
+                in_text = False
+                text_start = None
+        elif operator == "Tp":
+            supported = in_text and _TEXT_POSITION_RE.fullmatch(line) is not None
+        elif operator == "Tm":
+            supported = in_text and _TEXT_MATRIX_RE.fullmatch(line) is not None
+        elif operator == "Tf":
+            match = _TEXT_FONT_RE.fullmatch(line) if in_text else None
+            supported = match is not None
+            if match is not None:
+                text_font = (match.group(1), _number(float(match.group(2))))
+        elif operator == "Ta":
+            match = _TEXT_ALIGNMENT_RE.fullmatch(line) if in_text else None
+            supported = match is not None and match.group(1) in {"0", "1", "2"}
+            if supported and match is not None:
+                text_alignment = match.group(1)
+        elif operator == "Tx":
+            match = _TEXT_CONTENT_RE.fullmatch(line) if in_text else None
+            supported = match is not None
+            if supported:
+                text_run_signatures.add((text_font, text_alignment, fill_signature))
+        elif operator == "TP":
+            supported = in_text and line == "TP"
+        elif operator == "Tr":
+            supported = in_text and line == "0 Tr"
+        elif operator in {"Xa", "XA"}:
+            rgb_match = _COLOR_RE.fullmatch(line)
+            ai8_match = _AI8_RGB_COLOR_RE.fullmatch(line)
+            match = rgb_match or ai8_match
+            supported = match is not None
+            if match is not None and operator == "Xa":
+                if rgb_match is not None:
+                    components = rgb_match.groups()[:3]
+                elif ai8_match is not None:
+                    components = ai8_match.groups()[4:7]
+                else:
+                    raise AssertionError("matched RGB operator has no recognized form")
+                fill_signature = tuple(_number(float(value)) for value in components)
+        elif operator in {"k", "K"}:
+            match = _CMYK_COLOR_RE.fullmatch(line)
+            supported = match is not None
+            if match is not None and operator == "k":
+                fill_signature = tuple(_number(float(value)) for value in match.groups()[:4])
+        elif operator == "m":
+            supported = not in_text and not path_open and _POINT_RE.fullmatch(line) is not None
+            if supported:
+                path_open = True
+                path_start = (token.start, token.end, token.line_number, operator)
+        elif operator in {"l", "L"}:
+            supported = path_open and _POINT_RE.fullmatch(line) is not None
+        elif operator in {"c", "C"}:
+            supported = path_open and _CUBIC_RE.fullmatch(line) is not None
+        elif operator in {"v", "V", "y", "Y"}:
+            supported = path_open and _SHORT_CUBIC_RE.fullmatch(line) is not None
+        elif operator in {"b", "f", "s", "n", "B", "F", "S", "N"}:
+            supported = path_open and line == operator
+            if supported:
+                path_open = False
+                path_start = None
+        elif operator in {"h", "H", "W"}:
+            supported = path_open and line == operator
+        elif operator == "w":
+            supported = re.fullmatch(rf"{_NUMBER}\s+w", line) is not None
+        elif operator == "J":
+            supported = re.fullmatch(r"[012]\s+J", line) is not None
+        elif operator == "j":
+            supported = re.fullmatch(r"[012]\s+j", line) is not None
+        elif operator == "M":
+            supported = re.fullmatch(rf"{_NUMBER}\s+M", line) is not None
+        elif operator == "d":
+            supported = _DASH_RE.fullmatch(line) is not None
+        elif operator == "D":
+            supported = _POLARITY_RE.fullmatch(line) is not None
+        elif operator == "A":
+            match = re.fullmatch(r"([01])\s+A", line)
+            supported = (
+                not in_text
+                and not path_open
+                and match is not None
+                and (match.group(1) == "1") == layer_locked
+            )
+        elif operator == "Lb":
+            match = _LAYER_RE.fullmatch(line)
+            supported = (
+                match is not None and layer_start is not None and not in_text and not path_open
+            )
+            if match is not None:
+                layer_locked = match.group(2) == "0"
+        elif operator == "Ln":
+            supported = (
+                layer_start is not None
+                and not in_text
+                and not path_open
+                and _LAYER_NAME_RE.fullmatch(line) is not None
+            )
+        elif operator == "u":
+            supported = line == operator and not in_text and not path_open
+            if supported:
+                group_starts.append((token.start, token.end, token.line_number, operator))
+        elif operator == "U":
+            supported = line == operator and bool(group_starts) and not in_text and not path_open
+            if supported:
+                group_starts.pop()
+        elif operator == "*u":
+            supported = (
+                line == operator and compound_start is None and not in_text and not path_open
+            )
+            if supported:
+                compound_start = (token.start, token.end, token.line_number, operator)
+        elif operator == "*U":
+            supported = (
+                line == operator and compound_start is not None and not in_text and not path_open
+            )
+            if supported:
+                compound_start = None
+        elif operator == "q":
+            supported = (
+                line == operator and clipping_start is None and not in_text and not path_open
+            )
+            if supported:
+                clipping_start = (token.start, token.end, token.line_number, operator)
+        elif operator == "Q":
+            supported = (
+                line == operator and clipping_start is not None and not in_text and not path_open
+            )
+            if supported:
+                clipping_start = None
+        elif operator == "LB":
+            supported = (
+                line == operator and layer_start is not None and not in_text and not path_open
+            )
+        elif operator == "TZ":
+            supported = re.fullmatch(r"\[/\S+/\S+\s+0\s+1\s+0\s+TZ", line) is not None
+
+        if not supported:
+            add(
+                token.start,
+                token.end,
+                token.line_number,
+                operator,
+                f"Legacy operator {operator!r} uses syntax or context not represented by the IR.",
+            )
+    open_constructs = [
+        item
+        for item in (text_start, path_start, compound_start, clipping_start, layer_start)
+        if item is not None
+    ]
+    for start, end, line_number, feature_name in [*open_constructs, *group_starts]:
+        feature_kind: Literal["operator", "resource"] = (
+            "resource" if feature_name.startswith("%") else "operator"
+        )
+        add(
+            start,
+            end,
+            line_number,
+            feature_name,
+            f"Legacy construct beginning with {feature_name!r} is not terminated.",
+            feature_kind=feature_kind,
+            code=(
+                "unmodeled-resource-semantics"
+                if feature_kind == "resource"
+                else "unmodeled-operator-semantics"
+            ),
+        )
+    return tuple(diagnostics)
 
 
 def _path_note(path: Path) -> str | None:
@@ -637,6 +1055,7 @@ def _loads_ai7_source(
     miter_limit = 4.0
     pending_id: str | None = None
     pending_name: str | None = None
+    pending_path_source_start: int | None = None
     pending_compound_id: str | None = None
     pending_compound_name: str | None = None
     pending_compound_source_start: int | None = None
@@ -665,6 +1084,7 @@ def _loads_ai7_source(
     current_text_matrix_origin: LegacyFieldOrigin | None = None
     pending_text_id: str | None = None
     pending_text_name: str | None = None
+    pending_text_source_start: int | None = None
     pending_text_alignment: str | None = None
     pending_text_native_font_name: str | None = None
     pending_text_tracking = 0.0
@@ -1022,18 +1442,22 @@ def _loads_ai7_source(
             clipping_mask_closed = None
             continue
         if line.startswith("%AI7_Tag: (") and line.endswith(")"):
+            pending_path_source_start = pending_path_source_start or token.start
             pending_id = _unescape_postscript_string(line[11:-1])
             continue
         if line.startswith("%%py-ai-path-id-utf8: "):
+            pending_path_source_start = pending_path_source_start or token.start
             with suppress(ValueError, UnicodeError):
                 pending_id = base64.b64decode(
                     line.removeprefix("%%py-ai-path-id-utf8: "), validate=True
                 ).decode("utf-8")
             continue
         if line.startswith("%%py-ai-path-name: (") and line.endswith(")"):
+            pending_path_source_start = pending_path_source_start or token.start
             pending_name = _unescape_postscript_string(line[20:-1])
             continue
         if line.startswith("%%py-ai-path-name-utf8: "):
+            pending_path_source_start = pending_path_source_start or token.start
             with suppress(ValueError, UnicodeError):
                 pending_name = base64.b64decode(
                     line.removeprefix("%%py-ai-path-name-utf8: "), validate=True
@@ -1041,50 +1465,61 @@ def _loads_ai7_source(
             continue
         if line.startswith("%AI3_Note:"):
             note_id, note_name = _parse_path_note(line[10:].lstrip())
+            if note_id is not None or note_name is not None:
+                pending_path_source_start = pending_path_source_start or token.start
             if note_id is not None:
                 pending_id = note_id
             if note_name is not None:
                 pending_name = note_name
             continue
         if line.startswith("%%py-ai-text-id: (") and line.endswith(")"):
+            pending_text_source_start = pending_text_source_start or token.start
             value = line.removeprefix("%%py-ai-text-id: (")[:-1]
             pending_text_id = _unescape_postscript_string(value)
             continue
         if line.startswith("%%py-ai-text-id-utf8: "):
+            pending_text_source_start = pending_text_source_start or token.start
             with suppress(ValueError, UnicodeError):
                 pending_text_id = base64.b64decode(
                     line.removeprefix("%%py-ai-text-id-utf8: "), validate=True
                 ).decode("utf-8")
             continue
         if line.startswith("%%py-ai-text-name: (") and line.endswith(")"):
+            pending_text_source_start = pending_text_source_start or token.start
             value = line.removeprefix("%%py-ai-text-name: (")[:-1]
             pending_text_name = _unescape_postscript_string(value)
             continue
         if line.startswith("%%py-ai-text-name-utf8: "):
+            pending_text_source_start = pending_text_source_start or token.start
             with suppress(ValueError, UnicodeError):
                 pending_text_name = base64.b64decode(
                     line.removeprefix("%%py-ai-text-name-utf8: "), validate=True
                 ).decode("utf-8")
             continue
         if line.startswith("%%py-ai-text-alignment: (") and line.endswith(")"):
+            pending_text_source_start = pending_text_source_start or token.start
             value = line.removeprefix("%%py-ai-text-alignment: (")[:-1]
             candidate = _unescape_postscript_string(value)
             if candidate in {"left", "center", "right"}:
                 pending_text_alignment = candidate
             continue
         if line.startswith("%%py-ai-text-native-font: (") and line.endswith(")"):
+            pending_text_source_start = pending_text_source_start or token.start
             value = line.removeprefix("%%py-ai-text-native-font: (")[:-1]
             pending_text_native_font_name = _unescape_postscript_string(value)
             continue
         if line.startswith("%%py-ai-text-tracking: "):
+            pending_text_source_start = pending_text_source_start or token.start
             with suppress(ValueError):
                 pending_text_tracking = float(line.removeprefix("%%py-ai-text-tracking: "))
             continue
         if line.startswith("%%py-ai-text-rotation: "):
+            pending_text_source_start = pending_text_source_start or token.start
             with suppress(ValueError):
                 pending_text_rotation = float(line.removeprefix("%%py-ai-text-rotation: "))
             continue
         if line.startswith("%%py-ai-text-area: "):
+            pending_text_source_start = pending_text_source_start or token.start
             values = line.removeprefix("%%py-ai-text-area: ").split()
             if len(values) == 2:
                 with suppress(ValueError):
@@ -1094,6 +1529,7 @@ def _loads_ai7_source(
                         pending_text_area_height = area_height
             continue
         if line.startswith("%%py-ai-text-leading: "):
+            pending_text_source_start = pending_text_source_start or token.start
             with suppress(ValueError):
                 candidate = float(line.removeprefix("%%py-ai-text-leading: "))
                 if candidate > 0:
@@ -1102,7 +1538,7 @@ def _loads_ai7_source(
         if _TEXT_BEGIN_RE.match(line):
             in_text = True
             text_parts = []
-            current_text_source_start = token.start
+            current_text_source_start = pending_text_source_start or token.start
             current_text_content_origins = []
             current_text_position_origin = None
             current_text_matrix_origin = None
@@ -1230,6 +1666,7 @@ def _loads_ai7_source(
                     )
                 pending_text_id = None
                 pending_text_name = None
+                pending_text_source_start = None
                 pending_text_alignment = None
                 pending_text_native_font_name = None
                 pending_text_tracking = 0.0
@@ -1326,7 +1763,7 @@ def _loads_ai7_source(
             )
             if operator == "m":
                 current_points = [point]
-                current_path_source_start = token.start
+                current_path_source_start = pending_path_source_start or token.start
                 current_geometry_origins = []
             else:
                 current_points.append(point)
@@ -1504,6 +1941,7 @@ def _loads_ai7_source(
             current_geometry_origins = []
             pending_id = None
             pending_name = None
+            pending_path_source_start = None
             polarity = "positive"
 
     if current_layer is not None:
@@ -1585,6 +2023,12 @@ def reads_ai7(data: bytes) -> LegacyReadResult:
     origins: list[LegacyNodeOrigin] = []
     document = _loads_ai7_source(source, origins=origins)
     coverage, diagnostics = analyze_legacy_source(source)
+    diagnostics = tuple(
+        sorted(
+            (*diagnostics, *_semantic_legacy_diagnostics(source, tuple(origins))),
+            key=lambda diagnostic: (diagnostic.start, diagnostic.end, diagnostic.code),
+        )
+    )
     return LegacyReadResult(
         document=document,
         source=source,

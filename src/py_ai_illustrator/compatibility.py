@@ -168,9 +168,7 @@ class LegacyReadResult:
 
     @property
     def safe_to_reserialize(self) -> bool:
-        return self.coverage.complete and not any(
-            diagnostic.severity == "error" for diagnostic in self.diagnostics
-        )
+        return self.coverage.complete and not self.diagnostics
 
     @property
     def classification(self) -> Literal["convertible", "partially_parsed"]:

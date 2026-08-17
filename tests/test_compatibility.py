@@ -214,6 +214,7 @@ def test_reader_returns_source_coverage_and_recognized_inventory() -> None:
     assert origin.node_type == "path"
     assert origin.field("fill") is not None
     assert origin.start < origin.end
+    assert data[origin.start : origin.end].startswith(b"%AI7_Tag: (shape)")
 
 
 def test_reader_connects_every_ir_node_kind_to_a_source_span() -> None:
@@ -308,6 +309,147 @@ def test_unknown_operator_and_resource_are_source_located_and_make_result_partia
     report = result.compatibility_report()
     assert report["safe_to_reserialize"] is False
     assert report["coverage"]["unsupported_statement_count"] == 1
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "feature_name"),
+    [
+        (b"0 Ta", b"3 Ta", "Ta"),
+        (b"1 0 0 Xa", b"1 0 0 0 Xa", "Xa"),
+        (b"0 A", b"1 A", "A"),
+    ],
+)
+def test_known_operator_with_unmodeled_semantics_is_not_classified_as_convertible(
+    old: bytes, new: bytes, feature_name: str
+) -> None:
+    data = dumps_ai7(text_document() if feature_name == "Ta" else supported_document()).replace(
+        old,
+        new,
+        1,
+    )
+
+    result = reads_ai7(data)
+
+    assert result.coverage.complete is True
+    assert result.safe_to_reserialize is False
+    assert result.classification == "partially_parsed"
+    assert [
+        (diagnostic.code, diagnostic.feature_name) for diagnostic in result.diagnostics
+    ] == [("unmodeled-operator-semantics", feature_name)]
+    with pytest.raises(UnsupportedLegacyFeature, match="Refusing to reserialize"):
+        reserialize_ai7(result)
+
+
+def test_modeled_text_operator_outside_a_text_object_is_diagnosed() -> None:
+    data = dumps_ai7(supported_document()).replace(
+        b"%%EndSetup\n",
+        b"%%EndSetup\n(orphan) Tx\n",
+    )
+
+    result = reads_ai7(data)
+
+    assert result.coverage.complete is True
+    assert result.safe_to_reserialize is False
+    assert [(item.code, item.feature_name) for item in result.diagnostics] == [
+        ("unmodeled-operator-semantics", "Tx")
+    ]
+
+
+def test_multiple_tx_runs_with_different_styles_are_diagnosed_as_lossy() -> None:
+    data = dumps_ai7(text_document(text="FirstSecond")).replace(
+        b"(FirstSecond) Tx",
+        b"(First) Tx\n/Helvetica-Bold 12 0 0 Tf\n(Second) Tx",
+    )
+
+    result = reads_ai7(data)
+
+    assert result.document.layers[0].text_frames[0].text == "FirstSecond"
+    assert result.safe_to_reserialize is False
+    assert [(item.code, item.feature_name) for item in result.diagnostics] == [
+        ("unmodeled-operator-semantics", "TO")
+    ]
+
+
+def test_malformed_recognized_private_metadata_is_not_silently_discarded() -> None:
+    initial = reads_ai7(dumps_ai7(linked_image_document()))
+    image_origin = next(origin for origin in initial.origins if origin.node_id == "hero")
+    metadata = image_origin.field("metadata")
+    assert metadata is not None
+    data = initial.source.patched(
+        [SourceReplacement(metadata.start, metadata.end, b"not-base64")]
+    ).data
+
+    result = reads_ai7(data)
+
+    assert result.coverage.complete is True
+    assert result.safe_to_reserialize is False
+    assert [(item.code, item.feature_name) for item in result.diagnostics] == [
+        ("unmodeled-resource-semantics", "%%py-ai-linked-image"),
+        ("unmodeled-resource-semantics", "%AI3_Note"),
+    ]
+
+
+def test_arbitrary_standard_path_note_is_reported_as_unmodeled_resource_data() -> None:
+    data = dumps_ai7(supported_document())
+    note_line = next(line for line in data.splitlines() if line.startswith(b"%AI3_Note:"))
+    data = data.replace(note_line, b"%AI3_Note:user-authored-note")
+
+    result = reads_ai7(data)
+
+    assert result.coverage.complete is True
+    assert result.safe_to_reserialize is False
+    assert [(item.code, item.feature_name) for item in result.diagnostics] == [
+        ("unmodeled-resource-semantics", "%AI3_Note")
+    ]
+
+
+def test_valid_private_metadata_without_a_modeled_node_is_diagnosed() -> None:
+    data = dumps_ai7(supported_document()).replace(
+        b"%%EndSetup\n",
+        b"%%EndSetup\n%%py-ai-text-alignment: (left)\n",
+    )
+
+    result = reads_ai7(data)
+
+    assert result.coverage.complete is True
+    assert result.safe_to_reserialize is False
+    assert [(item.code, item.feature_name) for item in result.diagnostics] == [
+        ("unmodeled-resource-semantics", "%%py-ai-text-alignment")
+    ]
+
+
+@pytest.mark.parametrize(
+    ("document", "old", "feature_name"),
+    [
+        (text_document(), b"TO\n", "To"),
+        (supported_document(), b"f\nLB", "m"),
+        (translatable_group_document(), b"U\nLB", "u"),
+    ],
+)
+def test_unterminated_modeled_construct_is_not_classified_as_convertible(
+    document: Document, old: bytes, feature_name: str
+) -> None:
+    data = dumps_ai7(document).replace(old, b"LB" if old.endswith(b"LB") else b"", 1)
+
+    result = reads_ai7(data)
+
+    assert result.coverage.complete is True
+    assert result.safe_to_reserialize is False
+    assert ("unmodeled-operator-semantics", feature_name) in [
+        (item.code, item.feature_name) for item in result.diagnostics
+    ]
+
+
+def test_isolated_modeled_close_operator_is_diagnosed() -> None:
+    data = dumps_ai7(supported_document()).replace(b"%%EndSetup\n", b"%%EndSetup\nU\n")
+
+    result = reads_ai7(data)
+
+    assert result.coverage.complete is True
+    assert result.safe_to_reserialize is False
+    assert [(item.code, item.feature_name) for item in result.diagnostics] == [
+        ("unmodeled-operator-semantics", "U")
+    ]
 
 
 def test_reserialize_rejects_unknown_features_unless_loss_is_explicit() -> None:
@@ -1235,6 +1377,7 @@ def test_text_origin_and_typed_patch_preserve_every_byte_outside_content() -> No
     assert position_origin is not None
     assert matrix_origin is not None
     assert data[text_origin.start : text_origin.end] == rb"Original \(copy\)"
+    assert data[origin.start : origin.end].startswith(b"%%py-ai-text-id: (headline)")
     assert data[position_origin.start : position_origin.end].endswith(b"10 50 0 Tp")
     assert data[matrix_origin.start : matrix_origin.end].endswith(b"10 50 Tm")
 
@@ -1294,6 +1437,7 @@ def test_multi_statement_text_origin_retains_each_content_span() -> None:
     assert [field.field for field in text_origins] == ["text.0", "text.1"]
     assert [data[field.start : field.end] for field in text_origins] == [b"First", b"Second"]
     assert result.document.layers[0].text_frames[0].text == "FirstSecond"
+    assert result.safe_to_reserialize is True
 
     with pytest.raises(UnsupportedLegacyFeature, match="exclusive source text span"):
         patch_text(
