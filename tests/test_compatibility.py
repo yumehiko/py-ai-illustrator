@@ -323,6 +323,24 @@ def test_unknown_operator_and_resource_are_source_located_and_make_result_partia
     }
 
 
+def test_unmodeled_text_encoding_resource_is_not_treated_as_structural_only() -> None:
+    font_name = "_KozGoPr6N-Regular-83pv-RKSJ-H"
+    document = text_document(text="日本語")
+    document.layers[0].text_frames[0].font_name = font_name
+    data = dumps_ai7(document).replace(
+        f"%AI3_BeginEncoding: {font_name} {font_name.removeprefix('_')}".encode(),
+        b"%AI3_BeginEncoding: /Custom /Encoding",
+    )
+
+    result = reads_ai7(data)
+
+    assert result.coverage.complete is True
+    assert result.safe_to_reserialize is False
+    assert [(item.code, item.feature_name) for item in result.diagnostics] == [
+        ("unmodeled-resource-semantics", "%AI3_BeginEncoding")
+    ]
+
+
 @pytest.mark.parametrize(
     ("old", "new", "feature_name"),
     [

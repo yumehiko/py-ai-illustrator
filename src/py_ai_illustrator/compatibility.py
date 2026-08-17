@@ -221,7 +221,7 @@ class LegacyReadResult:
             "conversion_policies": [
                 {
                     "name": "canonical-reserialize",
-                    "effect": "syntax-and-nonsemantic-header-normalization",
+                    "effect": "syntax-header-and-document-setup-normalization",
                     "requires_explicit_opt_in": False,
                 },
                 {

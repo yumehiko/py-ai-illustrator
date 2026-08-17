@@ -41,7 +41,7 @@
 
 1. Read-only: `result.source.to_bytes()`は入力bytesと完全一致します。
 2. Typed patch: planに列挙したreplacement span以外のbytesは完全一致します。元source全体のSHA-256、各field bytes、semantic precondition、selector一意性、unsupported交差、span範囲、operation間競合をapply前に検証します。
-3. Canonical reserialize: `convertible`入力ではgraphic semantic round-tripを保証対象とします。物理改行、数値表記、header順、非意味headerはcanonical writerで正規化されるためbyte一致は保証しません。
+3. Canonical reserialize: `convertible`入力ではgraphic semantic round-tripを保証対象とします。物理改行、数値表記、header順、preview、ruler/page origin等のdocument setupはIRの`(0, 0)`原点を基準にcanonical writerで正規化されるためbyte一致は保証しません。任意text encoding resourceはこのpolicyに含めず、未対応として診断します。
 4. Discard: `loss_policy="discard"`だけが、診断済み/未対応source dataを捨てる明示policyです。既定では拒否します。
 5. Semantic diff: 安定IDでnodeを対応付け、field変更、追加、削除、stacking変更を別々に報告します。
 

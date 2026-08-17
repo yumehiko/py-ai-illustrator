@@ -22,7 +22,7 @@
 | Authoring | Create MVP成立 | Table、共通component境界、point/area text、linked image、group、Artboard、rigid transform、複数の実制作例 | image crop、link診断、semantic manifest、高度なlayout/resource共有 |
 | Safe Edit / Agent | 設計段階 | inspect/export/validateとIllustrator検証CLI | selector、typed edit、precondition、dry-run、diff、preview、skill/plugin |
 
-2026-08-17時点のローカル基準は、`pytest` 164件成功、`ruff check`成功です。
+2026-08-17時点のローカル基準は、`pytest` 165件成功、`ruff check`成功です。
 
 現在の変換保証は、次のように区別します。
 

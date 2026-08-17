@@ -206,6 +206,17 @@ def _structured_resource_supported(line: str) -> bool | None:
     )
     if line.startswith("%%Title:"):
         return line.startswith("%%Title: (") and line.endswith(")")
+    if line.startswith("%AI5_FileFormat"):
+        return line == "%AI5_FileFormat 3.0"
+    if line.startswith("%AI3_BeginEncoding:"):
+        match = re.fullmatch(r"%AI3_BeginEncoding: (\S+) (\S+)", line)
+        return (
+            match is not None
+            and "RKSJ-" in match.group(1)
+            and match.group(1).removeprefix("_") == match.group(2)
+        )
+    if line.startswith("%AI3_EndEncoding"):
+        return line == "%AI3_EndEncoding AdobeType"
     if line.startswith("%%py-ai-metadata: "):
         return _decode_base64_json_object(line.removeprefix("%%py-ai-metadata: ")) is not None
     if line.startswith("%%py-ai-artboard: "):
