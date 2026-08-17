@@ -155,9 +155,10 @@ def _unescape_postscript_text(value: str, *, font_name: str) -> str:
     raw = _unescape_postscript_bytes(value)
     encoding = "cp932" if _text_encoding(font_name) == "cp932" else "latin-1"
     try:
-        return raw.decode(encoding)
+        decoded = raw.decode(encoding)
     except UnicodeDecodeError:
-        return raw.decode("latin-1")
+        decoded = raw.decode("latin-1")
+    return decoded.replace("\r\n", "\n").replace("\r", "\n")
 
 
 def _path_note(path: Path) -> str | None:
@@ -319,6 +320,12 @@ def _serialized_text_frame(text: TextFrame, *, locked: bool) -> list[str]:
         lines.append(f"%%py-ai-text-tracking: {_number(text.tracking)}")
     if text.rotation != 0:
         lines.append(f"%%py-ai-text-rotation: {_number(text.rotation)}")
+    if text.is_area_text:
+        lines.append(
+            f"%%py-ai-text-area: {_number(text.area_width or 0)} {_number(text.area_height or 0)}"
+        )
+    if text.leading is not None:
+        lines.append(f"%%py-ai-text-leading: {_number(text.leading)}")
     if text.native_font_name is not None:
         if not _POSTSCRIPT_NAME_RE.fullmatch(text.native_font_name):
             raise UnsupportedLegacyFeature(
@@ -555,6 +562,9 @@ def loads_ai7(data: bytes) -> Document:
     pending_text_native_font_name: str | None = None
     pending_text_tracking = 0.0
     pending_text_rotation: float | None = None
+    pending_text_area_width: float | None = None
+    pending_text_area_height: float | None = None
+    pending_text_leading: float | None = None
     metadata: dict[str, object] = {}
 
     def active_container() -> Layer | Group:
@@ -793,15 +803,26 @@ def loads_ai7(data: bytes) -> Document:
             continue
         if line.startswith("%%py-ai-text-tracking: "):
             with suppress(ValueError):
-                pending_text_tracking = float(
-                    line.removeprefix("%%py-ai-text-tracking: ")
-                )
+                pending_text_tracking = float(line.removeprefix("%%py-ai-text-tracking: "))
             continue
         if line.startswith("%%py-ai-text-rotation: "):
             with suppress(ValueError):
-                pending_text_rotation = float(
-                    line.removeprefix("%%py-ai-text-rotation: ")
-                )
+                pending_text_rotation = float(line.removeprefix("%%py-ai-text-rotation: "))
+            continue
+        if line.startswith("%%py-ai-text-area: "):
+            values = line.removeprefix("%%py-ai-text-area: ").split()
+            if len(values) == 2:
+                with suppress(ValueError):
+                    area_width, area_height = map(float, values)
+                    if area_width > 0 and area_height > 0:
+                        pending_text_area_width = area_width
+                        pending_text_area_height = area_height
+            continue
+        if line.startswith("%%py-ai-text-leading: "):
+            with suppress(ValueError):
+                candidate = float(line.removeprefix("%%py-ai-text-leading: "))
+                if candidate > 0:
+                    pending_text_leading = candidate
             continue
         if _TEXT_BEGIN_RE.match(line):
             in_text = True
@@ -859,6 +880,9 @@ def loads_ai7(data: bytes) -> Document:
                         if pending_text_rotation is not None
                         else text_rotation
                     ),
+                    area_width=pending_text_area_width,
+                    area_height=pending_text_area_height,
+                    leading=pending_text_leading,
                     fill=fill or Color(0.0, 0.0, 0.0),
                     alignment=pending_text_alignment or text_alignment,
                 )
@@ -869,6 +893,9 @@ def loads_ai7(data: bytes) -> Document:
                 pending_text_native_font_name = None
                 pending_text_tracking = 0.0
                 pending_text_rotation = None
+                pending_text_area_width = None
+                pending_text_area_height = None
+                pending_text_leading = None
                 in_text = False
                 continue
         ai8_rgb_match = _AI8_RGB_COLOR_RE.match(line)

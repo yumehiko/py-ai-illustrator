@@ -34,7 +34,7 @@ def test_export_javascript_creates_and_closes_only_its_cmyk_fixture(tmp_path: Pa
     assert "documentRef.saveAs(destination, options)" in javascript
     assert "documentRef.close(SaveOptions.DONOTSAVECHANGES)" in javascript
     assert "current document" not in javascript
-    assert "\\" not in javascript
+    assert str(tmp_path) not in javascript
 
 
 def test_roundtrip_javascript_resaves_and_closes_only_its_document(tmp_path: Path) -> None:
@@ -62,7 +62,7 @@ def test_native_materialization_converts_legacy_text_and_closes_its_copy(
     assert "documentRef.saveAs(destination, options)" in javascript
     assert "documentRef.close(SaveOptions.DONOTSAVECHANGES)" in javascript
     assert "current document" not in javascript
-    assert "\\" not in javascript
+    assert str(tmp_path) not in javascript
 
 
 def test_text_identity_notes_follow_recursive_illustrator_dom_order() -> None:
@@ -87,22 +87,35 @@ def test_native_materialization_assigns_identity_notes_after_conversion(
         text_notes=('py-ai-text:{"id":"price","name":"Price"}',),
         text_contents=("Price",),
         desired_font_names=("Helvetica-Bold",),
+        desired_font_sizes=(18,),
+        desired_fills=({"type": "rgb", "values": [0.1, 0.2, 0.3]},),
         desired_trackings=(160,),
         desired_rotations=(-12,),
+        desired_alignments=("center",),
+        desired_area_widths=(180,),
+        desired_area_heights=(96,),
+        desired_leadings=(16,),
     )
 
     conversion = javascript.index("legacyTextItems.convertToNative()")
-    assignment = javascript.index("documentRef.textFrames[noteIndex].note = textNotes[noteIndex]")
+    assignment = javascript.index("textFrame.note = textNotes[noteIndex]")
     assert conversion < assignment
     assert 'py-ai-text:{"id":"price","name":"Price"}' not in javascript
     assert "var textContents = [String.fromCharCode(80,114,105,99,101)]" in javascript
     assert "String.fromCharCode" in javascript
     assert "app.textFonts.getByName" in javascript
     assert "characterAttributes.textFont" in javascript
+    assert "characterAttributes.size = desiredFontSizes[noteIndex]" in javascript
+    assert "applyFill(textFrame.textRange.characterAttributes" in javascript
     assert "characterAttributes.tracking" in javascript
-    assert "textFrames[noteIndex].rotate(rotationDelta)" in javascript
+    assert "textFrame.rotate(rotationDelta)" in javascript
     assert "position = positionBeforeRotation" in javascript
     assert "itemRotation" in javascript
+    assert "documentRef.textFrames.areaText(textPath)" in javascript
+    assert "textFrame.kind === TextType.AREATEXT" in javascript
+    assert "characterAttributes.leading" in javascript
+    assert "paragraphAttributes.justification = desiredJustification" in javascript
+    assert "normalizedText(textFrame.contents)" in javascript
     assert "String.fromCharCode(72,101,108,118,101,116,105,99,97,45,66,111,108,100)" in javascript
 
 

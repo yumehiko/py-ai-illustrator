@@ -37,8 +37,7 @@ class AffineTransform:
 
     def __post_init__(self) -> None:
         if not all(
-            math.isfinite(value)
-            for value in (self.a, self.b, self.c, self.d, self.tx, self.ty)
+            math.isfinite(value) for value in (self.a, self.b, self.c, self.d, self.tx, self.ty)
         ):
             raise ValueError("Affine transform values must be finite")
 
@@ -404,6 +403,51 @@ class TextBlock:
             width=self.width,
             height=self.height,
             text_frames=frames,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class AreaTextBlock:
+    """A paragraph that becomes one reflowable native Illustrator area text."""
+
+    id: str
+    text: str
+    width: float
+    height: float
+    style: TextStyle = field(default_factory=TextStyle)
+    alignment: str = "left"
+    name: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.id:
+            raise ValueError("An area text block id must not be empty")
+        if self.width <= 0 or self.height <= 0:
+            raise ValueError("Area text block dimensions must be positive")
+        if self.alignment not in {"left", "center", "right"}:
+            raise ValueError("alignment must be 'left', 'center', or 'right'")
+
+    def render(self, *, x: float, top: float) -> RenderedComponent:
+        frame = TextFrame(
+            id=self.id,
+            name=self.name or self.id,
+            text=self.text.replace("\r\n", "\n").replace("\r", "\n"),
+            x=x,
+            y=top,
+            font_size=self.style.font_size,
+            font_name=self.style.ai7_font_name,
+            native_font_name=self.style.native_font_name,
+            tracking=self.style.tracking,
+            rotation=self.style.rotation,
+            area_width=self.width,
+            area_height=self.height,
+            leading=self.style.font_size * self.style.line_height_ratio,
+            fill=self.style.fill,
+            alignment=self.alignment,
+        )
+        return RenderedComponent(
+            width=self.width,
+            height=self.height,
+            text_frames=[frame],
         )
 
 

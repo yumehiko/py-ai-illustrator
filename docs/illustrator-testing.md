@@ -152,10 +152,12 @@ AI8互換のlegacy再保存ではfont名の置換やparagraph alignmentの正規
 | `examples/event-poster.ai` | 1 layer / 4 paths / 9 point texts | 日本語階層、折り返し、装飾Bézier楕円 |
 | `examples/retail-price-tags.ai` | 1 layer / 12 nested groups / 19 paths / 41 point texts | 6棚札、価格欄group、販売variant、右揃え価格 |
 | `examples/quarterly-kpi-report.ai` | 1 layer / 4 groups / 17 paths / 24 point texts | actual/target/grid、dash、round cap/join、KPI cards |
+| `examples/packaging-labels.ai` | 1 layer / 5 groups / 14 paths / 20 point texts | rigid transform、90度side code、-12度badge |
+| `examples/editorial-brochure.ai` | 1 layer / 4 paths / 7 text intents | native化後に4 AreaText、2段本文、導入、中央揃え引用 |
 
 native materializationも同じ環境で確認済みです。
 
-下記6 fixtureはすべて、再オープン後に全native TextFrameの`note`が`py-ai-text:` identityを保持することも確認しています。
+下記8 fixtureはすべて、再オープン後に全native TextFrameの`note`が`py-ai-text:` identityを保持することも確認しています。
 
 | native fixture | 変換結果 | 再オープン後 |
 | --- | --- | --- |
@@ -166,6 +168,7 @@ native materializationも同じ環境で確認済みです。
 | `retail-price-tags.native.ai` | 41 legacy → 41 native TextFrames | 12 groups、販売variant、RIGHT価格揃えを保持 |
 | `quarterly-kpi-report.native.ai` | 24 legacy → 24 native TextFrames | chart group、dash、KPI値と3種の揃えを保持 |
 | `packaging-labels.native.ai` | 20 legacy → 20 native TextFrames | 5 groups、90度side code、-12度badge、font・tracking・IDを保持 |
+| `editorial-brochure.native.ai` | 7 legacy → 7 native TextFrames | 4 AreaText、枠寸法、font/size/fill/leading、揃え、IDを保持 |
 
 逆方向も同じ環境で確認済みです。
 
@@ -188,6 +191,8 @@ mixed stackも完全往復で`passed`です。IRの`item_order`はAIのback-to-f
 
 styled tableも必須項目の完全往復で`passed`です。文字font名とalignmentのadvisory lossを除き、16 paths、20 texts、内容、size、fill、相対配置、罫線geometry、RGB色、stackingが一致しました。
 
-japanese tableも完全往復で`passed`です。18 textsすべての日本語内容、RKSJ font、size、fill、相対配置と、15 pathsのgeometry・paint・stackingが一致しました。表・名札・ポスターのnative AIをPDF/PNG化したpreviewでも、文字化け、セル越境、行の重なりがないことを確認しました。
+japanese tableも完全往復で`passed`です。18 textsすべての日本語内容、RKSJ font、size、fill、相対配置と、15 pathsのgeometry・paint・stackingが一致しました。表・名札・ポスター・誌面のnative AIをPDF/PNG化したpreviewでも、文字化け、セル越境、行の重なり、文章欠落がないことを確認しました。
+
+editorial brochureはnative保存・再オープン後も4枠が`TextType.AREATEXT`で、390×66、222×310（2枠）、180×80 ptを保持しました。本文10.5pt、導入13pt、引用15pt、指定leading、RGB fill、LEFT/CENTER justification、全7 TextFramesのidentityと内容が一致しています。
 
 これは記載したfixtureと機能subsetの適合結果です。任意のAI7ファイルや未対応機能の互換性を保証するものではありません。

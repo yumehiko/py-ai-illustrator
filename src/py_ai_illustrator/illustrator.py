@@ -40,6 +40,15 @@ def _text_identity_note(text: TextFrame) -> str:
     )
 
 
+def _native_fill_spec(color: ProcessColor) -> dict[str, Any]:
+    if isinstance(color, CmykColor):
+        return {
+            "type": "cmyk",
+            "values": [color.cyan, color.magenta, color.yellow, color.black],
+        }
+    return {"type": "rgb", "values": [color.red, color.green, color.blue]}
+
+
 def _group_paths(group: Group) -> list[AIPath]:
     paths: list[AIPath] = []
     paths.extend(group.paths)
@@ -360,6 +369,9 @@ def _build_javascript(source: Path) -> str:
                 var attributes = textRange ? textRange.characterAttributes : null;
                 var paragraphAttributes = textRange ? textRange.paragraphAttributes : null;
                 textFrames.push({{
+                    kind: textFrame.typename === "TextFrame"
+                        ? String(textFrame.kind)
+                        : "LegacyTextItem",
                     name: textFrame.name,
                     note: textFrame.note,
                     contents: textFrame.contents,
@@ -371,7 +383,16 @@ def _build_javascript(source: Path) -> str:
                     tracking: attributes && typeof attributes.tracking === "number"
                         ? attributes.tracking
                         : null,
+                    leading: attributes && typeof attributes.leading === "number"
+                        ? attributes.leading
+                        : null,
                     rotation: itemRotation(textFrame),
+                    width: typeof textFrame.width === "number" ? textFrame.width : null,
+                    height: typeof textFrame.height === "number" ? textFrame.height : null,
+                    overflows: textFrame.typename === "TextFrame"
+                        && typeof textFrame.overflows === "boolean"
+                        ? textFrame.overflows
+                        : null,
                     fill_color: attributes ? colorToObject(attributes.fillColor) : null,
                     justification: paragraphAttributes
                         ? String(paragraphAttributes.justification)
@@ -722,8 +743,14 @@ def _build_native_materialization_javascript(
     text_notes: tuple[str, ...] = (),
     text_contents: tuple[str, ...] = (),
     desired_font_names: tuple[str, ...] = (),
+    desired_font_sizes: tuple[float, ...] = (),
+    desired_fills: tuple[dict[str, Any], ...] = (),
     desired_trackings: tuple[float, ...] = (),
     desired_rotations: tuple[float, ...] = (),
+    desired_alignments: tuple[str, ...] = (),
+    desired_area_widths: tuple[float | None, ...] = (),
+    desired_area_heights: tuple[float | None, ...] = (),
+    desired_leadings: tuple[float | None, ...] = (),
 ) -> str:
     source_literal = _character_code_expression(source)
     destination_literal = _character_code_expression(destination)
@@ -734,8 +761,24 @@ def _build_native_materialization_javascript(
     desired_font_names_literal = ",".join(
         _character_code_expression(name) for name in desired_font_names
     )
+    desired_font_sizes_literal = ",".join(str(value) for value in desired_font_sizes)
+    desired_fills_literal = ",".join(
+        json.dumps(value, separators=(",", ":")) for value in desired_fills
+    )
     desired_trackings_literal = ",".join(str(value) for value in desired_trackings)
     desired_rotations_literal = ",".join(str(value) for value in desired_rotations)
+    desired_alignments_literal = ",".join(
+        _character_code_expression(value) for value in desired_alignments
+    )
+    desired_area_widths_literal = ",".join(
+        "null" if value is None else str(value) for value in desired_area_widths
+    )
+    desired_area_heights_literal = ",".join(
+        "null" if value is None else str(value) for value in desired_area_heights
+    )
+    desired_leadings_literal = ",".join(
+        "null" if value is None else str(value) for value in desired_leadings
+    )
     return f"""#target illustrator
 (function () {{
     var source = new File({source_literal});
@@ -751,8 +794,14 @@ def _build_native_materialization_javascript(
         var textNotes = [{text_notes_literal}];
         var textContents = [{text_contents_literal}];
         var desiredFontNames = [{desired_font_names_literal}];
+        var desiredFontSizes = [{desired_font_sizes_literal}];
+        var desiredFills = [{desired_fills_literal}];
         var desiredTrackings = [{desired_trackings_literal}];
         var desiredRotations = [{desired_rotations_literal}];
+        var desiredAlignments = [{desired_alignments_literal}];
+        var desiredAreaWidths = [{desired_area_widths_literal}];
+        var desiredAreaHeights = [{desired_area_heights_literal}];
+        var desiredLeadings = [{desired_leadings_literal}];
         var converted = legacyTextCount === 0
             ? true
             : documentRef.legacyTextItems.convertToNative();
@@ -762,9 +811,18 @@ def _build_native_materialization_javascript(
         var requestedFontCount = 0;
         var assignedFontCount = 0;
         var matchingFontCount = 0;
+        var matchingFontSizeCount = 0;
+        var matchingFillCount = 0;
         var missingFonts = [];
         var matchingTrackingCount = 0;
         var matchingRotationCount = 0;
+        var recreatedAreaTextCount = 0;
+        var matchingAreaTextCount = 0;
+        var matchingLeadingCount = 0;
+        var nativeFrames = [];
+        for (var frameIndex = 0; frameIndex < nativeTextCount; frameIndex++) {{
+            nativeFrames.push(documentRef.textFrames[frameIndex]);
+        }}
         function itemRotation(item) {{
             var matrix = item.matrix;
             return Math.atan2(matrix.mValueB, matrix.mValueA) * 180 / Math.PI;
@@ -774,13 +832,105 @@ def _build_native_materialization_javascript(
             if (difference < 0) difference += 360;
             return Math.abs(difference - 180);
         }}
+        function normalizedText(value) {{
+            return String(value).replace(/\\r\\n/g, "\\n").replace(/\\r/g, "\\n");
+        }}
+        function applyFill(attributes, spec) {{
+            var color;
+            if (spec.type === "rgb") {{
+                color = new RGBColor();
+                color.red = spec.values[0] * 255;
+                color.green = spec.values[1] * 255;
+                color.blue = spec.values[2] * 255;
+            }} else {{
+                color = new CMYKColor();
+                color.cyan = spec.values[0] * 100;
+                color.magenta = spec.values[1] * 100;
+                color.yellow = spec.values[2] * 100;
+                color.black = spec.values[3] * 100;
+            }}
+            attributes.fillColor = color;
+        }}
+        function fillMatches(color, spec) {{
+            var scale = spec.type === "rgb" ? 255 : 100;
+            var actual = spec.type === "rgb"
+                ? [color.red, color.green, color.blue]
+                : [color.cyan, color.magenta, color.yellow, color.black];
+            if (
+                (spec.type === "rgb" && color.typename !== "RGBColor")
+                || (spec.type === "cmyk" && color.typename !== "CMYKColor")
+            ) return false;
+            for (var colorIndex = 0; colorIndex < actual.length; colorIndex++) {{
+                if (Math.abs(actual[colorIndex] - spec.values[colorIndex] * scale) > 0.51) {{
+                    return false;
+                }}
+            }}
+            return true;
+        }}
         for (
             var noteIndex = 0;
             noteIndex < nativeTextCount && noteIndex < textNotes.length;
             noteIndex++
         ) {{
-            documentRef.textFrames[noteIndex].note = textNotes[noteIndex];
+            var textFrame = nativeFrames[noteIndex];
+            if (
+                noteIndex < desiredAreaWidths.length
+                && desiredAreaWidths[noteIndex] !== null
+                && desiredAreaHeights[noteIndex] !== null
+            ) {{
+                var framePosition = textFrame.anchor
+                    ? [textFrame.anchor[0], textFrame.anchor[1]]
+                    : [textFrame.position[0], textFrame.position[1]];
+                var frameParent = textFrame.parent;
+                var textPath = frameParent.pathItems.rectangle(
+                    framePosition[1],
+                    framePosition[0],
+                    desiredAreaWidths[noteIndex],
+                    desiredAreaHeights[noteIndex]
+                );
+                var areaFrame = documentRef.textFrames.areaText(textPath);
+                areaFrame.contents = noteIndex < textContents.length
+                    ? textContents[noteIndex]
+                    : textFrame.contents;
+                areaFrame.move(textFrame, ElementPlacement.PLACEBEFORE);
+                textFrame.remove();
+                textFrame = areaFrame;
+                nativeFrames[noteIndex] = areaFrame;
+                recreatedAreaTextCount++;
+                if (
+                    textFrame.kind === TextType.AREATEXT
+                    && Math.abs(textFrame.width - desiredAreaWidths[noteIndex]) < 0.1
+                    && Math.abs(textFrame.height - desiredAreaHeights[noteIndex]) < 0.1
+                ) matchingAreaTextCount++;
+            }}
+            textFrame.note = textNotes[noteIndex];
             assignedNoteCount++;
+            if (noteIndex < desiredFontSizes.length) {{
+                textFrame.textRange.characterAttributes.size = desiredFontSizes[noteIndex];
+                if (
+                    Math.abs(
+                        textFrame.textRange.characterAttributes.size
+                            - desiredFontSizes[noteIndex]
+                    ) < 0.01
+                ) matchingFontSizeCount++;
+            }}
+            if (noteIndex < desiredFills.length) {{
+                applyFill(textFrame.textRange.characterAttributes, desiredFills[noteIndex]);
+                if (
+                    fillMatches(
+                        textFrame.textRange.characterAttributes.fillColor,
+                        desiredFills[noteIndex]
+                    )
+                ) matchingFillCount++;
+            }}
+            if (noteIndex < desiredAlignments.length) {{
+                var desiredJustification = {{
+                    left: Justification.LEFT,
+                    center: Justification.CENTER,
+                    right: Justification.RIGHT
+                }}[desiredAlignments[noteIndex]];
+                textFrame.textRange.paragraphAttributes.justification = desiredJustification;
+            }}
             if (
                 noteIndex < desiredFontNames.length
                 && desiredFontNames[noteIndex] !== ""
@@ -790,50 +940,61 @@ def _build_native_materialization_javascript(
                     var desiredFont = app.textFonts.getByName(
                         desiredFontNames[noteIndex]
                     );
-                    documentRef.textFrames[noteIndex].textRange.characterAttributes.textFont = (
-                        desiredFont
-                    );
+                    textFrame.textRange.characterAttributes.textFont = desiredFont;
                     assignedFontCount++;
                     if (
-                        documentRef.textFrames[noteIndex].textRange.characterAttributes
-                            .textFont.name === desiredFontNames[noteIndex]
+                        textFrame.textRange.characterAttributes.textFont.name
+                            === desiredFontNames[noteIndex]
                     ) matchingFontCount++;
                 }} catch (fontError) {{
                     missingFonts.push(desiredFontNames[noteIndex]);
                 }}
             }}
             if (noteIndex < desiredTrackings.length) {{
-                documentRef.textFrames[noteIndex].textRange.characterAttributes.tracking = (
-                    desiredTrackings[noteIndex]
-                );
+                textFrame.textRange.characterAttributes.tracking = desiredTrackings[noteIndex];
                 if (
                     Math.abs(
-                        documentRef.textFrames[noteIndex].textRange.characterAttributes.tracking
+                        textFrame.textRange.characterAttributes.tracking
                             - desiredTrackings[noteIndex]
                     ) < 0.01
                 ) matchingTrackingCount++;
             }}
+            if (
+                noteIndex < desiredLeadings.length
+                && desiredLeadings[noteIndex] !== null
+            ) {{
+                textFrame.textRange.characterAttributes.autoLeading = false;
+                textFrame.textRange.characterAttributes.leading = desiredLeadings[noteIndex];
+                if (
+                    Math.abs(
+                        textFrame.textRange.characterAttributes.leading
+                            - desiredLeadings[noteIndex]
+                    ) < 0.01
+                ) matchingLeadingCount++;
+            }} else {{
+                matchingLeadingCount++;
+            }}
             if (noteIndex < desiredRotations.length) {{
-                var currentRotation = itemRotation(documentRef.textFrames[noteIndex]);
+                var currentRotation = itemRotation(textFrame);
                 var rotationDelta = desiredRotations[noteIndex] - currentRotation;
                 if (Math.abs(rotationDelta) > 0.0001) {{
                     var positionBeforeRotation = [
-                        documentRef.textFrames[noteIndex].position[0],
-                        documentRef.textFrames[noteIndex].position[1]
+                        textFrame.position[0],
+                        textFrame.position[1]
                     ];
-                    documentRef.textFrames[noteIndex].rotate(rotationDelta);
-                    documentRef.textFrames[noteIndex].position = positionBeforeRotation;
+                    textFrame.rotate(rotationDelta);
+                    textFrame.position = positionBeforeRotation;
                 }}
                 if (
                     angleDifference(
-                        itemRotation(documentRef.textFrames[noteIndex]),
+                        itemRotation(textFrame),
                         desiredRotations[noteIndex]
                     ) < 0.01
                 ) matchingRotationCount++;
             }}
             if (
                 noteIndex < textContents.length
-                && documentRef.textFrames[noteIndex].contents === textContents[noteIndex]
+                && normalizedText(textFrame.contents) === normalizedText(textContents[noteIndex])
             ) identityContentMatchCount++;
         }}
         var justifications = [];
@@ -869,9 +1030,14 @@ def _build_native_materialization_javascript(
             requestedFontCount,
             assignedFontCount,
             matchingFontCount,
+            matchingFontSizeCount,
+            matchingFillCount,
             missingFonts.join(","),
             matchingTrackingCount,
-            matchingRotationCount
+            matchingRotationCount,
+            recreatedAreaTextCount,
+            matchingAreaTextCount,
+            matchingLeadingCount
         ].join(":");
     }} catch (error) {{
         return "error:" + String(error) + ":line:" + String(error.line || "");
@@ -1360,8 +1526,15 @@ def materialize_native_ai(
         text.native_font_name or ("" if "RKSJ-" in text.font_name else text.font_name)
         for text in dom_ordered_text
     )
+    desired_font_sizes = tuple(text.font_size for text in dom_ordered_text)
+    desired_fills = tuple(_native_fill_spec(text.fill) for text in dom_ordered_text)
     desired_trackings = tuple(text.tracking for text in dom_ordered_text)
     desired_rotations = tuple(text.rotation for text in dom_ordered_text)
+    desired_alignments = tuple(text.alignment for text in dom_ordered_text)
+    desired_area_widths = tuple(text.area_width for text in dom_ordered_text)
+    desired_area_heights = tuple(text.area_height for text in dom_ordered_text)
+    desired_leadings = tuple(text.leading for text in dom_ordered_text)
+    expected_area_text_count = sum(text.is_area_text for text in dom_ordered_text)
 
     destination_path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="py-ai-illustrator-native-") as temp_directory:
@@ -1376,8 +1549,14 @@ def materialize_native_ai(
                     text_notes=text_notes,
                     text_contents=text_contents,
                     desired_font_names=desired_font_names,
+                    desired_font_sizes=desired_font_sizes,
+                    desired_fills=desired_fills,
                     desired_trackings=desired_trackings,
                     desired_rotations=desired_rotations,
+                    desired_alignments=desired_alignments,
+                    desired_area_widths=desired_area_widths,
+                    desired_area_heights=desired_area_heights,
+                    desired_leadings=desired_leadings,
                 ),
                 temp_path,
                 timeout=timeout,
@@ -1403,8 +1582,8 @@ def materialize_native_ai(
             "error": "Illustrator reported success but did not create the native AI file.",
         }
 
-    parts = response.split(":", 14)
-    if len(parts) != 15:
+    parts = response.split(":", 19)
+    if len(parts) != 20:
         return {"status": "failed", "illustrator_response": response}
     (
         _,
@@ -1419,9 +1598,14 @@ def materialize_native_ai(
         requested_fonts,
         assigned_fonts,
         matching_fonts,
+        matching_font_sizes,
+        matching_fills,
         missing_fonts,
         matching_trackings,
         matching_rotations,
+        recreated_area_texts,
+        matching_area_texts,
+        matching_leadings,
     ) = parts
     legacy_text_count = int(legacy_count)
     native_text_count = int(native_count)
@@ -1432,9 +1616,14 @@ def materialize_native_ai(
     requested_font_count = int(requested_fonts)
     assigned_font_count = int(assigned_fonts)
     matching_font_count = int(matching_fonts)
+    matching_font_size_count = int(matching_font_sizes)
+    matching_fill_count = int(matching_fills)
     missing_font_names = missing_fonts.split(",") if missing_fonts else []
     matching_tracking_count = int(matching_trackings)
     matching_rotation_count = int(matching_rotations)
+    recreated_area_text_count = int(recreated_area_texts)
+    matching_area_text_count = int(matching_area_texts)
+    matching_leading_count = int(matching_leadings)
     checks = {
         "legacy_conversion_succeeded": converted == "true",
         "text_frame_count": native_text_count == legacy_text_count,
@@ -1444,8 +1633,13 @@ def materialize_native_ai(
         "text_identity_mapping": identity_content_match_count == legacy_text_count,
         "requested_fonts_available": assigned_font_count == requested_font_count,
         "native_font_names": matching_font_count == requested_font_count,
+        "native_font_sizes": matching_font_size_count == legacy_text_count,
+        "native_text_fills": matching_fill_count == legacy_text_count,
         "native_tracking": matching_tracking_count == legacy_text_count,
         "native_rotation": matching_rotation_count == legacy_text_count,
+        "native_area_text": recreated_area_text_count == expected_area_text_count
+        and matching_area_text_count == expected_area_text_count,
+        "native_leading": matching_leading_count == legacy_text_count,
     }
     return {
         "status": "passed" if all(checks.values()) else "mismatch",
@@ -1459,9 +1653,15 @@ def materialize_native_ai(
         "requested_font_count": requested_font_count,
         "assigned_font_count": assigned_font_count,
         "matching_font_count": matching_font_count,
+        "matching_font_size_count": matching_font_size_count,
+        "matching_fill_count": matching_fill_count,
         "missing_fonts": missing_font_names,
         "matching_tracking_count": matching_tracking_count,
         "matching_rotation_count": matching_rotation_count,
+        "expected_area_text_count": expected_area_text_count,
+        "recreated_area_text_count": recreated_area_text_count,
+        "matching_area_text_count": matching_area_text_count,
+        "matching_leading_count": matching_leading_count,
         "native_justifications": native_justifications,
         "checks": checks,
         "format": inspect_file(destination_path).to_dict(),

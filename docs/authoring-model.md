@@ -71,7 +71,7 @@ layer = price_table.render_layer(x=40, top=300)
 - `RenderedComponent`: componentが生成したpath、text、描画順、寸法
 - `LayerBuilder`: 複数componentを安定ID付きで一つのlayerへ合成
 - `Group`: path、text、compound、clipping、子groupの描画順を保つ編集単位
-- `TextBlock` / `TextStyle`: 折り返し、文字階層、ネイティブ段落揃え、tracking
+- `TextBlock` / `AreaTextBlock` / `TextStyle`: 決定的な行分割、native再流し込み枠、文字階層、段落揃え、tracking、行送り
 - `FontSpec`: AI7 bridge名とIllustratorのPostScript名を分離した書体指定
 - `rectangle_path` / `ellipse_path` / `polyline_path`: domainに依存しない編集可能な図形primitive
 - `AffineTransform` / `RenderedComponent.transformed()`: path、handle、text、nested groupをまとめて配置するrigid transform
@@ -84,6 +84,8 @@ layer = price_table.render_layer(x=40, top=300)
 
 [`examples/packaging_labels.py`](../examples/packaging_labels.py)では、3つの商品variantからラベルを生成し、縦向きside codeと斜めbadgeを配置します。`AffineTransform.rotation()`はpath anchorとBézier handle、text anchorとrotation、nested groupを同じmatrixで変換します。現時点でtextを含むcomponentは、font sizeやstroke widthを曖昧にscaleしないrigid transform（平行移動・回転）に限定し、非一様scaleは明示的に拒否します。
 
+[`examples/editorial_brochure.py`](../examples/editorial_brochure.py)では、導入文、2段本文、引用を4つの`AreaTextBlock`として組み立てます。文章枠は単一のTextFrame identityを保ち、Illustrator上で枠幅を変更すると標準の再流し込みが働きます。
+
 この形なら、今後の商品カード、値札、名刺、図解、カタログページ等も、それぞれの文脈を持つPython componentとして追加できます。低水準IRとAI writerは特定componentを知りません。
 
 ## legacy AIと再編集可能なnative AI
@@ -92,9 +94,9 @@ AI7は公開仕様に基づく往復・検査形式として有用ですが、�
 
 `FontSpec`は`postscript_name`を主たる書体IDとし、表示用の`family` / `style`と、必要な場合だけ`legacy_name`を持ちます。たとえば日本語では、AI7 streamのCP932/RKSJ resource名と、native TextFrameへ設定する`KozGoPr6N-Regular`を同じ指定にまとめます。family名や見た目の近い代替書体で曖昧に解決はしません。`py-ai illustrator-fonts`で現在のIllustratorが持つ正確な名前を検索・検証できます。
 
-`py-ai materialize-native`は入力を一時コピーし、Illustratorの`legacyTextItems.convertToNative()`を使ってnative TextFrameへ変換し、PDF-compatible AIとして別名保存します。変換直後、IRのDOM順と対応する各TextFrameの`note`へ`py-ai-text:` identityを設定し、指定されたPostScript名のfont、tracking、rotationを割り当てます。IDと役割名はnative AIの再オープン後も保持され、font欠落、割り当て不一致、tracking・rotation不一致は`mismatch`として報告されます。これにより、純Pythonの決定的なAI7経路と、Illustrator環境を使う高編集性の現代AI経路を分離します。
+`py-ai materialize-native`は入力を一時コピーし、Illustratorの`legacyTextItems.convertToNative()`を使ってnative TextFrameへ変換し、PDF-compatible AIとして別名保存します。変換直後、IRのDOM順と対応する各TextFrameの`note`へ`py-ai-text:` identityを設定し、font、size、fill、tracking、rotation、leading、paragraph justificationを割り当てます。AreaText指定はpoint textのbaseline anchorから文章枠を再構成します。IDと役割名はnative AIの再オープン後も保持され、属性不一致は`mismatch`として報告されます。
 
-現行`TextBlock`の折り返しは、各行を独立したpoint textとしてrenderします。Illustrator上で幅変更に追従するarea textではありません。Illustrator 30.7.0はarea textをAI8互換保存するとoutline化するため、area text対応はlegacy serializerではなく、modern AI materialization時にDOM上でframeを再構成する課題として扱います。
+`TextBlock`の折り返しは各行を独立したpoint textとしてrenderし、出力を決定的にします。幅変更へ追従させたい文章は`AreaTextBlock`を使います。Illustrator 30.7.0はarea textをAI8互換保存するとoutline化するため、再編集可能なarea textの保証はmodern materialization経路に限定します。
 
 ## 三つの層の責務
 

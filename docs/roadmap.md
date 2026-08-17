@@ -23,11 +23,11 @@
 進捗（2026-08-15）:
 
 - 完了: 依存ゼロの形式判定、最小Python IR、legacy AIサブセットreader/writer、JSON往復、CLI、自動テスト、Illustrator 30.7.0実機適合試験、MITライセンス決定
-- 実証済みsubset: RGB/CMYK、直線/Bézier、native stroke style、compound、clipping、ASCII/CP932 point text、異種itemのstacking order、path ID・名前のAI8再保存保持
-- 意味モデル実装済み: Python `Table`、共通`RenderedComponent` / `LayerBuilder`、`TextBlock`、名札・ポスター・入れ子棚札・KPI chart作例からIRへのdeterministic render
-- native出力実証済み: AI7 `Ta`段落揃えを含むlegacy textをIllustrator経由でnative TextFrameへ変換し、安定ID・役割名をDOM noteへ設定してPDF-compatible AIとして保存
+- 実証済みsubset: RGB/CMYK、直線/Bézier、native stroke style、compound、clipping、ASCII/CP932 point/area text intent、異種itemのstacking order、path ID・名前のAI8再保存保持
+- 意味モデル実装済み: Python `Table`、共通`RenderedComponent` / `LayerBuilder`、`TextBlock` / `AreaTextBlock`、名札・ポスター・入れ子棚札・KPI chart・誌面作例からIRへのdeterministic render
+- native出力実証済み: legacy textをIllustrator経由でnative point/area TextFrameへ変換し、font/size/fill/leading/揃えと安定IDを設定してPDF-compatible AIとして保存
 - 基盤実装済み: legacy元bytes・物理行改行・operator byte spanを保持するlossless source map、resource limit、非重複local patch primitive
-- 未完了: 現代AI fixtureのPrivateData semantic reader、`inkai`比較環境、node-level CSTとtyped patch、area text、CP932以外のtext/image/multiple artboards/non-rigid transform
+- 未完了: 現代AI fixtureのPrivateData semantic reader、`inkai`比較環境、node-level CSTとtyped patch、CP932以外のtext/image/multiple artboards/non-rigid transform
 - 詳細: [Phase 0 の実装状況](phase0-status.md)
 
 ## Phase 1: Reader + IR + inspection CLI
@@ -124,4 +124,4 @@
 
 ## 推奨する次の一手
 
-Phase 0のlegacy縦切り、semantic component合成、入れ子group、native stroke、rigid transform、Illustratorによるnative materializationが成立しました。次はarea textのmodern materialization、画像配置またはmultiple artboardsを含む作例を検討しながら、未知operatorを保持するlossless token/CSTをtyped editへ接続します。
+Phase 0のlegacy縦切り、semantic component合成、入れ子group、native stroke、rigid transform、native AreaTextを含むIllustrator materializationが成立しました。次は画像配置またはmultiple artboardsを含む作例を検討しながら、未知operatorを保持するlossless token/CSTをtyped editへ接続します。

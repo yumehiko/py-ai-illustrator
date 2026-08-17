@@ -2,6 +2,7 @@
 
 from .authoring import (
     AffineTransform,
+    AreaTextBlock,
     FontSpec,
     LayerBuilder,
     RenderedComponent,
@@ -43,6 +44,7 @@ from .model import (
 __all__ = [
     "CmykColor",
     "AffineTransform",
+    "AreaTextBlock",
     "Color",
     "CompoundPath",
     "ControlPoint",

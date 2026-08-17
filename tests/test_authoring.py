@@ -2,6 +2,7 @@ import pytest
 
 from py_ai_illustrator.authoring import (
     AffineTransform,
+    AreaTextBlock,
     FontSpec,
     LayerBuilder,
     RenderedComponent,
@@ -126,6 +127,26 @@ def test_text_block_wraps_and_uses_alignment_anchor() -> None:
     assert rendered.text_frames[1].y == pytest.approx(rendered.text_frames[0].y - 14)
 
 
+def test_area_text_block_compiles_to_one_reflowable_frame() -> None:
+    rendered = AreaTextBlock(
+        id="article.body",
+        name="Article body",
+        text="A paragraph that Illustrator can reflow when its frame changes.",
+        width=180,
+        height=96,
+        alignment="left",
+        style=TextStyle(font_size=10, line_height_ratio=1.6),
+    ).render(x=40, top=220)
+
+    assert (rendered.width, rendered.height) == (180, 96)
+    assert len(rendered.text_frames) == 1
+    frame = rendered.text_frames[0]
+    assert frame.is_area_text
+    assert (frame.x, frame.y, frame.area_width, frame.area_height) == (40, 220, 180, 96)
+    assert frame.leading == 16
+    assert frame.text.startswith("A paragraph")
+
+
 def test_font_spec_keeps_legacy_encoding_and_native_font_separate() -> None:
     font = FontSpec(
         postscript_name="KozGoPr6N-Regular",
@@ -170,9 +191,7 @@ def test_rigid_component_transform_rotates_paths_text_and_dimensions() -> None:
         wrap=False,
         style=TextStyle(rotation=5),
     ).render(x=10, top=30)
-    panel = rectangle_path(
-        "panel", x=0, top=50, width=100, height=50, fill=Color(1, 1, 1)
-    )
+    panel = rectangle_path("panel", x=0, top=50, width=100, height=50, fill=Color(1, 1, 1))
     component = RenderedComponent(
         width=100,
         height=50,

@@ -46,9 +46,7 @@ def test_conference_badges_are_independent_semantic_components() -> None:
         "STAFF",
     }
     assert all(
-        text.alignment == "right"
-        for text in layer.text_frames
-        if text.id.endswith("number.line-0")
+        text.alignment == "right" for text in layer.text_frames if text.id.endswith("number.line-0")
     )
 
 
@@ -60,9 +58,7 @@ def test_event_poster_preserves_hierarchy_and_wrapped_japanese() -> None:
     assert document.metadata["component"] == "EventPoster"
     assert len(layer.paths) == 4
     assert any(text.text == "創造とコード" for text in layer.text_frames)
-    statement = [
-        text for text in layer.text_frames if text.id.startswith("poster.statement.line-")
-    ]
+    statement = [text for text in layer.text_frames if text.id.startswith("poster.statement.line-")]
     assert len(statement) > 1
     assert "".join(text.text for text in statement) == (
         "データを座標へ置き換えるだけではなく、文脈と規則を再利用できる形にします。"
@@ -154,6 +150,31 @@ def test_packaging_labels_preserve_rotated_editable_variants() -> None:
     assert all(len(badge.paths) == 1 for badge in badges)
 
 
+def test_editorial_brochure_preserves_reflowable_article_frames() -> None:
+    example = Path(__file__).parents[1] / "examples" / "editorial-brochure.ai"
+    document = load_ai7(example)
+    layer = document.layers[0]
+
+    area_frames = [text for text in layer.text_frames if text.is_area_text]
+
+    assert document.metadata["text_model"] == "native-area-text"
+    assert len(layer.paths) == 4
+    assert len(layer.text_frames) == 7
+    assert [text.id for text in area_frames] == [
+        "brochure.deck",
+        "brochure.body-left",
+        "brochure.body-right",
+        "brochure.pull-quote",
+    ]
+    assert [(text.area_width, text.area_height) for text in area_frames] == [
+        (390, 66),
+        (222, 310),
+        (222, 310),
+        (180, 80),
+    ]
+    assert all(text.leading is not None for text in area_frames)
+
+
 def test_materialized_examples_are_pdf_compatible_native_ai() -> None:
     examples = Path(__file__).parents[1] / "examples"
     native_examples = (
@@ -164,6 +185,7 @@ def test_materialized_examples_are_pdf_compatible_native_ai() -> None:
         "retail-price-tags.native.ai",
         "quarterly-kpi-report.native.ai",
         "packaging-labels.native.ai",
+        "editorial-brochure.native.ai",
     )
 
     for name in native_examples:

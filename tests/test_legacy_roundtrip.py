@@ -564,6 +564,37 @@ def test_point_text_roundtrip_preserves_editable_text_semantics() -> None:
     assert loads_ai7(serialized).to_dict() == original.to_dict()
 
 
+def test_area_text_intent_roundtrips_through_legacy_bridge_metadata() -> None:
+    original = Document(
+        width=320,
+        height=240,
+        layers=[
+            Layer(
+                id="article",
+                name="Article",
+                text_frames=[
+                    TextFrame(
+                        id="body",
+                        text="One paragraph.\nAnother paragraph.",
+                        x=40,
+                        y=200,
+                        font_size=11,
+                        area_width=180,
+                        area_height=96,
+                        leading=15.4,
+                    )
+                ],
+            )
+        ],
+    )
+
+    serialized = dumps_ai7(original)
+
+    assert b"%%py-ai-text-area: 180 96" in serialized
+    assert b"%%py-ai-text-leading: 15.4" in serialized
+    assert loads_ai7(serialized).to_dict() == original.to_dict()
+
+
 def test_reads_illustrator_native_octal_text_body() -> None:
     source = rb"""%!PS-Adobe-3.0
 %%BoundingBox: 0 0 320 240
@@ -596,7 +627,7 @@ LB
 
 
 def test_reads_text_rotation_from_native_text_matrix() -> None:
-    source = br"""%!PS-Adobe-3.0
+    source = rb"""%!PS-Adobe-3.0
 %%BoundingBox: 0 0 200 200
 %AI5_FileFormat 3.0
 %AI5_BeginLayer

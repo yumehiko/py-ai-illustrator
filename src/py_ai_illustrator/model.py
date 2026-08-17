@@ -162,7 +162,7 @@ class Path:
 
 @dataclass(slots=True)
 class TextFrame:
-    """Editable point text positioned in document coordinates.
+    """Editable point or area text positioned in document coordinates.
 
     ``font_name`` is the name written to the legacy AI stream.  Japanese AI7
     text may need a composite RKSJ name there, so ``native_font_name`` can keep
@@ -179,6 +179,9 @@ class TextFrame:
     native_font_name: str | None = None
     tracking: float = 0.0
     rotation: float = 0.0
+    area_width: float | None = None
+    area_height: float | None = None
+    leading: float | None = None
     fill: ProcessColor = field(default_factory=lambda: Color(0.0, 0.0, 0.0))
     alignment: str = "left"
     name: str | None = None
@@ -191,8 +194,20 @@ class TextFrame:
             raise ValueError("tracking must be finite")
         if not math.isfinite(self.rotation):
             raise ValueError("rotation must be finite")
+        if (self.area_width is None) != (self.area_height is None):
+            raise ValueError("area_width and area_height must be specified together")
+        if self.area_width is not None and (
+            self.area_width <= 0 or self.area_height is None or self.area_height <= 0
+        ):
+            raise ValueError("Area text dimensions must be positive")
+        if self.leading is not None and self.leading <= 0:
+            raise ValueError("leading must be positive")
         if self.alignment not in {"left", "center", "right"}:
             raise ValueError("alignment must be 'left', 'center', or 'right'")
+
+    @property
+    def is_area_text(self) -> bool:
+        return self.area_width is not None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> TextFrame:
@@ -208,6 +223,11 @@ class TextFrame:
             ),
             tracking=float(data.get("tracking", 0.0)),
             rotation=float(data.get("rotation", 0.0)),
+            area_width=(float(data["area_width"]) if data.get("area_width") is not None else None),
+            area_height=(
+                float(data["area_height"]) if data.get("area_height") is not None else None
+            ),
+            leading=(float(data["leading"]) if data.get("leading") is not None else None),
             fill=_process_color_from_dict(
                 data.get("fill", {"red": 0.0, "green": 0.0, "blue": 0.0})
             ),
