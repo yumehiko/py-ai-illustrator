@@ -614,13 +614,17 @@ def _loads_ai7_source(
     title_seen = False
     layers: list[Layer] = []
     current_layer: Layer | None = None
+    current_layer_source_start: int | None = None
+    current_layer_source_end: int | None = None
     current_compound_paths: list[Path] | None = None
     current_compound_id: str | None = None
     current_compound_name: str | None = None
+    current_compound_source_start: int | None = None
     current_clipping_paths: list[Path] | None = None
     current_clipping_path: Path | None = None
     current_clipping_id: str | None = None
     current_clipping_name: str | None = None
+    current_clipping_source_start: int | None = None
     clipping_mask_closed: bool | None = None
     current_points: list[Point] = []
     fill: ProcessColor | None = None
@@ -635,11 +639,14 @@ def _loads_ai7_source(
     pending_name: str | None = None
     pending_compound_id: str | None = None
     pending_compound_name: str | None = None
+    pending_compound_source_start: int | None = None
     pending_clipping_id: str | None = None
     pending_clipping_name: str | None = None
+    pending_clipping_source_start: int | None = None
     pending_group_id: str | None = None
     pending_group_name: str | None = None
-    group_stack: list[tuple[Group, bool]] = []
+    pending_group_source_start: int | None = None
+    group_stack: list[tuple[Group, bool, int]] = []
     group_counter = 0
     polarity = "positive"
     path_counter = 0
@@ -721,7 +728,11 @@ def _loads_ai7_source(
     def append_item(
         kind: str,
         item: Path | TextFrame | LinkedImage | CompoundPath | ClippingGroup | Group,
+        *,
+        source_start: int | None = None,
+        source_end: int | None = None,
     ) -> None:
+        nonlocal current_layer_source_start, current_layer_source_end
         container = active_container()
         if isinstance(item, Path):
             container.paths.append(item)
@@ -736,6 +747,10 @@ def _loads_ai7_source(
         else:
             container.groups.append(item)
         container.item_order.append(LayerItemRef(kind, item.id))
+        if isinstance(container, Layer) and source_start is not None and source_end is not None:
+            if current_layer_source_start is None:
+                current_layer_source_start = source_start
+            current_layer_source_end = source_end
 
     for token in source.lines:
         line = source.line_content(token).decode("latin-1").strip()
@@ -759,7 +774,17 @@ def _loads_ai7_source(
                 ).decode("utf-8")
                 candidate = json.loads(decoded)
                 if isinstance(candidate, dict):
-                    artboards.append(Artboard.from_dict(candidate))
+                    artboard = Artboard.from_dict(candidate)
+                    artboards.append(artboard)
+                    if origins is not None:
+                        origins.append(
+                            LegacyNodeOrigin(
+                                node_type="artboard",
+                                node_id=artboard.id,
+                                start=token.start,
+                                end=token.end,
+                            )
+                        )
             except (ValueError, UnicodeError, json.JSONDecodeError):
                 pass
             continue
@@ -797,6 +822,8 @@ def _loads_ai7_source(
             continue
         if line == "%AI5_BeginLayer":
             current_layer = Layer(id=f"layer-{len(layers) + 1}", name=f"Layer {len(layers) + 1}")
+            current_layer_source_start = token.start
+            current_layer_source_end = token.end
             continue
         if line.startswith("%%py-ai-layer-id: (") and line.endswith(")") and current_layer:
             current_layer.id = _unescape_postscript_string(line[19:-1])
@@ -812,24 +839,40 @@ def _loads_ai7_source(
             continue
         if line == "%AI5_EndLayer" and current_layer is not None:
             group_stack.clear()
+            current_layer_source_end = token.end
+            if origins is not None and current_layer_source_start is not None:
+                origins.append(
+                    LegacyNodeOrigin(
+                        node_type="layer",
+                        node_id=current_layer.id,
+                        start=current_layer_source_start,
+                        end=current_layer_source_end,
+                    )
+                )
             layers.append(current_layer)
             current_layer = None
+            current_layer_source_start = None
+            current_layer_source_end = None
             continue
         if line.startswith("%%py-ai-group-id: (") and line.endswith(")"):
+            pending_group_source_start = pending_group_source_start or token.start
             value = line.removeprefix("%%py-ai-group-id: (")[:-1]
             pending_group_id = _unescape_postscript_string(value)
             continue
         if line.startswith("%%py-ai-group-id-utf8: "):
+            pending_group_source_start = pending_group_source_start or token.start
             with suppress(ValueError, UnicodeError):
                 pending_group_id = base64.b64decode(
                     line.removeprefix("%%py-ai-group-id-utf8: "), validate=True
                 ).decode("utf-8")
             continue
         if line.startswith("%%py-ai-group-name: (") and line.endswith(")"):
+            pending_group_source_start = pending_group_source_start or token.start
             value = line.removeprefix("%%py-ai-group-name: (")[:-1]
             pending_group_name = _unescape_postscript_string(value)
             continue
         if line.startswith("%%py-ai-group-name-utf8: "):
+            pending_group_source_start = pending_group_source_start or token.start
             with suppress(ValueError, UnicodeError):
                 pending_group_name = base64.b64decode(
                     line.removeprefix("%%py-ai-group-name-utf8: "), validate=True
@@ -845,26 +888,39 @@ def _loads_ai7_source(
                         name=pending_group_name,
                     ),
                     explicit,
+                    pending_group_source_start or token.start,
                 )
             )
             pending_group_id = None
             pending_group_name = None
+            pending_group_source_start = None
             continue
         if line == "U" and group_stack:
-            group, explicit = group_stack.pop()
+            group, explicit, group_source_start = group_stack.pop()
             children = group.ordered_items()
             if not explicit and len(children) == 1:
                 child = children[0]
                 kind = group.item_order[0].kind
-                append_item(kind, child)
+                append_item(kind, child, source_start=group_source_start, source_end=token.end)
             elif children or explicit:
-                append_item("group", group)
+                append_item("group", group, source_start=group_source_start, source_end=token.end)
+                if origins is not None:
+                    origins.append(
+                        LegacyNodeOrigin(
+                            node_type="group",
+                            node_id=group.id,
+                            start=group_source_start,
+                            end=token.end,
+                        )
+                    )
             continue
         if line.startswith("%%py-ai-compound-id: (") and line.endswith(")"):
+            pending_compound_source_start = pending_compound_source_start or token.start
             value = line.removeprefix("%%py-ai-compound-id: (")[:-1]
             pending_compound_id = _unescape_postscript_string(value)
             continue
         if line.startswith("%%py-ai-compound-name: (") and line.endswith(")"):
+            pending_compound_source_start = pending_compound_source_start or token.start
             value = line.removeprefix("%%py-ai-compound-name: (")[:-1]
             pending_compound_name = _unescape_postscript_string(value)
             continue
@@ -872,8 +928,10 @@ def _loads_ai7_source(
             current_compound_paths = []
             current_compound_id = pending_compound_id or f"compound-{len(layers) + 1}"
             current_compound_name = pending_compound_name
+            current_compound_source_start = pending_compound_source_start or token.start
             pending_compound_id = None
             pending_compound_name = None
+            pending_compound_source_start = None
             continue
         if line == "*U" and current_compound_paths is not None:
             if len(current_compound_paths) >= 2:
@@ -882,19 +940,36 @@ def _loads_ai7_source(
                     name=current_compound_name,
                     paths=current_compound_paths,
                 )
-                append_item("compound_path", compound)
+                append_item(
+                    "compound_path",
+                    compound,
+                    source_start=current_compound_source_start,
+                    source_end=token.end,
+                )
+                if origins is not None and current_compound_source_start is not None:
+                    origins.append(
+                        LegacyNodeOrigin(
+                            node_type="compound_path",
+                            node_id=compound.id,
+                            start=current_compound_source_start,
+                            end=token.end,
+                        )
+                    )
             else:
                 for path in current_compound_paths:
                     append_item("path", path)
             current_compound_paths = None
             current_compound_id = None
             current_compound_name = None
+            current_compound_source_start = None
             continue
         if line.startswith("%%py-ai-clipping-id: (") and line.endswith(")"):
+            pending_clipping_source_start = pending_clipping_source_start or token.start
             value = line.removeprefix("%%py-ai-clipping-id: (")[:-1]
             pending_clipping_id = _unescape_postscript_string(value)
             continue
         if line.startswith("%%py-ai-clipping-name: (") and line.endswith(")"):
+            pending_clipping_source_start = pending_clipping_source_start or token.start
             value = line.removeprefix("%%py-ai-clipping-name: (")[:-1]
             pending_clipping_name = _unescape_postscript_string(value)
             continue
@@ -903,9 +978,11 @@ def _loads_ai7_source(
             current_clipping_path = None
             current_clipping_id = pending_clipping_id or f"clipping-{len(layers) + 1}"
             current_clipping_name = pending_clipping_name
+            current_clipping_source_start = pending_clipping_source_start or token.start
             clipping_mask_closed = None
             pending_clipping_id = None
             pending_clipping_name = None
+            pending_clipping_source_start = None
             continue
         if line == "Q" and current_clipping_paths is not None:
             if current_clipping_path is not None and current_clipping_paths:
@@ -915,7 +992,21 @@ def _loads_ai7_source(
                     clipping_path=current_clipping_path,
                     paths=current_clipping_paths,
                 )
-                append_item("clipping_group", group)
+                append_item(
+                    "clipping_group",
+                    group,
+                    source_start=current_clipping_source_start,
+                    source_end=token.end,
+                )
+                if origins is not None and current_clipping_source_start is not None:
+                    origins.append(
+                        LegacyNodeOrigin(
+                            node_type="clipping_group",
+                            node_id=group.id,
+                            start=current_clipping_source_start,
+                            end=token.end,
+                        )
+                    )
             else:
                 if current_clipping_path is not None:
                     append_item("path", current_clipping_path)
@@ -925,6 +1016,7 @@ def _loads_ai7_source(
             current_clipping_path = None
             current_clipping_id = None
             current_clipping_name = None
+            current_clipping_source_start = None
             clipping_mask_closed = None
             continue
         if line.startswith("%AI7_Tag: (") and line.endswith(")"):
@@ -1083,7 +1175,12 @@ def _loads_ai7_source(
                     fill=fill or Color(0.0, 0.0, 0.0),
                     alignment=pending_text_alignment or text_alignment,
                 )
-                append_item("text", text_frame)
+                append_item(
+                    "text",
+                    text_frame,
+                    source_start=current_text_source_start or token.start,
+                    source_end=token.end,
+                )
                 if origins is not None:
                     text_fields = tuple(current_text_content_origins)
                     if len(text_fields) == 1:
@@ -1321,7 +1418,12 @@ def _loads_ai7_source(
             )
             if pending_linked_image is not None and not is_clipping_mask:
                 linked_image = pending_linked_image
-                append_item("image", linked_image)
+                append_item(
+                    "image",
+                    linked_image,
+                    source_start=pending_linked_image_source_start or token.start,
+                    source_end=token.end,
+                )
                 if origins is not None and pending_linked_image_metadata_origin is not None:
                     origins.append(
                         LegacyNodeOrigin(
@@ -1363,7 +1465,12 @@ def _loads_ai7_source(
                 elif current_clipping_paths is not None:
                     current_clipping_paths.append(parsed_path)
                 else:
-                    append_item("path", parsed_path)
+                    append_item(
+                        "path",
+                        parsed_path,
+                        source_start=current_path_source_start or token.start,
+                        source_end=token.end,
+                    )
             current_points = []
             current_path_source_start = None
             current_geometry_origins = []
@@ -1372,6 +1479,15 @@ def _loads_ai7_source(
             polarity = "positive"
 
     if current_layer is not None:
+        if origins is not None and current_layer_source_start is not None:
+            origins.append(
+                LegacyNodeOrigin(
+                    node_type="layer",
+                    node_id=current_layer.id,
+                    start=current_layer_source_start,
+                    end=current_layer_source_end or len(data),
+                )
+            )
         layers.append(current_layer)
     if width is None or height is None:
         raise UnsupportedLegacyFeature("A numeric %%BoundingBox is required in Phase 0")
@@ -1413,6 +1529,17 @@ def _loads_ai7_source(
                     fields=fields,
                 )
             )
+        origins.append(
+            LegacyNodeOrigin(
+                node_type="document",
+                node_id="document",
+                start=0,
+                end=len(data),
+            )
+        )
+        origins.sort(
+            key=lambda origin: (origin.start, -origin.end, origin.node_type, origin.node_id)
+        )
     return Document(
         width=width,
         height=height,

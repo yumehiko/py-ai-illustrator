@@ -22,8 +22,11 @@ from py_ai_illustrator.legacy import (
 )
 from py_ai_illustrator.lossless import SourceReplacement
 from py_ai_illustrator.model import (
+    Artboard,
+    ClippingGroup,
     CmykColor,
     Color,
+    CompoundPath,
     Document,
     Group,
     Layer,
@@ -134,6 +137,78 @@ def test_reader_returns_source_coverage_and_recognized_inventory() -> None:
     assert origin.node_type == "path"
     assert origin.field("fill") is not None
     assert origin.start < origin.end
+
+
+def test_reader_connects_every_ir_node_kind_to_a_source_span() -> None:
+    group_path = AIPath(id="group-path", points=[Point(5, 5), Point(15, 5)])
+    group = Group(id="group", paths=[group_path])
+    compound = CompoundPath(
+        id="compound",
+        paths=[
+            AIPath(id="compound-a", points=[Point(20, 20), Point(30, 20)]),
+            AIPath(id="compound-b", points=[Point(20, 30), Point(30, 30)]),
+        ],
+    )
+    clipping = ClippingGroup(
+        id="clipping",
+        clipping_path=AIPath(
+            id="mask",
+            points=[Point(40, 40), Point(60, 40), Point(60, 60), Point(40, 60)],
+        ),
+        paths=[AIPath(id="clipped", points=[Point(45, 45), Point(55, 55)])],
+    )
+    image = LinkedImage(
+        id="image",
+        source="Links/image.png",
+        x=65,
+        y=70,
+        width=20,
+        height=20,
+    )
+    document = Document(
+        width=100,
+        height=80,
+        artboards=[Artboard(id="board", name="Board", left=0, top=80, width=100, height=80)],
+        layers=[
+            Layer(
+                id="layer",
+                name="Layer",
+                groups=[group],
+                compound_paths=[compound],
+                clipping_groups=[clipping],
+                text_frames=[TextFrame(id="text", text="Text", x=10, y=70)],
+                linked_images=[image],
+            )
+        ],
+    )
+
+    data = dumps_ai7(document)
+    result = reads_ai7(data)
+    origin_keys = {(origin.node_type, origin.node_id) for origin in result.origins}
+
+    assert origin_keys >= {
+        ("document", "document"),
+        ("artboard", "board"),
+        ("layer", "layer"),
+        ("group", "group"),
+        ("compound_path", "compound"),
+        ("clipping_group", "clipping"),
+        ("path", "group-path"),
+        ("path", "compound-a"),
+        ("path", "compound-b"),
+        ("path", "mask"),
+        ("path", "clipped"),
+        ("text", "text"),
+        ("linked_image", "image"),
+    }
+    for origin in result.origins:
+        assert data[origin.start : origin.end]
+
+    by_key = {(origin.node_type, origin.node_id): origin for origin in result.origins}
+    layer_origin = by_key[("layer", "layer")]
+    for node_type, node_id in origin_keys - {("document", "document"), ("artboard", "board")}:
+        origin = by_key[(node_type, node_id)]
+        assert layer_origin.start <= origin.start < origin.end <= layer_origin.end
 
 
 def test_unknown_operator_and_resource_are_source_located_and_make_result_partial() -> None:
