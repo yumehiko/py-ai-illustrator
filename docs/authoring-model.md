@@ -68,13 +68,14 @@ layer = price_table.render_layer(x=40, top=300)
 
 表は最初のstress testであり、authoring modelの中心ではありません。現在は次の共通境界を使います。
 
-- `RenderedComponent`: componentが生成したpath、text、描画順、寸法
+- `RenderedComponent`: componentが生成したpath、text、linked image、描画順、寸法
 - `LayerBuilder`: 複数componentを安定ID付きで一つのlayerへ合成
 - `Group`: path、text、compound、clipping、子groupの描画順を保つ編集単位
 - `TextBlock` / `AreaTextBlock` / `TextStyle`: 決定的な行分割、native再流し込み枠、文字階層、段落揃え、tracking、行送り
 - `FontSpec`: AI7 bridge名とIllustratorのPostScript名を分離した書体指定
 - `rectangle_path` / `ellipse_path` / `polyline_path`: domainに依存しない編集可能な図形primitive
 - `AffineTransform` / `RenderedComponent.transformed()`: path、handle、text、nested groupをまとめて配置するrigid transform
+- `LinkedImage`: 同一出力先の`Links/`へ収集されるPNG/JPEGの外部参照と配置寸法
 
 [`examples/conference_badges.py`](../examples/conference_badges.py)では、`Attendee`とrole variantから4枚の`ConferenceBadge`を生成します。[`examples/event_poster.py`](../examples/event_poster.py)では、同じprimitiveから日本語の告知ポスターを生成します。前者は反復・variant・識別番号、後者は文字階層・折り返し・装飾図形が主題です。いずれも表のrow/column modelへ押し込めていません。
 
@@ -88,6 +89,8 @@ layer = price_table.render_layer(x=40, top=300)
 
 [`examples/campaign_variants.py`](../examples/campaign_variants.py)では、同じキャンペーン内容をSquare・Portrait・Bannerへ展開します。`Artboard`はdocument内の名前付き出力矩形、各`CampaignVariant`は独立groupです。legacy bridgeでは全variantを一つのcomposite canvasへ置き、modern materializationで3つのnative Artboardへ再構成します。
 
+[`examples/product_catalog.py`](../examples/product_catalog.py)では、写真を`LinkedImage`、見出しとラベルをpoint text、説明をAreaText、背景・badge・CTAをvector pathとして合成します。出力時はAIの隣に`Links/`を作り、同一内容だけを再利用します。Illustrator成果物では埋め込み画像へ変えず、外部差し替え可能なlinked `PlacedItem`を保持します。
+
 この形なら、今後の商品カード、値札、名刺、図解、カタログページ等も、それぞれの文脈を持つPython componentとして追加できます。低水準IRとAI writerは特定componentを知りません。
 
 ## legacy AIと再編集可能なnative AI
@@ -96,7 +99,7 @@ AI7は公開仕様に基づく往復・検査形式として有用ですが、�
 
 `FontSpec`は`postscript_name`を主たる書体IDとし、表示用の`family` / `style`と、必要な場合だけ`legacy_name`を持ちます。たとえば日本語では、AI7 streamのCP932/RKSJ resource名と、native TextFrameへ設定する`KozGoPr6N-Regular`を同じ指定にまとめます。family名や見た目の近い代替書体で曖昧に解決はしません。`py-ai illustrator-fonts`で現在のIllustratorが持つ正確な名前を検索・検証できます。
 
-`py-ai materialize-native`は入力を一時コピーし、Illustratorの`legacyTextItems.convertToNative()`を使ってnative TextFrameへ変換し、PDF-compatible AIとして別名保存します。変換直後、IRのDOM順と対応する各TextFrameの`note`へ`py-ai-text:` identityを設定し、font、size、fill、tracking、rotation、leading、paragraph justificationを割り当てます。AreaText指定はpoint textのbaseline anchorから文章枠を再構成し、複数Artboard指定はcomposite canvas基準の矩形と名前からnative Artboard collectionを再構成します。属性不一致は`mismatch`として報告されます。
+`py-ai materialize-native`は入力を一時コピーし、Illustratorの`legacyTextItems.convertToNative()`を使ってnative TextFrameへ変換し、PDF-compatible AIとして別名保存します。変換直後、IRのDOM順と対応する各TextFrameの`note`へ`py-ai-text:` identityを設定し、font、size、fill、tracking、rotation、leading、paragraph justificationを割り当てます。AreaText指定はpoint textのbaseline anchorから文章枠を再構成し、複数Artboard指定はcomposite canvas基準の矩形と名前からnative Artboard collectionを再構成します。linked image指定はAI7上のplaceholderを同じ描画位置の`PlacedItem`へ置換し、`Links/`への外部参照を維持します。属性不一致は`mismatch`として報告されます。
 
 `TextBlock`の折り返しは各行を独立したpoint textとしてrenderし、出力を決定的にします。幅変更へ追従させたい文章は`AreaTextBlock`を使います。Illustrator 30.7.0はarea textをAI8互換保存するとoutline化するため、再編集可能なarea textの保証はmodern materialization経路に限定します。
 

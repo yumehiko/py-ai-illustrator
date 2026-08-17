@@ -60,7 +60,7 @@ def _export(args: argparse.Namespace) -> int:
         if destination is None:
             raise ValueError("--output is required when writing binary/file output")
         data = json.loads(source.read_text(encoding="utf-8"))
-        dump_ai7(Document.from_dict(data), destination)
+        dump_ai7(Document.from_dict(data), destination, source_base=source.parent)
         return 0
     raise ValueError(f"Unsupported target: {args.to}")
 

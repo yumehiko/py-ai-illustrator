@@ -65,13 +65,15 @@ uv run py-ai test-illustrator examples/packaging-labels.ai
 ```bash
 uv run py-ai materialize-native examples/styled-table.ai \
   -o examples/styled-table.native.ai
+uv run py-ai materialize-native examples/product-catalog.ai \
+  -o examples/product-catalog.native.ai
 uv run py-ai test-illustrator examples/styled-table.native.ai
 uv run py-ai test-illustrator examples/retail-price-tags.native.ai
 uv run py-ai test-illustrator examples/quarterly-kpi-report.native.ai
 uv run py-ai test-illustrator examples/packaging-labels.native.ai
 ```
 
-`materialize-native`はAI7の`Ta`段落属性を含むlegacy textを`convertToNative()`で現代TextFrameへ変換します。変換後は再帰的なIllustrator DOM順に基づき、各TextFrameの`note`へ`py-ai-text:` identity（安定ID・役割名）を設定し、`FontSpec.postscript_name`のfont、`TextStyle.tracking`、rotationを割り当てます。指定fontが見つからない場合、割り当て後のfont名、tracking、rotationが一致しない場合は`mismatch`にします。出力はPDF-compatible AIで、既存出力の上書きを拒否します。
+`materialize-native`はAI7の`Ta`段落属性を含むlegacy textを`convertToNative()`で現代TextFrameへ変換します。変換後は再帰的なIllustrator DOM順に基づき、各TextFrameの`note`へ`py-ai-text:` identity（安定ID・役割名）を設定し、`FontSpec.postscript_name`のfont、`TextStyle.tracking`、rotationを割り当てます。linked image placeholderは同じ親・描画順の`PlacedItem`へ置換し、成果物横の`Links/`を参照したまま保存します。指定fontやlinkが見つからない場合、割り当て後の属性が一致しない場合は成功扱いにしません。出力はPDF-compatible AIで、既存出力の上書きを拒否します。
 
 rotationを含むlegacy AIをIllustratorでAI8互換再保存する経路では、一部textがoutlineへ変換され、text/path/group数の完全往復は成立しませんでした。回転textの保証対象はnative materialization経路です。`packaging-labels.native.ai`では保存・再オープン後も全20 TextFramesがnativeのまま残り、5件の回転角を保持します。
 
@@ -98,6 +100,7 @@ uv run py-ai test-illustrator examples/rectangle.ai \
 - 検査対象は`DONOTSAVECHANGES`で閉じる。
 - 逆方向試験は新規ドキュメントを作り、指定した一時出力だけへ保存する。
 - native化は入力の一時コピーだけを開き、明示した新規出力へ保存する。
+- linked assetは`Links/`へcopy/reuseし、同名別内容の既存ファイルを上書きしない。
 - `--ai-output`が既存ファイルを指す場合は上書きしない。
 - Illustratorが応答しない場合はタイムアウトし、互換性失敗ではなく`environment-unavailable`を返す。
 
@@ -155,6 +158,7 @@ AI8互換のlegacy再保存ではfont名の置換やparagraph alignmentの正規
 | `examples/packaging-labels.ai` | 1 layer / 5 groups / 14 paths / 20 point texts | rigid transform、90度side code、-12度badge |
 | `examples/editorial-brochure.ai` | 1 layer / 4 paths / 7 text intents | native化後に4 AreaText、2段本文、導入、中央揃え引用 |
 | `examples/campaign-variants.ai` | 1 layer / 3 groups / 9 paths / 19 point texts | composite canvas上のSquare・Portrait・Banner variant |
+| `examples/product-catalog.ai` | 1 layer / 3 paths / 5 texts / 1 image placeholder | linked image・point/area text・vectorの混在stacking |
 
 native materializationも同じ環境で確認済みです。
 
@@ -171,6 +175,7 @@ native materializationも同じ環境で確認済みです。
 | `packaging-labels.native.ai` | 20 legacy → 20 native TextFrames | 5 groups、90度side code、-12度badge、font・tracking・IDを保持 |
 | `editorial-brochure.native.ai` | 7 legacy → 7 native TextFrames | 4 AreaText、枠寸法、font/size/fill/leading、揃え、IDを保持 |
 | `campaign-variants.native.ai` | 19 legacy → 19 native TextFrames | 3 named Artboards、3 groups、font/size/fill/揃え/IDを保持 |
+| `product-catalog.native.ai` | 5 legacy → 5 native TextFrames、1 linked image | `PlacedItem`、link存在、300×252 pt、point/AreaText、IDを保持 |
 
 逆方向も同じ環境で確認済みです。
 

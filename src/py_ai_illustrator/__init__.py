@@ -1,5 +1,6 @@
 """Python tools for inspecting and translating Adobe Illustrator files."""
 
+from .assets import PackagedLink, iter_linked_images, package_linked_images
 from .authoring import (
     AffineTransform,
     AreaTextBlock,
@@ -15,6 +16,7 @@ from .authoring import (
     polyline_path,
     rectangle_path,
     transform_group,
+    transform_image,
     transform_path,
     transform_text,
 )
@@ -37,6 +39,7 @@ from .model import (
     Group,
     Layer,
     LayerItemRef,
+    LinkedImage,
     Path,
     Point,
     TextFrame,
@@ -59,9 +62,11 @@ __all__ = [
     "Layer",
     "LayerBuilder",
     "LayerItemRef",
+    "LinkedImage",
     "LegacyLineToken",
     "LegacySource",
     "Path",
+    "PackagedLink",
     "Point",
     "RenderedComponent",
     "TextFrame",
@@ -74,9 +79,12 @@ __all__ = [
     "TableStyle",
     "ellipse_path",
     "inspect_file",
+    "iter_linked_images",
+    "package_linked_images",
     "polyline_path",
     "rectangle_path",
     "transform_group",
+    "transform_image",
     "transform_path",
     "transform_text",
     "tokenize_legacy",

@@ -17,6 +17,7 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 - 表・名札・ポスター・棚札を同じ境界で合成する`RenderedComponent` / `LayerBuilder`
 - 意味的な文字ブロック、再利用可能な文字style、矩形・Bézier楕円・polylineのauthoring primitives
 - rigid affine transformによるpath・Bézier handle・text・nested groupの再配置とtext rotation
+- PNG/JPEGを`Links/`へ安全にpackageし、Illustratorのlinked `PlacedItem`へ復元する画像IR
 - AI7のlegacy textを現代Illustratorの編集可能なTextFrameへ変換するnative materialization
 - 未知行や非UTF-8 byteを変更せず、物理行のbyte spanを索引化するlossless source prototype
 - 公開仕様に沿った Illustrator 7 互換サブセットと JSON IR の往復変換
@@ -47,6 +48,8 @@ JSONはIllustratorファイルを作るための唯一の記述言語ではあ�
 
 [examples/campaign_variants.py](examples/campaign_variants.py) は共通キャンペーンをSquare・Portrait・Bannerの3サイズへ展開します。各variantを独立group、各出力領域を名前付きArtboardとして保持し、native AIのPDF-compatible部分も3ページになります。
 
+[examples/product_catalog.py](examples/product_catalog.py) は、リンク画像、ポイントテキスト、再流し込み可能なエリアテキスト、ベクター図形を一枚の商品カードへ合成します。画像は生成AIと同じ場所の`Links/`に置かれ、native AIでも埋め込まず`PlacedItem`として保持されます。
+
 ```bash
 uv run python examples/styled_table.py
 uv run py-ai test-illustrator examples/styled-table.ai
@@ -60,12 +63,15 @@ uv run python examples/quarterly_kpi_report.py
 uv run python examples/packaging_labels.py
 uv run python examples/editorial_brochure.py
 uv run python examples/campaign_variants.py
+uv run python examples/product_catalog.py
 
 # Illustratorを使い、legacy textを編集可能なnative TextFrameへ変換
 uv run py-ai illustrator-fonts --query "小塚ゴシック" \
   --require KozGoPr6N-Regular
 uv run py-ai materialize-native examples/styled-table.ai \
   -o examples/styled-table.native.ai
+uv run py-ai materialize-native examples/product-catalog.ai \
+  -o examples/product-catalog.native.ai
 ```
 
 ## セットアップ
@@ -151,6 +157,7 @@ uv run py-ai test-illustrator examples/quarterly-kpi-report.native.ai
 uv run py-ai test-illustrator examples/packaging-labels.native.ai
 uv run py-ai test-illustrator examples/editorial-brochure.native.ai
 uv run py-ai test-illustrator examples/campaign-variants.native.ai
+uv run py-ai test-illustrator examples/product-catalog.native.ai
 ```
 
 同梱fixtureをIllustratorで開く方向に加え、Illustrator自身が作成・AI8保存したfixtureをPython IRへ読む方向も確認済みです。layer/path/anchor、開閉、塗り・線、Bézier方向点、RGB/CMYK属性、point textを照合します。これは現在の限定subsetに対する結果で、任意のAIファイルの完全互換を意味しません。
@@ -160,6 +167,8 @@ uv run py-ai test-illustrator examples/campaign-variants.native.ai
 legacy point textはASCIIに加え、`RKSJ-H` / `RKSJ-V` fontを明示した日本語CP932の読み書きに対応します。writerは`Ta` operator、text matrix、揃え基準のanchorを出力します。ただし現行IllustratorでAI7 textを直接開いた状態はlegacy textであり、現代のTextFrameへ変換するまで再編集できません。`materialize-native`は一時コピーだけを開いて全legacy textをnativeへ変換し、PDF-compatible AIとして保存します。変換後の各TextFrameには`py-ai-text:` noteとして安定IDと役割名を設定し、指定されたPostScript名のfont、size、fill、tracking、rotation、leading、paragraph justificationを明示的に再設定します。fontが導入されていない場合は黙って代替せず、検証を失敗させて不足名を報告します。
 
 `AreaTextBlock`は文章枠のwidth / heightとleadingをIRへ保持します。AI7 bridgeでは互換用point textとprivate metadataとして運び、native materialization時にIllustrator DOM上で本物のAreaTextへ再構成します。現行`TextBlock`は決定的な行分割が必要な用途向けに、引き続き複数のpoint textを出力します。
+
+`LinkedImage`はPNG/JPEGの外部参照と配置寸法を保持します。`dump_ai7()`は成果物の隣に`Links/`を作り、同一内容の同名ファイルはSHA-256照合後に再利用します。同名でも内容が異なる場合は既存ファイルを上書きせず、内容hash付きの名前でコピーします。`materialize-native`はAI7上の非表示placeholderを同じ階層・描画順のlinked `PlacedItem`へ置換し、`embedLinkedFiles = false`で保存します。
 
 回転textも、Illustrator 30.7.0でlegacy AIをAI8互換再保存すると一部がoutlineへ変換される場合があります。rotationを含む再編集可能な成果物は`materialize-native`経路を使い、font・tracking・rotation・identityの一致を検証します。
 

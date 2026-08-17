@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import math
 import re
@@ -21,6 +22,7 @@ from .model import (
     Group,
     Layer,
     LayerItemRef,
+    LinkedImage,
     Path,
     Point,
     ProcessColor,
@@ -208,6 +210,30 @@ def _artboard_comment(artboard: Artboard) -> str:
     return "%%py-ai-artboard: " + encoded
 
 
+def _linked_image_comment(image: LinkedImage) -> str:
+    payload = {
+        "id": image.id,
+        "source": image.source,
+        "x": image.x,
+        "y": image.y,
+        "width": image.width,
+        "height": image.height,
+        "rotation": image.rotation,
+        "name": image.name,
+    }
+    encoded = base64.b64encode(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode()
+    ).decode("ascii")
+    return "%%py-ai-linked-image: " + encoded
+
+
+def linked_image_placeholder_note(image_id: str) -> str:
+    """Return the native note used to locate an image's legacy placeholder."""
+
+    digest = hashlib.sha256(image_id.encode("utf-8")).hexdigest()
+    return "py-ai-image-placeholder:" + digest
+
+
 def _color_operator(color: ProcessColor, *, stroke: bool) -> str:
     if isinstance(color, CmykColor):
         operator = "K" if stroke else "k"
@@ -381,8 +407,31 @@ def _serialized_text_frame(text: TextFrame, *, locked: bool) -> list[str]:
     return lines
 
 
+def _serialized_linked_image(image: LinkedImage, *, locked: bool) -> list[str]:
+    placeholder_id = "pyai-image-" + hashlib.sha256(image.id.encode("utf-8")).hexdigest()[:16]
+    placeholder = Path(
+        id=placeholder_id,
+        name=None,
+        points=[
+            Point(image.x, image.y - image.height),
+            Point(image.x + image.width, image.y - image.height),
+            Point(image.x + image.width, image.y),
+            Point(image.x, image.y),
+        ],
+        fill=None,
+        stroke=None,
+    )
+    lines = [_linked_image_comment(image), *_serialized_path(placeholder, locked=locked)]
+    placeholder_note = linked_image_placeholder_note(image.id)
+    for index, line in enumerate(lines):
+        if line.startswith("%AI3_Note:"):
+            lines[index] = "%AI3_Note:" + placeholder_note
+            break
+    return lines
+
+
 def _serialized_item(
-    item: Path | TextFrame | CompoundPath | ClippingGroup | Group,
+    item: Path | TextFrame | LinkedImage | CompoundPath | ClippingGroup | Group,
     *,
     locked: bool,
 ) -> list[str]:
@@ -390,6 +439,8 @@ def _serialized_item(
         return _serialized_path(item, locked=locked)
     if isinstance(item, TextFrame):
         return _serialized_text_frame(item, locked=locked)
+    if isinstance(item, LinkedImage):
+        return _serialized_linked_image(item, locked=locked)
     if isinstance(item, CompoundPath):
         lines = [f"%%py-ai-compound-id: ({_escape_postscript_string(item.id)})"]
         if item.name is not None:
@@ -518,8 +569,24 @@ def dumps_ai7(document: Document) -> bytes:
     return "\n".join(lines).encode("ascii", errors="strict")
 
 
-def dump_ai7(document: Document, destination: str | FilePath) -> None:
-    FilePath(destination).write_bytes(dumps_ai7(document))
+def dump_ai7(
+    document: Document,
+    destination: str | FilePath,
+    *,
+    package_links: bool = True,
+    source_base: str | FilePath | None = None,
+) -> None:
+    destination_path = FilePath(destination)
+    serialized_document = document
+    if package_links:
+        from .assets import package_linked_images
+
+        serialized_document, _ = package_linked_images(
+            document,
+            destination_path.parent,
+            source_base=source_base,
+        )
+    destination_path.write_bytes(dumps_ai7(serialized_document))
 
 
 def loads_ai7(data: bytes) -> Document:
@@ -582,6 +649,7 @@ def loads_ai7(data: bytes) -> Document:
     pending_text_area_width: float | None = None
     pending_text_area_height: float | None = None
     pending_text_leading: float | None = None
+    pending_linked_image: LinkedImage | None = None
     metadata: dict[str, object] = {}
     artboards: list[Artboard] = []
 
@@ -595,13 +663,15 @@ def loads_ai7(data: bytes) -> Document:
 
     def append_item(
         kind: str,
-        item: Path | TextFrame | CompoundPath | ClippingGroup | Group,
+        item: Path | TextFrame | LinkedImage | CompoundPath | ClippingGroup | Group,
     ) -> None:
         container = active_container()
         if isinstance(item, Path):
             container.paths.append(item)
         elif isinstance(item, TextFrame):
             container.text_frames.append(item)
+        elif isinstance(item, LinkedImage):
+            container.linked_images.append(item)
         elif isinstance(item, CompoundPath):
             container.compound_paths.append(item)
         elif isinstance(item, ClippingGroup):
@@ -635,6 +705,17 @@ def loads_ai7(data: bytes) -> Document:
                     artboards.append(Artboard.from_dict(candidate))
             except (ValueError, UnicodeError, json.JSONDecodeError):
                 pass
+            continue
+        if line.startswith("%%py-ai-linked-image: "):
+            try:
+                decoded = base64.b64decode(
+                    line.removeprefix("%%py-ai-linked-image: "), validate=True
+                ).decode("utf-8")
+                candidate = json.loads(decoded)
+                if isinstance(candidate, dict):
+                    pending_linked_image = LinkedImage.from_dict(candidate)
+            except (ValueError, UnicodeError, json.JSONDecodeError):
+                pending_linked_image = None
             continue
         bounds_match = _BOUNDS_RE.match(line)
         if bounds_match and width is None:
@@ -1068,7 +1149,10 @@ def loads_ai7(data: bytes) -> Document:
                 name=pending_name,
                 polarity=polarity,
             )
-            if is_clipping_mask:
+            if pending_linked_image is not None and not is_clipping_mask:
+                append_item("image", pending_linked_image)
+                pending_linked_image = None
+            elif is_clipping_mask:
                 current_clipping_path = parsed_path
                 clipping_mask_closed = None
             elif current_compound_paths is not None:

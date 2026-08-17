@@ -15,7 +15,7 @@ from py_ai_illustrator.authoring import (
     polyline_path,
     rectangle_path,
 )
-from py_ai_illustrator.model import Color, LayerItemRef
+from py_ai_illustrator.model import Color, LayerItemRef, LinkedImage
 
 
 def test_table_compiles_semantics_to_editable_paths_and_text() -> None:
@@ -299,6 +299,25 @@ def test_layer_builder_can_keep_a_component_as_an_editable_group() -> None:
     assert group.text_frames[0].text == "Grouped"
     assert layer.item_order == [LayerItemRef("group", "product-card")]
     assert layer.groups == [group]
+
+
+def test_layer_builder_composes_and_translates_linked_images() -> None:
+    image = LinkedImage(
+        id="photo",
+        source="photo.png",
+        x=10,
+        y=80,
+        width=60,
+        height=40,
+    )
+    component = RenderedComponent(width=60, height=40, linked_images=[image])
+    translated = component.transformed(AffineTransform.translation(20, -10))
+    builder = LayerBuilder(id="page", name="Page")
+    builder.add(translated)
+
+    placed = builder.build().linked_images[0]
+    assert (placed.x, placed.y, placed.width, placed.height) == (30, 70, 60, 40)
+    assert builder.build().item_order == [LayerItemRef("image", "photo")]
 
 
 def test_polyline_path_keeps_native_stroke_style() -> None:

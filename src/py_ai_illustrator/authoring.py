@@ -14,6 +14,7 @@ from .model import (
     Group,
     Layer,
     LayerItemRef,
+    LinkedImage,
     Path,
     Point,
     ProcessColor,
@@ -128,6 +129,20 @@ def transform_text(text: TextFrame, transform: AffineTransform) -> TextFrame:
     )
 
 
+def transform_image(image: LinkedImage, transform: AffineTransform) -> LinkedImage:
+    """Return a linked image placed by a rigid affine transform."""
+
+    if not transform.is_rigid:
+        raise ValueError("LinkedImage currently supports rigid transforms only")
+    x, y = transform.apply(image.x, image.y)
+    return replace(
+        image,
+        x=x,
+        y=y,
+        rotation=image.rotation + transform.rotation_degrees,
+    )
+
+
 def transform_group(group: Group, transform: AffineTransform) -> Group:
     """Transform every editable descendant while preserving group semantics."""
 
@@ -135,6 +150,7 @@ def transform_group(group: Group, transform: AffineTransform) -> Group:
         group,
         paths=[transform_path(path, transform) for path in group.paths],
         text_frames=[transform_text(text, transform) for text in group.text_frames],
+        linked_images=[transform_image(image, transform) for image in group.linked_images],
         compound_paths=[
             replace(
                 compound,
@@ -162,6 +178,7 @@ class RenderedComponent:
     height: float
     paths: list[Path] = field(default_factory=list)
     text_frames: list[TextFrame] = field(default_factory=list)
+    linked_images: list[LinkedImage] = field(default_factory=list)
     groups: list[Group] = field(default_factory=list)
     item_order: list[LayerItemRef] = field(default_factory=list)
 
@@ -172,6 +189,7 @@ class RenderedComponent:
             self.item_order = [
                 *(LayerItemRef("path", path.id) for path in self.paths),
                 *(LayerItemRef("text", text.id) for text in self.text_frames),
+                *(LayerItemRef("image", image.id) for image in self.linked_images),
                 *(LayerItemRef("group", group.id) for group in self.groups),
             ]
 
@@ -181,6 +199,7 @@ class RenderedComponent:
             name=layer_name,
             paths=list(self.paths),
             text_frames=list(self.text_frames),
+            linked_images=list(self.linked_images),
             groups=list(self.groups),
             item_order=list(self.item_order),
         )
@@ -191,6 +210,7 @@ class RenderedComponent:
             name=group_name,
             paths=list(self.paths),
             text_frames=list(self.text_frames),
+            linked_images=list(self.linked_images),
             groups=list(self.groups),
             item_order=list(self.item_order),
         )
@@ -198,8 +218,10 @@ class RenderedComponent:
     def transformed(self, transform: AffineTransform) -> RenderedComponent:
         """Place a component without discarding editable child identities."""
 
-        if self.text_frames and not transform.is_rigid:
-            raise ValueError("Components containing text currently require a rigid transform")
+        if (self.text_frames or self.linked_images) and not transform.is_rigid:
+            raise ValueError(
+                "Components containing text or images currently require a rigid transform"
+            )
         width = abs(transform.a) * self.width + abs(transform.c) * self.height
         height = abs(transform.b) * self.width + abs(transform.d) * self.height
         return RenderedComponent(
@@ -207,6 +229,7 @@ class RenderedComponent:
             height=height,
             paths=[transform_path(path, transform) for path in self.paths],
             text_frames=[transform_text(text, transform) for text in self.text_frames],
+            linked_images=[transform_image(image, transform) for image in self.linked_images],
             groups=[transform_group(group, transform) for group in self.groups],
             item_order=list(self.item_order),
         )
@@ -220,6 +243,7 @@ class LayerBuilder:
     name: str
     _paths: list[Path] = field(default_factory=list, init=False, repr=False)
     _text_frames: list[TextFrame] = field(default_factory=list, init=False, repr=False)
+    _linked_images: list[LinkedImage] = field(default_factory=list, init=False, repr=False)
     _groups: list[Group] = field(default_factory=list, init=False, repr=False)
     _item_order: list[LayerItemRef] = field(default_factory=list, init=False, repr=False)
     _ids: set[str] = field(default_factory=set, init=False, repr=False)
@@ -238,6 +262,11 @@ class LayerBuilder:
         self._claim(text.id)
         self._text_frames.append(text)
         self._item_order.append(LayerItemRef("text", text.id))
+
+    def add_image(self, image: LinkedImage) -> None:
+        self._claim(image.id)
+        self._linked_images.append(image)
+        self._item_order.append(LayerItemRef("image", image.id))
 
     def add_group(self, group: Group) -> None:
         self._claim(group.id)
@@ -260,12 +289,15 @@ class LayerBuilder:
     def add(self, component: RenderedComponent) -> None:
         paths = {path.id: path for path in component.paths}
         text_frames = {text.id: text for text in component.text_frames}
+        linked_images = {image.id: image for image in component.linked_images}
         groups = {group.id: group for group in component.groups}
         for reference in component.item_order:
             if reference.kind == "path":
                 self.add_path(paths[reference.id])
             elif reference.kind == "text":
                 self.add_text(text_frames[reference.id])
+            elif reference.kind == "image":
+                self.add_image(linked_images[reference.id])
             elif reference.kind == "group":
                 self.add_group(groups[reference.id])
             else:
@@ -277,6 +309,7 @@ class LayerBuilder:
             name=self.name,
             paths=list(self._paths),
             text_frames=list(self._text_frames),
+            linked_images=list(self._linked_images),
             groups=list(self._groups),
             item_order=list(self._item_order),
         )

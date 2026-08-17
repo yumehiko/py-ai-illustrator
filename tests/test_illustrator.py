@@ -24,6 +24,8 @@ def test_javascript_closes_only_its_document_without_saving(tmp_path: Path) -> N
     assert "current document" not in javascript
     assert "String.fromCharCode(92)" in javascript
     assert "String.fromCharCode(34)" in javascript
+    assert "documentRef.placedItems" in javascript
+    assert "file_exists" in javascript
     assert "\\" not in javascript
 
 
@@ -100,6 +102,17 @@ def test_native_materialization_assigns_identity_notes_after_conversion(
             {"name": "Portrait", "left": 400, "top": 380, "width": 270, "height": 360},
         ),
         source_document_height=400,
+        desired_images=(
+            {
+                "id": "hero-photo",
+                "name": "Hero photo",
+                "path": tmp_path / "Links" / "hero.png",
+                "placeholder_note": "py-ai-image-placeholder:identity",
+                "width": 180,
+                "height": 120,
+                "rotation": -5,
+            },
+        ),
     )
 
     conversion = javascript.index("legacyTextItems.convertToNative()")
@@ -124,6 +137,10 @@ def test_native_materialization_assigns_identity_notes_after_conversion(
     assert "documentRef.artboards.add(artboardRect)" in javascript
     assert "documentRef.artboards.remove" in javascript
     assert "artboard.name = artboardSpec.name" in javascript
+    assert "documentRef.placedItems.add()" in javascript
+    assert "placedImage.file = imageFile" in javascript
+    assert "options.embedLinkedFiles = false" in javascript
+    assert "placedImage.move(placeholder, ElementPlacement.PLACEBEFORE)" in javascript
     assert "String.fromCharCode(72,101,108,118,101,116,105,99,97,45,66,111,108,100)" in javascript
 
 
@@ -232,6 +249,29 @@ def test_runner_reports_a_successful_illustrator_import(monkeypatch) -> None:
     result = illustrator.run_illustrator_test(source)
     assert result["status"] == "passed"
     assert all(result["checks"].values())
+
+
+def test_runner_reports_a_missing_link_as_a_mismatch(monkeypatch) -> None:
+    source = Path(__file__).parents[1] / "examples" / "styled-table.native.ai"
+    actual = {
+        "ok": True,
+        "illustrator_version": "30.7.0",
+        "placed_images": [{"file": "/missing/photo.png", "file_exists": False}],
+    }
+
+    monkeypatch.setattr(illustrator.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(
+        illustrator.subprocess,
+        "run",
+        lambda command, **kwargs: CompletedProcess(
+            command, 0, stdout=illustrator.json.dumps(actual), stderr=""
+        ),
+    )
+
+    result = illustrator.run_illustrator_test(source)
+
+    assert result["status"] == "mismatch"
+    assert result["checks"]["linked_files_exist"] is False
 
 
 def test_runner_distinguishes_an_unready_environment(monkeypatch) -> None:

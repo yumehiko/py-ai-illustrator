@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from .format import FileFormat, inspect_file
-from .legacy import load_ai7
+from .legacy import linked_image_placeholder_note, load_ai7
 from .model import (
     ClippingGroup,
     CmykColor,
@@ -21,6 +21,7 @@ from .model import (
     CompoundPath,
     Document,
     Group,
+    LinkedImage,
     ProcessColor,
     TextFrame,
 )
@@ -89,6 +90,23 @@ def _document_text_frames(document: Document) -> list[TextFrame]:
         for text in [
             *layer.text_frames,
             *(text for group in layer.groups for text in group_text(group)),
+        ]
+    ]
+
+
+def _document_linked_images(document: Document) -> list[LinkedImage]:
+    def group_images(group: Group) -> list[LinkedImage]:
+        return [
+            *group.linked_images,
+            *(image for child in group.groups for image in group_images(child)),
+        ]
+
+    return [
+        image
+        for layer in document.layers
+        for image in [
+            *layer.linked_images,
+            *(image for group in layer.groups for image in group_images(group)),
         ]
     ]
 
@@ -181,6 +199,7 @@ def _expected_structure(source: Path) -> dict[str, Any] | None:
         return None
     paths = _document_paths(document)
     text_frames = _document_text_frames(document)
+    linked_images = _document_linked_images(document)
     return {
         "layer_count": len(document.layers),
         "layer_names": [layer.name for layer in document.layers],
@@ -189,6 +208,7 @@ def _expected_structure(source: Path) -> dict[str, Any] | None:
                 {
                     "path": "PathItem",
                     "text": "TextFrame",
+                    "image": "PathItem",
                     "compound_path": "CompoundPathItem",
                     "clipping_group": "GroupItem",
                     "group": "GroupItem",
@@ -197,10 +217,12 @@ def _expected_structure(source: Path) -> dict[str, Any] | None:
             ]
             for layer in document.layers
         ],
-        "path_item_count": len(paths),
+        "path_item_count": len(paths) + len(linked_images),
         "text_frame_count": len(text_frames),
-        "point_counts": sorted(len(path.points) for path in paths),
-        "closed_count": sum(path.closed for path in paths),
+        "point_counts": sorted(
+            [*(len(path.points) for path in paths), *(4 for _ in linked_images)]
+        ),
+        "closed_count": sum(path.closed for path in paths) + len(linked_images),
         "filled_count": sum(path.fill is not None for path in paths),
         "stroked_count": sum(path.stroke is not None for path in paths),
         "compound_path_item_count": len(_document_compound_paths(document)),
@@ -342,6 +364,33 @@ def _build_javascript(source: Path) -> str:
             }});
         }}
 
+        var placedImages = [];
+        for (
+            var placedIndex = 0;
+            placedIndex < documentRef.placedItems.length;
+            placedIndex++
+        ) {{
+            var placed = documentRef.placedItems[placedIndex];
+            var placedFile = null;
+            var placedFileExists = false;
+            try {{
+                placedFile = placed.file.fsName;
+                placedFileExists = placed.file.exists;
+            }} catch (placedFileError) {{
+                placedFile = null;
+            }}
+            placedImages.push({{
+                name: placed.name,
+                note: placed.note,
+                file: placedFile,
+                file_exists: placedFileExists,
+                position: [placed.position[0], placed.position[1]],
+                width: placed.width,
+                height: placed.height,
+                rotation: itemRotation(placed)
+            }});
+        }}
+
         function itemRotation(item) {{
             if (!item.matrix) return null;
             var matrix = item.matrix;
@@ -438,6 +487,7 @@ def _build_javascript(source: Path) -> str:
             layer_count: documentRef.layers.length,
             path_item_count: documentRef.pathItems.length,
             text_frame_count: textFrames.length,
+            placed_item_count: placedImages.length,
             page_item_count: documentRef.pageItems.length,
             artboard_count: documentRef.artboards.length,
             compound_path_item_count: documentRef.compoundPathItems.length,
@@ -452,6 +502,7 @@ def _build_javascript(source: Path) -> str:
             layers: layers,
             paths: paths,
             text_frames: textFrames,
+            placed_images: placedImages,
             artboards: artboards
         }});
     }} catch (error) {{
@@ -752,6 +803,7 @@ def _build_native_materialization_javascript(
     desired_area_heights: tuple[float | None, ...] = (),
     desired_leadings: tuple[float | None, ...] = (),
     desired_artboards: tuple[dict[str, Any], ...] = (),
+    desired_images: tuple[dict[str, Any], ...] = (),
     source_document_height: float = 0.0,
 ) -> str:
     source_literal = _character_code_expression(source)
@@ -789,6 +841,19 @@ def _build_native_materialization_javascript(
         + "}"
         for value in desired_artboards
     )
+    desired_images_literal = ",".join(
+        "{id:"
+        + _character_code_expression(str(value["id"]))
+        + ",name:"
+        + _character_code_expression(str(value["name"]))
+        + ",path:"
+        + _character_code_expression(str(value["path"]))
+        + ",placeholderNote:"
+        + _character_code_expression(str(value["placeholder_note"]))
+        + f",width:{value['width']},height:{value['height']},rotation:{value['rotation']}"
+        + "}"
+        for value in desired_images
+    )
     return f"""#target illustrator
 (function () {{
     var source = new File({source_literal});
@@ -813,6 +878,7 @@ def _build_native_materialization_javascript(
         var desiredAreaHeights = [{desired_area_heights_literal}];
         var desiredLeadings = [{desired_leadings_literal}];
         var desiredArtboards = [{desired_artboards_literal}];
+        var desiredImages = [{desired_images_literal}];
         var sourceDocumentHeight = {source_document_height};
         var sourceArtboardRect = [
             documentRef.artboards[0].artboardRect[0],
@@ -838,6 +904,9 @@ def _build_native_materialization_javascript(
         var matchingAreaTextCount = 0;
         var matchingLeadingCount = 0;
         var matchingArtboardCount = 0;
+        var foundImagePlaceholderCount = 0;
+        var placedImageCount = 0;
+        var matchingLinkedImageCount = 0;
         var nativeFrames = [];
         for (var frameIndex = 0; frameIndex < nativeTextCount; frameIndex++) {{
             nativeFrames.push(documentRef.textFrames[frameIndex]);
@@ -1031,6 +1100,48 @@ def _build_native_materialization_javascript(
             }}
         }}
 
+        for (var imageIndex = 0; imageIndex < desiredImages.length; imageIndex++) {{
+            var imageSpec = desiredImages[imageIndex];
+            var placeholder = null;
+            for (
+                var placeholderIndex = 0;
+                placeholderIndex < documentRef.pathItems.length;
+                placeholderIndex++
+            ) {{
+                if (documentRef.pathItems[placeholderIndex].note === imageSpec.placeholderNote) {{
+                    placeholder = documentRef.pathItems[placeholderIndex];
+                    break;
+                }}
+            }}
+            if (placeholder === null) continue;
+            foundImagePlaceholderCount++;
+            var imageFile = new File(imageSpec.path);
+            if (!imageFile.exists) throw new Error("Packaged image link does not exist");
+            var placeholderPosition = [placeholder.position[0], placeholder.position[1]];
+            var placedImage = documentRef.placedItems.add();
+            placedImage.file = imageFile;
+            placedImage.name = imageSpec.name;
+            placedImage.note = "py-ai-image:" + imageSpec.id;
+            placedImage.width = imageSpec.width;
+            placedImage.height = imageSpec.height;
+            placedImage.move(placeholder, ElementPlacement.PLACEBEFORE);
+            placedImage.position = placeholderPosition;
+            if (Math.abs(imageSpec.rotation) > 0.0001) {{
+                placedImage.rotate(imageSpec.rotation);
+                placedImage.position = placeholderPosition;
+            }}
+            var imageMatches = (
+                placedImage.file.fsName === imageFile.fsName
+                && placedImage.note === "py-ai-image:" + imageSpec.id
+                && Math.abs(placedImage.width - imageSpec.width) < 0.1
+                && Math.abs(placedImage.height - imageSpec.height) < 0.1
+                && angleDifference(itemRotation(placedImage), imageSpec.rotation) < 0.01
+            );
+            if (imageMatches) matchingLinkedImageCount++;
+            placedImageCount++;
+            placeholder.remove();
+        }}
+
         if (desiredArtboards.length > 0) {{
             while (documentRef.artboards.length > 1) {{
                 documentRef.artboards.remove(documentRef.artboards.length - 1);
@@ -1094,7 +1205,10 @@ def _build_native_materialization_javascript(
             recreatedAreaTextCount,
             matchingAreaTextCount,
             matchingLeadingCount,
-            matchingArtboardCount
+            matchingArtboardCount,
+            foundImagePlaceholderCount,
+            placedImageCount,
+            matchingLinkedImageCount
         ].join(":");
     }} catch (error) {{
         return "error:" + String(error) + ":line:" + String(error.line || "");
@@ -1532,6 +1646,9 @@ def run_illustrator_test(
         return {"status": "failed", "illustrator": actual, "expected": expected}
 
     checks = _compare_structure(expected, actual) if expected is not None else {}
+    checks["linked_files_exist"] = all(
+        image.get("file_exists") is True for image in actual.get("placed_images", [])
+    )
     passed = bool(actual.get("ok")) and all(checks.values())
     return {
         "status": "passed" if passed else "mismatch",
@@ -1573,6 +1690,16 @@ def materialize_native_ai(
             "error": "Native materialization currently accepts legacy AI input only.",
         }
     source_document = load_ai7(source_path)
+    from .assets import package_linked_images
+
+    try:
+        source_document, packaged_links = package_linked_images(
+            source_document,
+            destination_path.parent,
+            source_base=source_path.parent,
+        )
+    except ValueError as error:
+        return {"status": "invalid-input", "error": str(error)}
     expected_justifications = Counter(
         f"Justification.{text.alignment.upper()}" for text in _document_text_frames(source_document)
     )
@@ -1602,6 +1729,18 @@ def materialize_native_ai(
         }
         for artboard in source_document.artboards
     )
+    desired_images = tuple(
+        {
+            "id": image.id,
+            "name": image.name or image.id,
+            "path": (destination_path.parent / image.source).resolve(),
+            "placeholder_note": linked_image_placeholder_note(image.id),
+            "width": image.width,
+            "height": image.height,
+            "rotation": image.rotation,
+        }
+        for image in _document_linked_images(source_document)
+    )
 
     destination_path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="py-ai-illustrator-native-") as temp_directory:
@@ -1625,6 +1764,7 @@ def materialize_native_ai(
                     desired_area_heights=desired_area_heights,
                     desired_leadings=desired_leadings,
                     desired_artboards=desired_artboards,
+                    desired_images=desired_images,
                     source_document_height=source_document.height,
                 ),
                 temp_path,
@@ -1651,8 +1791,8 @@ def materialize_native_ai(
             "error": "Illustrator reported success but did not create the native AI file.",
         }
 
-    parts = response.split(":", 20)
-    if len(parts) != 21:
+    parts = response.split(":", 23)
+    if len(parts) != 24:
         return {"status": "failed", "illustrator_response": response}
     (
         _,
@@ -1676,6 +1816,9 @@ def materialize_native_ai(
         matching_area_texts,
         matching_leadings,
         matching_artboards,
+        found_image_placeholders,
+        placed_images,
+        matching_linked_images,
     ) = parts
     legacy_text_count = int(legacy_count)
     native_text_count = int(native_count)
@@ -1695,6 +1838,9 @@ def materialize_native_ai(
     matching_area_text_count = int(matching_area_texts)
     matching_leading_count = int(matching_leadings)
     matching_artboard_count = int(matching_artboards)
+    found_image_placeholder_count = int(found_image_placeholders)
+    placed_image_count = int(placed_images)
+    matching_linked_image_count = int(matching_linked_images)
     checks = {
         "legacy_conversion_succeeded": converted == "true",
         "text_frame_count": native_text_count == legacy_text_count,
@@ -1712,6 +1858,9 @@ def materialize_native_ai(
         and matching_area_text_count == expected_area_text_count,
         "native_leading": matching_leading_count == legacy_text_count,
         "native_artboards": matching_artboard_count == len(desired_artboards),
+        "linked_image_placeholders": found_image_placeholder_count == len(desired_images),
+        "linked_images_created": placed_image_count == len(desired_images),
+        "linked_image_attributes": matching_linked_image_count == len(desired_images),
     }
     return {
         "status": "passed" if all(checks.values()) else "mismatch",
@@ -1736,6 +1885,11 @@ def materialize_native_ai(
         "matching_leading_count": matching_leading_count,
         "expected_artboard_count": len(desired_artboards),
         "matching_artboard_count": matching_artboard_count,
+        "expected_linked_image_count": len(desired_images),
+        "found_image_placeholder_count": found_image_placeholder_count,
+        "placed_image_count": placed_image_count,
+        "matching_linked_image_count": matching_linked_image_count,
+        "packaged_links": [link.to_dict() for link in packaged_links],
         "native_justifications": native_justifications,
         "checks": checks,
         "format": inspect_file(destination_path).to_dict(),

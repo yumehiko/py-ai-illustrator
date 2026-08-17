@@ -238,6 +238,48 @@ class TextFrame:
 
 
 @dataclass(slots=True)
+class LinkedImage:
+    """An externally linked raster image with editable Illustrator placement."""
+
+    id: str
+    source: str
+    x: float
+    y: float
+    width: float
+    height: float
+    rotation: float = 0.0
+    name: str | None = None
+    unknown: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.id:
+            raise ValueError("A linked image id must not be empty")
+        if not self.source or "\x00" in self.source:
+            raise ValueError("A linked image source must be a non-empty path")
+        if not all(
+            math.isfinite(value)
+            for value in (self.x, self.y, self.width, self.height, self.rotation)
+        ):
+            raise ValueError("Linked image placement values must be finite")
+        if self.width <= 0 or self.height <= 0:
+            raise ValueError("Linked image dimensions must be positive")
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> LinkedImage:
+        return cls(
+            id=str(data["id"]),
+            source=str(data["source"]),
+            x=float(data["x"]),
+            y=float(data["y"]),
+            width=float(data["width"]),
+            height=float(data["height"]),
+            rotation=float(data.get("rotation", 0.0)),
+            name=data.get("name"),
+            unknown=dict(data.get("unknown", {})),
+        )
+
+
+@dataclass(slots=True)
 class CompoundPath:
     id: str
     paths: list[Path]
@@ -290,6 +332,7 @@ class LayerItemRef:
         if self.kind not in {
             "path",
             "text",
+            "image",
             "compound_path",
             "clipping_group",
             "group",
@@ -309,6 +352,7 @@ class Group:
     name: str | None = None
     paths: list[Path] = field(default_factory=list)
     text_frames: list[TextFrame] = field(default_factory=list)
+    linked_images: list[LinkedImage] = field(default_factory=list)
     compound_paths: list[CompoundPath] = field(default_factory=list)
     clipping_groups: list[ClippingGroup] = field(default_factory=list)
     groups: list[Group] = field(default_factory=list)
@@ -322,6 +366,7 @@ class Group:
             self.item_order = [
                 *(LayerItemRef("path", path.id) for path in self.paths),
                 *(LayerItemRef("text", text.id) for text in self.text_frames),
+                *(LayerItemRef("image", image.id) for image in self.linked_images),
                 *(LayerItemRef("compound_path", compound.id) for compound in self.compound_paths),
                 *(LayerItemRef("clipping_group", group.id) for group in self.clipping_groups),
                 *(LayerItemRef("group", group.id) for group in self.groups),
@@ -329,16 +374,19 @@ class Group:
 
     def ordered_items(
         self,
-    ) -> list[Path | TextFrame | CompoundPath | ClippingGroup | Group]:
-        typed_items: list[tuple[str, Path | TextFrame | CompoundPath | ClippingGroup | Group]] = [
+    ) -> list[Path | TextFrame | LinkedImage | CompoundPath | ClippingGroup | Group]:
+        typed_items: list[
+            tuple[str, Path | TextFrame | LinkedImage | CompoundPath | ClippingGroup | Group]
+        ] = [
             *(("path", path) for path in self.paths),
             *(("text", text) for text in self.text_frames),
+            *(("image", image) for image in self.linked_images),
             *(("compound_path", compound) for compound in self.compound_paths),
             *(("clipping_group", group) for group in self.clipping_groups),
             *(("group", group) for group in self.groups),
         ]
         remaining = list(typed_items)
-        ordered: list[Path | TextFrame | CompoundPath | ClippingGroup | Group] = []
+        ordered: list[Path | TextFrame | LinkedImage | CompoundPath | ClippingGroup | Group] = []
         for reference in self.item_order:
             for index, (kind, item) in enumerate(remaining):
                 if kind == reference.kind and item.id == reference.id:
@@ -355,6 +403,9 @@ class Group:
             name=data.get("name"),
             paths=[Path.from_dict(path) for path in data.get("paths", [])],
             text_frames=[TextFrame.from_dict(text) for text in data.get("text_frames", [])],
+            linked_images=[
+                LinkedImage.from_dict(image) for image in data.get("linked_images", [])
+            ],
             compound_paths=[
                 CompoundPath.from_dict(path) for path in data.get("compound_paths", [])
             ],
@@ -375,6 +426,7 @@ class Layer:
     name: str
     paths: list[Path] = field(default_factory=list)
     text_frames: list[TextFrame] = field(default_factory=list)
+    linked_images: list[LinkedImage] = field(default_factory=list)
     compound_paths: list[CompoundPath] = field(default_factory=list)
     clipping_groups: list[ClippingGroup] = field(default_factory=list)
     groups: list[Group] = field(default_factory=list)
@@ -388,6 +440,7 @@ class Layer:
             self.item_order = [
                 *(LayerItemRef("path", path.id) for path in self.paths),
                 *(LayerItemRef("text", text.id) for text in self.text_frames),
+                *(LayerItemRef("image", image.id) for image in self.linked_images),
                 *(LayerItemRef("compound_path", compound.id) for compound in self.compound_paths),
                 *(LayerItemRef("clipping_group", group.id) for group in self.clipping_groups),
                 *(LayerItemRef("group", group.id) for group in self.groups),
@@ -395,16 +448,19 @@ class Layer:
 
     def ordered_items(
         self,
-    ) -> list[Path | TextFrame | CompoundPath | ClippingGroup | Group]:
-        typed_items: list[tuple[str, Path | TextFrame | CompoundPath | ClippingGroup | Group]] = [
+    ) -> list[Path | TextFrame | LinkedImage | CompoundPath | ClippingGroup | Group]:
+        typed_items: list[
+            tuple[str, Path | TextFrame | LinkedImage | CompoundPath | ClippingGroup | Group]
+        ] = [
             *(("path", path) for path in self.paths),
             *(("text", text) for text in self.text_frames),
+            *(("image", image) for image in self.linked_images),
             *(("compound_path", compound) for compound in self.compound_paths),
             *(("clipping_group", group) for group in self.clipping_groups),
             *(("group", group) for group in self.groups),
         ]
         remaining = list(typed_items)
-        ordered: list[Path | TextFrame | CompoundPath | ClippingGroup | Group] = []
+        ordered: list[Path | TextFrame | LinkedImage | CompoundPath | ClippingGroup | Group] = []
         for reference in self.item_order:
             for index, (kind, item) in enumerate(remaining):
                 if kind == reference.kind and item.id == reference.id:
@@ -421,6 +477,9 @@ class Layer:
             name=str(data["name"]),
             paths=[Path.from_dict(path) for path in data.get("paths", [])],
             text_frames=[TextFrame.from_dict(text) for text in data.get("text_frames", [])],
+            linked_images=[
+                LinkedImage.from_dict(image) for image in data.get("linked_images", [])
+            ],
             compound_paths=[
                 CompoundPath.from_dict(path) for path in data.get("compound_paths", [])
             ],

@@ -20,6 +20,7 @@ from py_ai_illustrator.model import (
     Group,
     Layer,
     LayerItemRef,
+    LinkedImage,
     Point,
     TextFrame,
 )
@@ -543,6 +544,38 @@ def test_artboard_intent_roundtrips_through_legacy_bridge_metadata() -> None:
 
     assert serialized.count(b"%%py-ai-artboard: ") == 2
     assert restored.artboards == original.artboards
+    assert restored.to_dict() == original.to_dict()
+
+
+def test_linked_image_intent_roundtrips_with_an_editable_placeholder() -> None:
+    image = LinkedImage(
+        id="hero-photo",
+        name="Hero photo",
+        source="Links/hero.png",
+        x=40,
+        y=220,
+        width=180,
+        height=120,
+        rotation=-5,
+    )
+    original = Document(
+        width=320,
+        height=240,
+        layers=[
+            Layer(
+                id="artwork",
+                name="Artwork",
+                linked_images=[image],
+                item_order=[LayerItemRef("image", image.id)],
+            )
+        ],
+    )
+
+    serialized = dumps_ai7(original)
+    restored = loads_ai7(serialized)
+
+    assert b"%%py-ai-linked-image: " in serialized
+    assert b"py-ai-image-placeholder:" in serialized
     assert restored.to_dict() == original.to_dict()
 
 

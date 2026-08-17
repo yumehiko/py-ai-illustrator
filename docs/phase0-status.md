@@ -38,7 +38,7 @@ legacy .ai bytes
 | semantic components | n/a | 対応 | TextBlock、LayerBuilder、名札・ポスター・棚札・campaign variant作例 |
 | native AI materialization | n/a | Illustrator経由 | native point/area TextFrameへ変換し、font/size/fill/leading/揃え/identityを保持 |
 | rigid transform / text rotation | 対応 | 対応 | path・handle・text・nested group、native角度検証 |
-| image | 未対応 | 未対応 | fixture調査後 |
+| linked image | bridge対応 | Illustrator経由 | PNG/JPEGを`Links/`へpackageし、native linked `PlacedItem`へ置換。埋め込みはしない |
 | PDF-compatible AI semantic data | 未対応 | 未対応 | 現在は形式判定のみ |
 
 ## 意図的な境界
@@ -56,7 +56,7 @@ legacy .ai bytes
 
 1. Illustrator再保存をまたぐlayer/container IDとdocument metadataの保持方式を調査する。
 2. 実装済みのoperator span/local patch primitiveをnode source spanとtyped editへ接続する。
-3. CP932以外のtext encodingとimageの次期feature profileを決める。
+3. CP932以外のtext encodingとimageのcontain / cover / clipping cropを実装する。
 4. 実装した共通render境界へsemantic metadata manifestを追加する。
 5. 検証対象とするIllustratorバージョンの範囲を広げる。
 
@@ -93,9 +93,13 @@ area textはAI8互換保存でoutline群へ変換されるため、IRの枠寸�
 
 複数Artboardもlegacy AI7では一つのcomposite canvasとして運び、各ArtboardのID・名前・矩形を短いprivate DSC commentへ保持します。[`examples/campaign_variants.py`](../examples/campaign_variants.py)をnative化すると、Square 360×360、Portrait 270×360、Banner 540×180の3 Artboardsへ再構成されます。Illustrator再オープン後の名前・矩形、3 groups / 9 paths / 19 TextFrames、3ページPDF previewを確認しました。
 
+linked imageはPNG/JPEGのsource、位置、表示寸法、rotationを`LinkedImage` IRへ保持します。AI7 bridgeでは同寸法の非表示pathを描画順placeholderとし、native materializationで同じ親・stacking位置のIllustrator `PlacedItem`へ置換します。成果物の隣の`Links/`へpackageし、同名同内容はSHA-256一致時だけ再利用、同名別内容はhash suffixで非破壊に共存させます。[`examples/product_catalog.py`](../examples/product_catalog.py)はlinked image、5 TextFrames（うち1 AreaText）、3 vector pathsを組み合わせ、Illustrator 30.7で保存・再オープン後も1 linked `PlacedItem`、link存在、300×252 pt、identity noteを保持し、PDF/PNG previewにも合格しました。
+
+Illustrator DOMで設定したlinkはnative AI内では絶対パスとして保存されます。このため現時点のpackage保証は、指定した最終出力先にAIと`Links/`を同時生成するところまでです。生成後にpackage全体を移動した場合のsibling `Links/`自動再リンクは未対応であり、公開fixtureには開発機の絶対パスを含むnative画像AIを置かず、相対参照のAI7 bridge、asset、生成scriptを収録します。
+
 `AffineTransform`とtext rotationを追加し、rigid matrixでpath、Bézier handle、text、nested groupを一括配置できるようにしました。[`examples/packaging_labels.py`](../examples/packaging_labels.py)は3つのlabel groupと2つのbadge group、14 paths、20 TextFramesを持ちます。Illustrator 30.7.0でnative化・再オープンし、side code 3件の90度、badge 2件の-12度、font、tracking、identity mappingを確認しました。PDF visual QAでは初期side codeの枠外配置を検出し、rotation前positionを保持するmaterializationとanchor調整で解消しました。legacy AI8互換再保存では一部の回転textがoutline化したため、rotationの再編集保証はnative materialization経路に限定します。
 
-legacy textへ標準`%AI3_Note`を書くだけでは、Illustrator DOMへnoteが付かずAI8再保存で失われます。一方、native materializationで変換直後のTextFrameへDOM `note`を設定する方式は保持されました。layer/groupのtop-to-bottom DOM順を再帰的に再現してIDと役割名を対応付け、9つのnative作例、合計178 TextFramesでidentity noteを再オープン確認しています。
+legacy textへ標準`%AI3_Note`を書くだけでは、Illustrator DOMへnoteが付かずAI8再保存で失われます。一方、native materializationで変換直後のTextFrameへDOM `note`を設定する方式は保持されました。layer/groupのtop-to-bottom DOM順を再帰的に再現してIDと役割名を対応付け、10のnative作例、合計183 TextFramesでidentity noteを再オープン確認しています。
 
 Illustrator生成の日本語AI8 fixtureから、`RKSJ-H` font profileとCP932 octal textを採取しました。readerはfont名からCP932を選んでUnicodeへ復号し、writerはRKSJ fontのencoding resourceとCP932 bytesを生成します。日本語予定表は列ごとの折り返しと可変行高を含む15 paths / 18 TextFramesとして認識され、Illustrator直接読込・AI8完全往復・PDF/PNG visual previewのすべてに合格しました。
 

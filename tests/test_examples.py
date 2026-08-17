@@ -203,6 +203,20 @@ def test_campaign_variants_preserve_named_artboards_and_editable_groups() -> Non
     )
 
 
+def test_product_catalog_combines_linked_image_point_area_text_and_shapes() -> None:
+    example = Path(__file__).parents[1] / "examples" / "product-catalog.ai"
+    document = load_ai7(example)
+    layer = document.layers[0]
+
+    assert document.metadata["business_case"] == "linked-image-product-card"
+    assert len(layer.linked_images) == 1
+    assert layer.linked_images[0].source == "Links/product-swatch.png"
+    assert layer.linked_images[0].name == "Linked product image"
+    assert len(layer.paths) == 3
+    assert any(text.is_area_text for text in layer.text_frames)
+    assert {reference.kind for reference in layer.item_order} == {"path", "image", "text"}
+
+
 def test_materialized_examples_are_pdf_compatible_native_ai() -> None:
     examples = Path(__file__).parents[1] / "examples"
     native_examples = (
