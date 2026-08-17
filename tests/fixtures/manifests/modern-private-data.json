@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "license": "MIT",
+  "provenance": {
+    "kind": "project-authored-generated-fixture",
+    "generator": "tools/generate_modern_ai_fixture.py",
+    "third_party_sample_bytes": false
+  },
+  "fixture": "tests/fixtures/generated/modern-private-data.ai",
+  "source_sha256": "f4ffdeace7c9d5838cb2608f464f7cae2cdde3cd18eb20cf7e3b3e8be16d9f60",
+  "pdf_version": "1.7",
+  "piece_info_paths": [
+    "3 0 R /PieceInfo/Illustrator/Private"
+  ],
+  "segments": [
+    {
+      "index": 0,
+      "key": "AIPrivateData1",
+      "object_ref": "6 0 R",
+      "filters": [],
+      "raw_size": 157,
+      "raw_sha256": "061c31e588550e4385761e6b4f25f91f1076d05196ed484526700e16c78e0fba",
+      "decoded_size": 157,
+      "decoded_sha256": "061c31e588550e4385761e6b4f25f91f1076d05196ed484526700e16c78e0fba",
+      "section_names": ["Layer"]
+    },
+    {
+      "index": 1,
+      "key": "AIPrivateData2",
+      "object_ref": "7 0 R",
+      "filters": ["ASCIIHexDecode", "FlateDecode"],
+      "raw_size": 135,
+      "raw_sha256": "ace330cde2324b36cc46a5d8d4bda5de7155d08ba0ec2b674fa44af282a574e6",
+      "decoded_size": 71,
+      "decoded_sha256": "c1e54c2b9702ddc978bd5e15eb024257ad5d4589cb34b9bb1ac053ea46e47f18",
+      "section_names": ["NonPrinting"]
+    }
+  ],
+  "real_generated_profile": {
+    "fixture": "examples/styled-table.native.ai",
+    "illustrator_version": "30.7.0",
+    "source_sha256": "8a10250ed188e64b3abf27ad29c32d77b63ccdc2fb0716ba65ac6c8f466b3581",
+    "segment_count": 1,
+    "filter": "AI24_ZStandard",
+    "raw_sha256": "785501c2199eb519d6c5622c2ccd90f8fa41c3e597c365701b9ea201189468c4",
+    "decoded_sha256": "907b94cc154ca75bc8a8839f6b812b87f1e2117d37221407923aaa997fb4fd24"
+  }
+}

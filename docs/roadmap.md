@@ -18,18 +18,19 @@
 
 | トラック | 状態 | 現在の到達点 | 主な未完了 |
 | --- | --- | --- | --- |
-| Conversion Core | Trusted legacy conversion成立（Illustrator 2026） | legacy AI7/AI8 subsetのIR/JSON往復、全node source span、atomic typed patch、semantic diff、Illustrator 30.7.0適合試験 | 次期Illustrator公開時のversion matrix拡張、modern AI semantic reader/writer |
+| Conversion Core | Trusted legacy conversion + modern read-only抽出成立 | legacy AI7/AI8の安全往復・patchに加え、PDF-compatible AIのPrivateDataをspan/hash付きで抽出・索引化 | modern AI semantic reader、PDF fallback、不一致診断、writer |
 | Authoring | Create MVP成立 | Table、共通component境界、point/area text、linked image、group、Artboard、rigid transform、複数の実制作例 | image crop、link診断、semantic manifest、高度なlayout/resource共有 |
 | Safe Edit / Agent | C1最小縦切り成立 | `type + id` selector、operation schema、plan/apply、precondition導出、semantic impact検証 | 高度selector、preview/visual diff、skill/plugin |
 
-2026-08-17時点のローカル基準は、`pytest` 177件成功、`ruff check`成功です。
+2026-08-17時点のローカル基準は、`pytest` 188件成功、`ruff check`成功です。
 
 現在の変換保証は、次のように区別します。
 
 - **対応subsetの意味往復**: Python IR -> legacy AI7/AI8 -> Python IRは自動テスト済み
 - **Illustratorを介したlegacy往復**: Python生成AIをIllustrator 30.7.0でAI8互換保存し、Python IRへ戻す経路を実機確認済み
 - **native materialization**: legacy AIからIllustratorを介してPDF-compatible native AIを生成可能
-- **modern AI往復**: 未実装。現時点ではcontainer判定のみ
+- **modern AI read-only**: bounded PDF / PieceInfo参照解決、PrivateData全segment、Flate / zstd展開、lossless token/section indexを自動テスト済み
+- **modern AI semantic往復**: 未実装。Document IR投影、PDF表示表現、writerは未対応
 - **任意AIのlossless往復**: 未実装。未知operatorを保持したsemantic edit/writeには未到達
 
 ## 品質ゲート
@@ -106,14 +107,14 @@ Gate Aを満たします。
 
 ### A2. Modern AI reader
 
-- [ ] 再配布可能なmodern AI fixtureと期待structure manifestを整備
-- [ ] PDF object tree、PieceInfo、Illustrator PrivateDataを抽出
-- [ ] Flate / zstd streamをresource limit付きで展開
-- [ ] PrivateData lexer/CSTとbyte spanを保持
+- [x] 再配布可能なmodern AI fixtureと期待structure manifestを整備
+- [x] bounded PDF object tree、PieceInfo、Illustrator PrivateDataを抽出
+- [x] Flate / zstd streamをresource limit付きで展開
+- [x] PrivateDataのlossless token/section indexとbyte spanを保持
 - [ ] 対応nodeを共通グラフィックIRへ投影
 - [ ] PDF表示表現をpreview/fallbackとして抽出
 - [ ] PrivateDataとPDF表示表現の不一致を診断
-- [ ] `inkai`等の先行実装を隔離環境で比較し、ライセンス境界を維持
+- [x] GPL実装をコアへ含めず、自作fixtureとpermissive dependencyによるライセンス境界を文書化
 
 終了条件:
 
@@ -259,7 +260,7 @@ py-ai-core ----------------> 他の層へ依存しない
 1. Gate B / C1へraster/PDF previewとvisual diffを追加する
 2. 実利用fixtureをもとにname、bounds、hierarchy selectorを段階的に追加する
 3. B1のimage crop・link診断を並行実装する
-4. A2のmodern AI reader縦切りへ進む
+4. A2の次段としてPrivateData semantic parserと共通IRへの限定投影を進める
 5. C1のAPI/CLI境界を固定できた後にC2のCodex skill/pluginへ進む
 
 Phase 0の詳細な実機試験記録は[Phase 0の実装状況](phase0-status.md)と[Illustrator適合試験](illustrator-testing.md)へ残します。

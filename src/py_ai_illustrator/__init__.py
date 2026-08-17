@@ -85,6 +85,17 @@ from .model import (
     Point,
     TextFrame,
 )
+from .modern import (
+    ModernAIReadResult,
+    ModernDiagnostic,
+    ModernReadLimits,
+    PdfRef,
+    PrivateDataSection,
+    PrivateDataSegment,
+    PrivateDataToken,
+    read_modern_ai,
+    tokenize_private_data,
+)
 from .semantic import SemanticDiff, SemanticDifference, semantic_diff
 
 __all__ = [
@@ -115,12 +126,19 @@ __all__ = [
     "LegacyParseCoverage",
     "LegacyReadResult",
     "LegacySource",
+    "ModernAIReadResult",
+    "ModernDiagnostic",
+    "ModernReadLimits",
     "OperationManifest",
     "OperationRequest",
     "OperationRequestError",
     "Path",
     "PackagedLink",
+    "PdfRef",
     "Point",
+    "PrivateDataSection",
+    "PrivateDataSegment",
+    "PrivateDataToken",
     "RenderedComponent",
     "ReplaceLinkedImageSource",
     "ReplaceText",
@@ -160,6 +178,7 @@ __all__ = [
     "polyline_path",
     "rectangle_path",
     "read_ai7",
+    "read_modern_ai",
     "reserialize_ai7",
     "semantic_diff",
     "transform_group",
@@ -167,6 +186,7 @@ __all__ = [
     "transform_path",
     "transform_text",
     "tokenize_legacy",
+    "tokenize_private_data",
     "unexpected_semantic_differences",
 ]
 

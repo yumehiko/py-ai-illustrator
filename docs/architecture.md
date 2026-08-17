@@ -80,13 +80,16 @@ PlacedImage
 
 ### modern AI
 
-1. PDF object graph を読む
-2. `AIPrivateData*` と metadata stream を順序どおり抽出
-3. Flate / zstd 等を展開
-4. lexer で token と byte span を保存
-5. parser で concrete syntax tree を生成
-6. reducer で Python IR に投影
-7. PDF content stream から preview/fallback IR も作り、PrivateData との対応を記録
+最初のread-only縦切りは実装済みです。
+
+1. bounded PDF readerで通常indirect objectの必要subsetを読む
+2. direct / indirect referenceをたどり`PieceInfo / Illustrator / Private`を解決する
+3. `AIPrivateData*`を数値suffix順に抽出し、object / raw stream source spanを保存する
+4. PDF Flate chainとIllustrator `%AI24_ZStandard_Data`をresource limit付きで展開する
+5. raw / decoded bytesとSHA-256、filter chain、diagnosticを`ModernAIReadResult`へ保持する
+6. decoded bytes全体を物理行tokenとbegin/end section spanでlosslessに索引化する
+
+この結果は`container_status`、`private_data_status`、`semantic_status`を分離します。現段階の`semantic_status`は常に`unsupported`で、token/section indexは未知領域を保持するCST前段です。object/xref stream等を含む汎用PDF全体、PrivateData semantic parser、共通IRへのreducer、PDF preview/fallback、不一致診断は後続作業です。正確な保証境界は[Modern AI read-only feature profile](modern-ai-read-profile.md)に定義します。
 
 ### legacy AI
 

@@ -20,7 +20,9 @@ classifiers = [
   "Programming Language :: Python :: 3 :: Only",
   "Topic :: Multimedia :: Graphics :: Editors :: Vector-Based",
 ]
-dependencies = []
+dependencies = [
+  "zstandard>=0.23,<1",
+]
 
 [project.optional-dependencies]
 dev = [

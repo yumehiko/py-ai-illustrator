@@ -20,6 +20,7 @@ from .illustrator import (
 )
 from .legacy import UnsupportedLegacyFeature, dump_ai7, read_ai7
 from .model import Document
+from .modern import read_modern_ai
 from .semantic import semantic_diff
 
 
@@ -37,6 +38,8 @@ def _inspect(args: argparse.Namespace) -> int:
         output = report.to_dict()
         if report.format is FileFormat.LEGACY_AI:
             output.update(inspect_editable_legacy(args.input))
+        elif report.format in {FileFormat.PDF_COMPATIBLE_AI, FileFormat.PDF}:
+            output["modern_ai"] = read_modern_ai(args.input).to_dict()
         _write_json(output, None)
     else:
         print(f"format: {report.format.value}")
@@ -44,6 +47,11 @@ def _inspect(args: argparse.Namespace) -> int:
         print(f"confidence: {report.confidence}")
         if report.illustrator_markers:
             print("markers: " + ", ".join(report.illustrator_markers))
+        if report.format in {FileFormat.PDF_COMPATIBLE_AI, FileFormat.PDF}:
+            modern = read_modern_ai(args.input)
+            print(f"container-read: {modern.container_status}")
+            print(f"private-data: {modern.private_data_status}")
+            print(f"semantic: {modern.semantic_status}")
         for note in report.notes:
             print(f"note: {note}")
     return 0
@@ -136,6 +144,9 @@ def _validate(args: argparse.Namespace) -> int:
     errors: list[str] = []
     warnings = list(report.notes)
     compatibility: dict[str, object] | None = None
+    modern_read: dict[str, object] | None = None
+    modern_valid: bool | None = None
+    classification = "unconvertible"
     if report.format is FileFormat.LEGACY_AI:
         try:
             parsed = read_ai7(args.input)
@@ -143,33 +154,54 @@ def _validate(args: argparse.Namespace) -> int:
             warnings.extend(diagnostic.message for diagnostic in parsed.diagnostics)
             if not parsed.document.layers:
                 warnings.append("No layers were parsed by the Phase 0 reader.")
+            classification = str(compatibility["classification"])
         except (ValueError, UnicodeError) as error:
             errors.append(str(error))
-    elif report.format is FileFormat.PDF_COMPATIBLE_AI:
+    elif report.format in {FileFormat.PDF_COMPATIBLE_AI, FileFormat.PDF}:
+        modern = read_modern_ai(args.input)
+        modern_read = modern.to_dict()
+        errors.extend(
+            diagnostic.message
+            for diagnostic in modern.diagnostics
+            if diagnostic.severity == "error"
+        )
+        warnings.extend(
+            diagnostic.message
+            for diagnostic in modern.diagnostics
+            if diagnostic.severity in {"warning", "info"}
+        )
+        if modern.private_data_status == "extracted":
+            classification = "read_only_private_data"
+            modern_valid = modern.container_status == "parsed" and not errors
+        elif modern.private_data_status == "absent":
+            classification = "ordinary_pdf"
+            modern_valid = modern.container_status == "parsed" and not errors
+        else:
+            modern_valid = False
         warnings.append(
-            "Modern AI semantic parsing is not implemented yet; container only checked."
+            "Modern AI semantic projection is unsupported; no Document IR was produced."
         )
     else:
         errors.append(f"Unsupported input format: {report.format.value}")
 
+    valid = modern_valid if modern_valid is not None else not errors
     result = {
-        "valid": not errors,
+        "valid": valid,
         "safe_to_reserialize": bool(
             not errors
             and compatibility is not None
             and compatibility["safe_to_reserialize"]
         ),
-        "classification": (
-            compatibility["classification"]
-            if compatibility is not None and not errors
-            else "unconvertible"
-        ),
+        "classification": classification if valid else "unconvertible",
         "format": report.format.value,
         "errors": errors,
         "warnings": warnings,
         "compatibility": compatibility,
+        "modern_ai": modern_read,
     }
     _write_json(result, None)
+    if modern_valid is not None:
+        return 0 if result["valid"] else 1
     return 0 if result["safe_to_reserialize"] else 1
 
 

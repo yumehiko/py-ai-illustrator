@@ -13,7 +13,7 @@ legacy .ai bytes
   -> legacy .ai bytes
 ```
 
-現代版の PDF-compatible AI はコンテナと代表 marker の検出までです。PrivateData を「PDFとして見える内容」と混同しないよう、未対応時は JSON export を明示的に停止します。
+Phase 0後のA2縦切りで、PDF-compatible AIはbounded container readerとPrivateDataのread-only抽出・索引化まで進みました。PrivateDataを「PDFとして見える内容」やDocument IRと混同せず、JSON exportは引き続き明示的に停止します。
 
 ## 対応 feature profile
 
@@ -39,7 +39,7 @@ legacy .ai bytes
 | native AI materialization | n/a | Illustrator経由 | native point/area TextFrameへ変換し、font/size/fill/leading/揃え/identityを保持 |
 | rigid transform / text rotation | 対応 | 対応 | path・handle・text・nested group、native角度検証 |
 | linked image | bridge対応 | Illustrator経由 | PNG/JPEGを`Links/`へpackageし、native linked `PlacedItem`へ置換。埋め込みはしない |
-| PDF-compatible AI semantic data | 未対応 | 未対応 | 現在は形式判定のみ |
+| PDF-compatible AI PrivateData | read-only抽出 | 未対応 | segment/span/filter/hash/token/section。semantic IRは未対応 |
 
 ## 意図的な境界
 
@@ -58,7 +58,7 @@ legacy .ai bytes
 2. 次期Illustrator正式版の公開時に実機fixtureを追加versionへ広げ、version matrixを記録する。
 3. CP932以外のtext encodingとimageのcontain / cover / clipping cropを実装する。
 4. 実装した共通render境界へsemantic metadata manifestを追加する。
-5. modern AI reader用の再配布可能fixtureと期待structure manifestを整備する。
+5. modern AIのdecoded PrivateDataから対応nodeを共通IRへ投影する。
 
 終了条件のうち、Python内の `IR -> AI7 -> IR` と、Illustrator 30.7.0でfixtureを開いた際の編集構造検査は完了しました。対応範囲はまだ小さいため、AI7 writer全体の位置付けは引き続き experimental です。
 
