@@ -1052,7 +1052,7 @@ def _loads_ai7_source(
                 content_end = token.start + leading_length + text_content_match.end(1)
                 current_text_content_origins.append(
                     LegacyFieldOrigin(
-                        field="text",
+                        field=f"text.{len(current_text_content_origins)}",
                         start=content_start,
                         end=content_end,
                         expected=data[content_start:content_end],
@@ -1085,11 +1085,16 @@ def _loads_ai7_source(
                 )
                 append_item("text", text_frame)
                 if origins is not None:
-                    text_fields = (
-                        tuple(current_text_content_origins)
-                        if len(text_parts) == 1 and len(current_text_content_origins) == 1
-                        else ()
-                    )
+                    text_fields = tuple(current_text_content_origins)
+                    if len(text_fields) == 1:
+                        text_fields = (
+                            LegacyFieldOrigin(
+                                field="text",
+                                start=text_fields[0].start,
+                                end=text_fields[0].end,
+                                expected=text_fields[0].expected,
+                            ),
+                        )
                     origins.append(
                         LegacyNodeOrigin(
                             node_type="text",

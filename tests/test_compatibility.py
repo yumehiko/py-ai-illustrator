@@ -796,14 +796,19 @@ def test_typed_text_patch_stops_for_zero_or_multiple_selector_matches(text_id: s
         )
 
 
-def test_typed_text_patch_rejects_multi_statement_text_without_a_local_field_span() -> None:
+def test_multi_statement_text_origin_retains_each_content_span() -> None:
     data = dumps_ai7(text_document(text="FirstSecond")).replace(
         b"(FirstSecond) Tx",
         b"(First) Tx\n(Second) Tx",
     )
     result = reads_ai7(data)
     origin = next(origin for origin in result.origins if origin.node_id == "headline")
+    text_origins = origin.fields_with_prefix("text.")
+
     assert origin.field("text") is None
+    assert [field.field for field in text_origins] == ["text.0", "text.1"]
+    assert [data[field.start : field.end] for field in text_origins] == [b"First", b"Second"]
+    assert result.document.layers[0].text_frames[0].text == "FirstSecond"
 
     with pytest.raises(UnsupportedLegacyFeature, match="exclusive source text span"):
         patch_text(
