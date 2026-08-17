@@ -1704,6 +1704,41 @@ class ReplaceText:
             raise ValueError("text_id must not be empty")
 
 
+LegacyPatchOperation = (
+    SetPathFill
+    | SetPathStroke
+    | TranslatePath
+    | TranslateContainer
+    | ReplaceLinkedImageSource
+    | ReplaceText
+)
+
+
+@dataclass(frozen=True, slots=True)
+class LegacyPatchPlan:
+    """Validated, non-conflicting replacements against one exact source."""
+
+    source_sha256: str
+    source_size: int
+    operation_count: int
+    replacements: tuple[SourceReplacement, ...]
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "source_sha256": self.source_sha256,
+            "source_size": self.source_size,
+            "operation_count": self.operation_count,
+            "replacement_count": len(self.replacements),
+            "replacements": [
+                {
+                    "span": {"start": replacement.start, "end": replacement.end},
+                    "replacement_size": len(replacement.data),
+                }
+                for replacement in self.replacements
+            ],
+        }
+
+
 def _container_paths(container: Layer | Group) -> list[Path]:
     paths = [
         *container.paths,
@@ -1848,9 +1883,9 @@ def _validate_patch_origin(
         )
 
 
-def patch_path_fill(result: LegacyReadResult, operation: SetPathFill) -> LegacySource:
-    """Patch one uniquely selected path fill while preserving all other source bytes."""
-
+def _path_fill_replacements(
+    result: LegacyReadResult, operation: SetPathFill
+) -> list[SourceReplacement]:
     matching_paths = _matching_paths(result, operation.path_id)
     if len(matching_paths) != 1:
         raise UnsupportedLegacyFeature(
@@ -1873,14 +1908,12 @@ def patch_path_fill(result: LegacyReadResult, operation: SetPathFill) -> LegacyS
     )
 
     replacement = _color_operator(operation.fill, stroke=False).encode("ascii")
-    return result.source.patched(
-        [SourceReplacement(fill_origin.start, fill_origin.end, replacement)]
-    )
+    return [SourceReplacement(fill_origin.start, fill_origin.end, replacement)]
 
 
-def patch_path_stroke(result: LegacyReadResult, operation: SetPathStroke) -> LegacySource:
-    """Patch one uniquely selected path stroke while preserving all other source bytes."""
-
+def _path_stroke_replacements(
+    result: LegacyReadResult, operation: SetPathStroke
+) -> list[SourceReplacement]:
     matching_paths = _matching_paths(result, operation.path_id)
     if len(matching_paths) != 1:
         raise UnsupportedLegacyFeature(
@@ -1903,9 +1936,7 @@ def patch_path_stroke(result: LegacyReadResult, operation: SetPathStroke) -> Leg
     )
 
     replacement = _color_operator(operation.stroke, stroke=True).encode("ascii")
-    return result.source.patched(
-        [SourceReplacement(stroke_origin.start, stroke_origin.end, replacement)]
-    )
+    return [SourceReplacement(stroke_origin.start, stroke_origin.end, replacement)]
 
 
 def _translated_geometry_statement(statement: bytes, *, dx: float, dy: float) -> bytes:
@@ -1942,9 +1973,9 @@ def _translated_geometry_statement(statement: bytes, *, dx: float, dy: float) ->
     )
 
 
-def patch_path_translate(result: LegacyReadResult, operation: TranslatePath) -> LegacySource:
-    """Translate one path through statement-local replacements."""
-
+def _path_translation_replacements(
+    result: LegacyReadResult, operation: TranslatePath
+) -> list[SourceReplacement]:
     matching_paths = _matching_paths(result, operation.path_id)
     if len(matching_paths) != 1:
         raise UnsupportedLegacyFeature(
@@ -1960,41 +1991,13 @@ def patch_path_translate(result: LegacyReadResult, operation: TranslatePath) -> 
 
     origin = _unique_origin(result, node_type="path", node_id=operation.path_id)
     _validate_patch_origin(result, origin=origin, node_label=f"Path {operation.path_id!r}")
-
-    geometry_origins = origin.fields_with_prefix("geometry.")
-    if not geometry_origins:
-        raise UnsupportedLegacyFeature(
-            f"Path {operation.path_id!r} does not have local source geometry spans."
-        )
-
-    replacements: list[SourceReplacement] = []
-    for index, geometry_origin in enumerate(geometry_origins):
-        if geometry_origin.field != f"geometry.{index}":
-            raise UnsupportedLegacyFeature(
-                f"Path {operation.path_id!r} has incomplete source geometry spans."
-            )
-        validated = _validate_patch_field(
-            result,
-            origin=origin,
-            field_name=geometry_origin.field,
-            node_label=f"Path {operation.path_id!r}",
-        )
-        replacements.append(
-            SourceReplacement(
-                validated.start,
-                validated.end,
-                (
-                    validated.expected
-                    if operation.dx == 0 and operation.dy == 0
-                    else _translated_geometry_statement(
-                        validated.expected,
-                        dx=operation.dx,
-                        dy=operation.dy,
-                    )
-                ),
-            )
-        )
-    return result.source.patched(replacements)
+    return _geometry_translation_replacements(
+        result,
+        origin=origin,
+        node_label=f"Path {operation.path_id!r}",
+        dx=operation.dx,
+        dy=operation.dy,
+    )
 
 
 def _geometry_translation_replacements(
@@ -2130,11 +2133,9 @@ def _image_translation_replacements(
     ]
 
 
-def patch_container_translate(
+def _container_translation_replacements(
     result: LegacyReadResult, operation: TranslateContainer
-) -> LegacySource:
-    """Translate one uniquely selected container through leaf field replacements."""
-
+) -> list[SourceReplacement]:
     matching = [
         container
         for container in _container_candidates(result, operation.container_type)
@@ -2218,19 +2219,12 @@ def patch_container_translate(
                         dy=operation.dy,
                     )
                 )
-    try:
-        return result.source.patched(replacements)
-    except ValueError as error:
-        raise UnsupportedLegacyFeature(
-            f"Container {operation.container_id!r} produced conflicting or out-of-range patches."
-        ) from error
+    return replacements
 
 
-def patch_linked_image_source(
+def _linked_image_source_replacements(
     result: LegacyReadResult, operation: ReplaceLinkedImageSource
-) -> LegacySource:
-    """Patch one linked-image source in its private legacy metadata."""
-
+) -> list[SourceReplacement]:
     matching_images = [
         image
         for layer in result.document.layers
@@ -2276,14 +2270,12 @@ def patch_linked_image_source(
     replacement = base64.b64encode(
         json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     )
-    return result.source.patched(
-        [SourceReplacement(metadata_origin.start, metadata_origin.end, replacement)]
-    )
+    return [SourceReplacement(metadata_origin.start, metadata_origin.end, replacement)]
 
 
-def patch_text(result: LegacyReadResult, operation: ReplaceText) -> LegacySource:
-    """Patch one uniquely selected text frame while preserving all other source bytes."""
-
+def _text_replacements(
+    result: LegacyReadResult, operation: ReplaceText
+) -> list[SourceReplacement]:
     matching_text_frames = [
         text_frame
         for layer in result.document.layers
@@ -2312,9 +2304,145 @@ def patch_text(result: LegacyReadResult, operation: ReplaceText) -> LegacySource
     replacement = _escape_postscript_text(
         operation.text, font_name=text_frame.font_name
     ).encode("ascii")
-    return result.source.patched(
-        [SourceReplacement(text_origin.start, text_origin.end, replacement)]
+    return [SourceReplacement(text_origin.start, text_origin.end, replacement)]
+
+
+def _operation_replacements(
+    result: LegacyReadResult, operation: LegacyPatchOperation
+) -> list[SourceReplacement]:
+    if isinstance(operation, SetPathFill):
+        return _path_fill_replacements(result, operation)
+    if isinstance(operation, SetPathStroke):
+        return _path_stroke_replacements(result, operation)
+    if isinstance(operation, TranslatePath):
+        return _path_translation_replacements(result, operation)
+    if isinstance(operation, TranslateContainer):
+        return _container_translation_replacements(result, operation)
+    if isinstance(operation, ReplaceLinkedImageSource):
+        return _linked_image_source_replacements(result, operation)
+    if isinstance(operation, ReplaceText):
+        return _text_replacements(result, operation)
+    raise TypeError(f"Unsupported legacy patch operation: {type(operation).__name__}")
+
+
+def _validated_replacements(
+    replacements: list[SourceReplacement] | tuple[SourceReplacement, ...],
+    *,
+    source_size: int,
+) -> tuple[SourceReplacement, ...]:
+    ordered = tuple(
+        sorted(replacements, key=lambda replacement: (replacement.start, replacement.end))
     )
+    previous: SourceReplacement | None = None
+    for replacement in ordered:
+        if replacement.end > source_size:
+            raise UnsupportedLegacyFeature(
+                f"Patch span [{replacement.start}, {replacement.end}) exceeds source size "
+                f"{source_size}."
+            )
+        if previous is not None:
+            overlaps = replacement.start < previous.end
+            same_insertion_point = (
+                replacement.start == previous.start
+                and (replacement.start == replacement.end or previous.start == previous.end)
+            )
+            if overlaps or same_insertion_point:
+                raise UnsupportedLegacyFeature(
+                    "Patch operations conflict at source spans "
+                    f"[{previous.start}, {previous.end}) and "
+                    f"[{replacement.start}, {replacement.end})."
+                )
+        previous = replacement
+    return ordered
+
+
+def plan_legacy_patch(
+    result: LegacyReadResult, operations: tuple[LegacyPatchOperation, ...]
+) -> LegacyPatchPlan:
+    """Validate typed operations and produce one conflict-free patch plan."""
+
+    if not operations:
+        raise ValueError("operations must not be empty")
+    replacements = [
+        replacement
+        for operation in operations
+        for replacement in _operation_replacements(result, operation)
+    ]
+    ordered = _validated_replacements(replacements, source_size=len(result.source.data))
+    return LegacyPatchPlan(
+        source_sha256=hashlib.sha256(result.source.data).hexdigest(),
+        source_size=len(result.source.data),
+        operation_count=len(operations),
+        replacements=ordered,
+    )
+
+
+def apply_legacy_patch(result: LegacyReadResult, plan: LegacyPatchPlan) -> LegacySource:
+    """Apply a plan only when the complete source precondition still matches."""
+
+    actual_digest = hashlib.sha256(result.source.data).hexdigest()
+    if len(result.source.data) != plan.source_size or actual_digest != plan.source_sha256:
+        raise UnsupportedLegacyFeature(
+            "Patch source precondition failed; the complete source changed after planning."
+        )
+    replacements = _validated_replacements(
+        plan.replacements,
+        source_size=len(result.source.data),
+    )
+    try:
+        return result.source.patched(list(replacements))
+    except ValueError as error:
+        raise UnsupportedLegacyFeature(
+            "Patch plan contains conflicting or out-of-range replacements."
+        ) from error
+
+
+def patch_legacy(
+    result: LegacyReadResult, operations: tuple[LegacyPatchOperation, ...]
+) -> LegacySource:
+    """Plan and atomically apply one or more typed legacy operations."""
+
+    return apply_legacy_patch(result, plan_legacy_patch(result, operations))
+
+
+def patch_path_fill(result: LegacyReadResult, operation: SetPathFill) -> LegacySource:
+    """Patch one uniquely selected path fill while preserving all other source bytes."""
+
+    return patch_legacy(result, (operation,))
+
+
+def patch_path_stroke(result: LegacyReadResult, operation: SetPathStroke) -> LegacySource:
+    """Patch one uniquely selected path stroke while preserving all other source bytes."""
+
+    return patch_legacy(result, (operation,))
+
+
+def patch_path_translate(result: LegacyReadResult, operation: TranslatePath) -> LegacySource:
+    """Translate one path through statement-local replacements."""
+
+    return patch_legacy(result, (operation,))
+
+
+def patch_container_translate(
+    result: LegacyReadResult, operation: TranslateContainer
+) -> LegacySource:
+    """Translate one uniquely selected container through leaf field replacements."""
+
+    return patch_legacy(result, (operation,))
+
+
+def patch_linked_image_source(
+    result: LegacyReadResult, operation: ReplaceLinkedImageSource
+) -> LegacySource:
+    """Patch one linked-image source in its private legacy metadata."""
+
+    return patch_legacy(result, (operation,))
+
+
+def patch_text(result: LegacyReadResult, operation: ReplaceText) -> LegacySource:
+    """Patch one uniquely selected text frame while preserving all other source bytes."""
+
+    return patch_legacy(result, (operation,))
 
 
 def reserialize_ai7(

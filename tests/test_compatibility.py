@@ -12,17 +12,20 @@ from py_ai_illustrator.legacy import (
     TranslateContainer,
     TranslatePath,
     UnsupportedLegacyFeature,
+    apply_legacy_patch,
     dumps_ai7,
     patch_container_translate,
+    patch_legacy,
     patch_linked_image_source,
     patch_path_fill,
     patch_path_stroke,
     patch_path_translate,
     patch_text,
+    plan_legacy_patch,
     reads_ai7,
     reserialize_ai7,
 )
-from py_ai_illustrator.lossless import SourceReplacement
+from py_ai_illustrator.lossless import SourceReplacement, tokenize_legacy
 from py_ai_illustrator.model import (
     Artboard,
     ClippingGroup,
@@ -924,6 +927,129 @@ def test_zero_container_translation_is_byte_preserving() -> None:
     )
 
     assert patched.data == data
+
+
+def test_batch_patch_applies_disjoint_typed_operations_atomically() -> None:
+    data = dumps_ai7(translatable_group_document()).replace(
+        b"%%EndSetup\n",
+        b"%%EndSetup\n12 34 FutureOperator % outside \xff\n",
+    )
+    result = reads_ai7(data)
+
+    plan = plan_legacy_patch(
+        result,
+        (
+            SetPathFill(
+                path_id="shape",
+                expected_fill=Color(1, 0, 0),
+                fill=Color(0, 1, 0),
+            ),
+            ReplaceText(text_id="label", expected_text="Label", text="Updated"),
+        ),
+    )
+    patched = apply_legacy_patch(result, plan)
+
+    assert plan.operation_count == 2
+    assert plan.to_dict()["replacement_count"] == 2
+    assert b"FutureOperator % outside \xff" in patched.data
+    source_cursor = 0
+    patched_cursor = 0
+    for replacement in plan.replacements:
+        unchanged_size = replacement.start - source_cursor
+        assert (
+            patched.data[patched_cursor : patched_cursor + unchanged_size]
+            == data[source_cursor : replacement.start]
+        )
+        source_cursor = replacement.end
+        patched_cursor += unchanged_size + len(replacement.data)
+    assert patched.data[patched_cursor:] == data[source_cursor:]
+    restored_group = reads_ai7(patched.data).document.layers[0].groups[0]
+    assert restored_group.paths[0].fill == Color(0, 1, 0)
+    assert restored_group.text_frames[0].text == "Updated"
+
+
+def test_batch_patch_rejects_two_operations_for_the_same_field() -> None:
+    result = reads_ai7(dumps_ai7(supported_document()))
+
+    with pytest.raises(UnsupportedLegacyFeature, match="operations conflict"):
+        plan_legacy_patch(
+            result,
+            (
+                SetPathFill(
+                    path_id="shape",
+                    expected_fill=Color(1, 0, 0),
+                    fill=Color(0, 1, 0),
+                ),
+                SetPathFill(
+                    path_id="shape",
+                    expected_fill=Color(1, 0, 0),
+                    fill=Color(0, 0, 1),
+                ),
+            ),
+        )
+
+
+def test_batch_patch_treats_two_empty_span_insertions_as_a_conflict() -> None:
+    result = reads_ai7(dumps_ai7(text_document(text="")))
+
+    with pytest.raises(UnsupportedLegacyFeature, match="operations conflict"):
+        plan_legacy_patch(
+            result,
+            (
+                ReplaceText(text_id="headline", expected_text="", text="First"),
+                ReplaceText(text_id="headline", expected_text="", text="Second"),
+            ),
+        )
+
+
+def test_patch_plan_requires_the_complete_source_to_remain_unchanged() -> None:
+    result = reads_ai7(dumps_ai7(supported_document()))
+    plan = plan_legacy_patch(
+        result,
+        (
+            SetPathFill(
+                path_id="shape",
+                expected_fill=Color(1, 0, 0),
+                fill=Color(0, 1, 0),
+            ),
+        ),
+    )
+    changed_source = tokenize_legacy(result.source.data + b"% changed after planning\n")
+
+    with pytest.raises(UnsupportedLegacyFeature, match="complete source changed"):
+        apply_legacy_patch(replace(result, source=changed_source), plan)
+
+
+def test_patch_plan_revalidates_replacement_ranges_before_apply() -> None:
+    result = reads_ai7(dumps_ai7(supported_document()))
+    plan = plan_legacy_patch(
+        result,
+        (
+            SetPathFill(
+                path_id="shape",
+                expected_fill=Color(1, 0, 0),
+                fill=Color(0, 1, 0),
+            ),
+        ),
+    )
+    invalid_plan = replace(
+        plan,
+        replacements=(SourceReplacement(0, len(result.source.data) + 1, b"invalid"),),
+    )
+
+    with pytest.raises(UnsupportedLegacyFeature, match="exceeds source size"):
+        apply_legacy_patch(result, invalid_plan)
+
+
+def test_patch_legacy_is_the_atomic_plan_and_apply_convenience() -> None:
+    result = reads_ai7(dumps_ai7(text_document()))
+
+    patched = patch_legacy(
+        result,
+        (ReplaceText(text_id="headline", expected_text="Original (copy)", text="New"),),
+    )
+
+    assert reads_ai7(patched.data).document.layers[0].text_frames[0].text == "New"
 
 
 def test_linked_image_source_patch_changes_only_the_metadata_payload() -> None:
