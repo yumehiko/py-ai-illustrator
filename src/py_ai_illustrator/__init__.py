@@ -68,6 +68,7 @@ from .model import (
     Point,
     TextFrame,
 )
+from .semantic import SemanticDiff, SemanticDifference, semantic_diff
 
 __all__ = [
     "Artboard",
@@ -108,6 +109,8 @@ __all__ = [
     "SourceReplacement",
     "SetPathFill",
     "SetPathStroke",
+    "SemanticDiff",
+    "SemanticDifference",
     "Table",
     "TableColumn",
     "TableStyle",
@@ -127,6 +130,7 @@ __all__ = [
     "rectangle_path",
     "read_ai7",
     "reserialize_ai7",
+    "semantic_diff",
     "transform_group",
     "transform_image",
     "transform_path",
