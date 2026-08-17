@@ -29,7 +29,16 @@ from .compatibility import (
     LegacyReadResult,
 )
 from .format import FileFormat, FormatReport, inspect_file
-from .legacy import SetPathFill, patch_path_fill, read_ai7, reserialize_ai7
+from .legacy import (
+    ReplaceText,
+    SetPathFill,
+    SetPathStroke,
+    patch_path_fill,
+    patch_path_stroke,
+    patch_text,
+    read_ai7,
+    reserialize_ai7,
+)
 from .lossless import (
     LegacyLineToken,
     LegacySource,
@@ -84,12 +93,14 @@ __all__ = [
     "PackagedLink",
     "Point",
     "RenderedComponent",
+    "ReplaceText",
     "TextFrame",
     "TextBlock",
     "TextStyle",
     "SourceLimitExceeded",
     "SourceReplacement",
     "SetPathFill",
+    "SetPathStroke",
     "Table",
     "TableColumn",
     "TableStyle",
@@ -98,6 +109,8 @@ __all__ = [
     "iter_linked_images",
     "package_linked_images",
     "patch_path_fill",
+    "patch_path_stroke",
+    "patch_text",
     "polyline_path",
     "rectangle_path",
     "read_ai7",

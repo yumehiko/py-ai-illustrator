@@ -18,11 +18,11 @@
 
 | トラック | 状態 | 現在の到達点 | 主な未完了 |
 | --- | --- | --- | --- |
-| Conversion Core | 限定subsetで実証済み | legacy AI7/AI8 subsetのIR/JSON往復、形式判定、source付きreader result、parse coverage、未知feature診断、Illustrator 30.7.0適合試験 | node source span、typed patch、modern AI semantic reader/writer |
+| Conversion Core | 限定subsetで実証済み | legacy AI7/AI8 subsetのIR/JSON往復、source付きreader result、parse coverage、fill / stroke / text局所patch、Illustrator 30.7.0適合試験 | 残りのnode source span / typed patch、modern AI semantic reader/writer |
 | Authoring | Create MVP成立 | Table、共通component境界、point/area text、linked image、group、Artboard、rigid transform、複数の実制作例 | image crop、link診断、semantic manifest、高度なlayout/resource共有 |
 | Safe Edit / Agent | 設計段階 | inspect/export/validateとIllustrator検証CLI | selector、typed edit、precondition、dry-run、diff、preview、skill/plugin |
 
-2026-08-17時点のローカル基準は、`pytest` 104件成功、`ruff check`成功です。
+2026-08-17時点のローカル基準は、`pytest` 117件成功、`ruff check`成功です。
 
 現在の変換保証は、次のように区別します。
 
@@ -41,8 +41,8 @@
 - [x] readerが`document + source + coverage + diagnostics`相当の結果を返す
 - [x] 認識済み・未認識operator/resourceをcompatibility reportへ列挙する
 - [x] unsupported featureを含む通常のIR再serializeは既定で拒否する
-- [ ] 全IR nodeへorigin/source spanを接続する（`Path` nodeと排他的fill spanの縦切りは完了）
-- [ ] text / image / pathのtyped editを局所source patchへ変換する（`SetPathFill`は完了）
+- [ ] 全IR nodeへorigin/source spanを接続する（`Path`の排他的fill / strokeと単一`Tx`の`TextFrame`は完了）
+- [ ] text / image / pathのtyped editを局所source patchへ変換する（fill / stroke / textは完了）
 - [ ] patchのprecondition、競合、範囲外変更を検出する
 - [ ] read-onlyでは元bytesが完全一致し、局所編集では対象span外が一致する
 - [ ] 対応feature profileとIllustrator対象バージョンを文書化する
@@ -94,10 +94,10 @@
 Gate Aを満たします。
 
 - [x] parse coverageとunknown operator/resource inventory
-- [ ] node-level CST/source span（`Path` originと排他的fill field spanは実装済み）
+- [ ] node-level CST/source span（`Path`のfill / strokeと単一`Tx`の`TextFrame`本文は実装済み）
 - [x] source付きreader resultと新規作成IRの明確な区別
 - [x] strict-by-default reserializeと明示的な`discard` loss policy
-- [ ] typed patch writer（`SetPathFill`のselector・precondition・局所patchは実装済み）
+- [ ] typed patch writer（`SetPathFill` / `SetPathStroke` / `ReplaceText`は実装済み）
 - [ ] semantic diffとcompatibility report
 - [ ] Illustrator生成fixtureの種類と対象バージョンを拡張
 
@@ -251,8 +251,8 @@ py-ai-core ----------------> 他の層へ依存しない
 
 ## 現在の推奨着手順
 
-1. Gate A / A1のsource spanをtext/image/path geometryへ拡張する
-2. typed patchを`replace_text` / stroke / translateへ拡張する
+1. Gate A / A1のsource spanをimage/path geometryと複数`Tx` textへ拡張する
+2. typed patchをtranslate / image差し替えへ拡張する
 3. B1のimage crop・link診断を並行実装
 4. Gate B / C1のselector、dry-run、impact report
 5. A2のmodern AI reader縦切り

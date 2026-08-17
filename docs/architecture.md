@@ -94,11 +94,11 @@ Adobe Illustrator 7 specification の DSC comments と operator を読みます�
 
 最初のlossless層として、元bytesと各物理行の`start/content_end/end` spanを保持する`LegacySource`を実装済みです。改行や未知byteを正規化しないため`LegacySource.to_bytes()`は入力と完全一致します。statementはPostScript文字列とinline commentを飛ばして末尾operator spanも索引化します。semantic parserはこの行索引から既知subsetをIRへ投影します。
 
-`SourceReplacement`と`LegacySource.patched()`は、範囲内かつ非重複のspanだけを差し替えてsource mapを再構築します。これはlossless patch writerの低レベルprimitiveで、operatorの妥当性やIR preconditionは検証しません。次段階ではnode source spanとtyped editを結び、高レベル操作からのみreplacementを生成します。
+`SourceReplacement`と`LegacySource.patched()`は、範囲内かつ非重複のspanだけを差し替えてsource mapを再構築します。これはlossless patch writerの低レベルprimitiveで、operatorの妥当性やIR preconditionは検証しません。高レベル操作はnode source spanとtyped editを結び、意味・source双方のpreconditionを確認してからreplacementを生成します。
 
 semantic readerの公開境界は`LegacyReadResult(document, source, coverage, diagnostics)`です。新規作成`Document`にはsource provenanceがなく、既存ファイル由来の結果には元bytesと互換性証拠があります。operator/resource inventoryに未対応項目がある場合、通常の再serializeは既定で拒否し、明示的なloss policyなしに未知sourceを捨てません。
 
-node provenanceはIR dataclassへ直接混在させず、`LegacyReadResult.origins`のside tableに保持します。最初の縦切りでは`Path` node spanと排他的なfill field spanを索引化し、`SetPathFill`から`SourceReplacement`を生成します。同じcolor stateを複数nodeが参照する場合はfield originをpatch可能として公開せず、局所性を証明できる操作だけを許可します。
+node provenanceはIR dataclassへ直接混在させず、`LegacyReadResult.origins`のside tableに保持します。`Path` nodeと排他的なfill / stroke field spanに加え、`TextFrame` nodeと単一`Tx` statementの本文spanを索引化し、`SetPathFill` / `SetPathStroke` / `ReplaceText`から`SourceReplacement`を生成します。同じcolor stateを複数nodeが参照する場合や、本文が複数`Tx`へ分割される場合はfield originをpatch可能として公開せず、局所性を証明できる操作だけを許可します。
 
 ## Writer 戦略
 

@@ -55,7 +55,7 @@ legacy .ai bytes
 ## 次の検証ゲート
 
 1. Illustrator再保存をまたぐlayer/container IDとdocument metadataの保持方式を調査する。
-2. 実装済みのoperator span/local patch primitiveをnode source spanとtyped editへ接続する。
+2. node source spanをimage/path geometryと複数`Tx` textへ広げ、typed editをtranslate / image差し替えへ拡張する。
 3. CP932以外のtext encodingとimageのcontain / cover / clipping cropを実装する。
 4. 実装した共通render境界へsemantic metadata manifestを追加する。
 5. 検証対象とするIllustratorバージョンの範囲を広げる。
@@ -111,10 +111,14 @@ clipping groupは`q` / `Q` container、mask pathの`h/H`・`W`、後続content p
 
 lossless source prototypeは元bytesを所有し、各物理行を`start/content_end/end`の半開byte spanとして索引化します。CRLF/LF/CR、非UTF-8 byte、未知operatorをそのまま再構築でき、legacy semantic readerも同じsource mapを入力境界に使います。PostScript文字列とinline commentを考慮してstatement末尾operatorのspanも取得できます。入力全体・単一行・行数に既定上限を設けました。
 
-範囲外・重複spanを拒否する`SourceReplacement` / `LegacySource.patched()`で、既知operatorだけを差し替え、未知byteと改行を完全維持する局所patchも実証しました。これは意味検証をしない低レベルprimitiveであり、IR nodeのsource spanやtyped editとの接続は次段階です。
+範囲外・重複spanを拒否する`SourceReplacement` / `LegacySource.patched()`で、既知operatorだけを差し替え、未知byteと改行を完全維持する局所patchも実証しました。これは意味検証をしない低レベルprimitiveであり、公開する編集はIR nodeのsource spanとtyped editを接続した高レベル操作を経由します。
 
 `LegacyReadResult`は、意味IRの`document`、完全一致する`source`、operator/resource inventoryを持つ`coverage`、source span付き`diagnostics`を一体で返します。未対応featureがある結果は`partially_parsed`となり、`reserialize_ai7()`とCLIのJSON exportは既定で拒否します。破棄を意図する場合のみ`loss_policy="discard"`または`--allow-partial`を明示します。
 
 最初のnode-level縦切りとして、各`Path`のsource originと、そのpathだけが使用するfill field spanをreader resultへ接続しました。`SetPathFill`は安定IDを0件・1件・複数件で判定し、期待色と元source bytesをpreconditionとして、fill spanだけをRGB/CMYK operatorへ差し替えます。色stateが複数path/textで共有される場合は局所変更と証明できないため停止します。
+
+同じ排他性判定をstroke color stateへ拡張しました。`SetPathStroke`はRGB / CMYKの期待色と元source bytesを検証し、選択したpathだけが使用するstroke operatorを局所置換します。同じstroke stateを複数pathが使用する場合は、他pathの見た目を変えない局所編集と証明できないため停止します。
+
+`TextFrame`にもnode originを接続し、単一`Tx` statementで表現された本文にはexact byte spanを保持します。`ReplaceText`は安定ID、期待本文、元source bytes、unsupported診断との交差、既存fontのASCII / CP932 encoding profileを検証して本文spanだけを差し替えます。複数`Tx`に分割された本文や既存fontで表現できない文字は、周辺構文を書き換えず明示的に停止します。
 
 最初の試験では閉じた矩形が3 anchorsとして読まれました。AI7の閉じパスに開始点へ戻る明示的な最終segmentを出力するようwriterを修正し、4 anchorsで再試験に合格しています。また、日本語環境でExtendScript内のreverse solidusが円記号として解釈される問題を避けるため、検査用JSXは該当文字とファイルパスを文字コードから構築します。詳細は [Illustrator 適合試験](illustrator-testing.md) を参照してください。

@@ -126,14 +126,23 @@ output = reserialize_ai7(result)
 `py-ai export input.ai --to json`も既定では部分解析結果を拒否します。診断を確認したうえで
 意味IRに含まれないfeatureの破棄を許す場合のみ、`--allow-partial`を指定します。
 
-既存のfill operatorを一つのpathだけが使用している場合は、typed operationから局所patchを
-生成できます。path IDが0件・複数件、意味precondition不一致、または色operatorが複数nodeで
-共有されている場合は停止します。
+既存のfill / stroke operatorを一つのpathだけが使用している場合と、`TextFrame`の本文が単一の
+`Tx` statementで表現されている場合は、typed operationから局所patchを生成できます。IDが0件・
+複数件、意味/source precondition不一致、または編集対象を排他的なspanに限定できない場合は停止します。
 
 ```python
 from pathlib import Path
 
-from py_ai_illustrator import Color, SetPathFill, patch_path_fill, read_ai7
+from py_ai_illustrator import (
+    Color,
+    ReplaceText,
+    SetPathFill,
+    SetPathStroke,
+    patch_path_fill,
+    patch_path_stroke,
+    patch_text,
+    read_ai7,
+)
 
 result = read_ai7("input.ai")
 patched = patch_path_fill(
@@ -145,13 +154,33 @@ patched = patch_path_fill(
     ),
 )
 Path("output.ai").write_bytes(patched.to_bytes())
+
+stroke_patched = patch_path_stroke(
+    result,
+    SetPathStroke(
+        path_id="rule",
+        expected_stroke=Color(0, 0, 0),
+        stroke=Color(1, 0.2, 0),
+    ),
+)
+Path("stroke-output.ai").write_bytes(stroke_patched.to_bytes())
+
+text_patched = patch_text(
+    result,
+    ReplaceText(
+        text_id="headline",
+        expected_text="Old title",
+        text="New title",
+    ),
+)
+Path("text-output.ai").write_bytes(text_patched.to_bytes())
 ```
 
-このpatchはfill field spanだけを差し替え、対象spanの前後にある改行、未知operator、非UTF-8
-byteをそのまま保持します。現時点では既存fillの変更だけが対象で、fill追加、共有color stateの
-分離、text/stroke/geometry編集は未実装です。
+これらのpatchはfill、strokeまたはtext field spanだけを差し替え、対象spanの前後にある改行、未知
+operator、非UTF-8 byteをそのまま保持します。textは既存fontのASCII / CP932 profileで再encode
+します。現時点ではfill / stroke追加、共有color stateの分離、複数`Tx` text、geometry編集は未実装です。
 
-既定では入力64 MiB、1行8 MiB、200万行を上限とし、超過時は`SourceLimitExceeded`を返します。`patched()`は範囲外・重複spanを拒否しますが、operatorの意味検証を行わない低レベルprimitiveです。IR編集を安全なspan変更へ変換する高レベルpatch writerは未実装です。
+既定では入力64 MiB、1行8 MiB、200万行を上限とし、超過時は`SourceLimitExceeded`を返します。`patched()`は範囲外・重複spanを拒否しますが、operatorの意味検証を行わない低レベルprimitiveです。IR編集では`SetPathFill` / `SetPathStroke` / `ReplaceText`の高レベルpatch APIを使用します。
 
 ## 最初の往復変換
 

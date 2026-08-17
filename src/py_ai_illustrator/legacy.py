@@ -652,6 +652,8 @@ def _loads_ai7_source(
     text_font_size = 12.0
     text_alignment = "left"
     text_rotation = 0.0
+    current_text_source_start: int | None = None
+    current_text_content_origins: list[LegacyFieldOrigin] = []
     pending_text_id: str | None = None
     pending_text_name: str | None = None
     pending_text_alignment: str | None = None
@@ -666,17 +668,27 @@ def _loads_ai7_source(
     artboards: list[Artboard] = []
     current_path_source_start: int | None = None
     current_fill_origin: LegacyFieldOrigin | None = None
-    path_origin_candidates: list[tuple[str, int, int, LegacyFieldOrigin | None]] = []
+    current_stroke_origin: LegacyFieldOrigin | None = None
+    path_origin_candidates: list[
+        tuple[
+            str,
+            int,
+            int,
+            LegacyFieldOrigin | None,
+            LegacyFieldOrigin | None,
+        ]
+    ] = []
     fill_origin_use_counts: dict[tuple[int, int], int] = {}
+    stroke_origin_use_counts: dict[tuple[int, int], int] = {}
 
-    def field_origin(
-        token_start: int, token_content_end: int, token_operator_end: int
+    def statement_field_origin(
+        field: str, token_start: int, token_content_end: int, token_operator_end: int
     ) -> LegacyFieldOrigin:
         start = token_start
         while start < token_content_end and data[start] in b"\x00\t\x0c ":
             start += 1
         return LegacyFieldOrigin(
-            field="fill",
+            field=field,
             start=start,
             end=token_operator_end,
             expected=data[start:token_operator_end],
@@ -687,6 +699,12 @@ def _loads_ai7_source(
             return
         key = (current_fill_origin.start, current_fill_origin.end)
         fill_origin_use_counts[key] = fill_origin_use_counts.get(key, 0) + 1
+
+    def count_stroke_origin_use() -> None:
+        if current_stroke_origin is None:
+            return
+        key = (current_stroke_origin.start, current_stroke_origin.end)
+        stroke_origin_use_counts[key] = stroke_origin_use_counts.get(key, 0) + 1
 
     def active_container() -> Layer | Group:
         nonlocal current_layer
@@ -972,6 +990,8 @@ def _loads_ai7_source(
         if _TEXT_BEGIN_RE.match(line):
             in_text = True
             text_parts = []
+            current_text_source_start = token.start
+            current_text_content_origins = []
             text_x = 0.0
             text_y = 0.0
             text_rotation = 0.0
@@ -1007,6 +1027,19 @@ def _loads_ai7_source(
                 text_parts.append(
                     _unescape_postscript_text(text_content_match.group(1), font_name=text_font_name)
                 )
+                raw_content = source.line_content(token)
+                decoded_content = raw_content.decode("latin-1")
+                leading_length = len(decoded_content) - len(decoded_content.lstrip())
+                content_start = token.start + leading_length + text_content_match.start(1)
+                content_end = token.start + leading_length + text_content_match.end(1)
+                current_text_content_origins.append(
+                    LegacyFieldOrigin(
+                        field="text",
+                        start=content_start,
+                        end=content_end,
+                        expected=data[content_start:content_end],
+                    )
+                )
                 continue
             if line == "TO":
                 text_counter += 1
@@ -1033,6 +1066,25 @@ def _loads_ai7_source(
                     alignment=pending_text_alignment or text_alignment,
                 )
                 append_item("text", text_frame)
+                if origins is not None:
+                    text_fields = (
+                        tuple(current_text_content_origins)
+                        if len(text_parts) == 1 and len(current_text_content_origins) == 1
+                        else ()
+                    )
+                    origins.append(
+                        LegacyNodeOrigin(
+                            node_type="text",
+                            node_id=text_frame.id,
+                            start=(
+                                current_text_source_start
+                                if current_text_source_start is not None
+                                else token.start
+                            ),
+                            end=token.end,
+                            fields=text_fields,
+                        )
+                    )
                 pending_text_id = None
                 pending_text_name = None
                 pending_text_alignment = None
@@ -1042,6 +1094,8 @@ def _loads_ai7_source(
                 pending_text_area_width = None
                 pending_text_area_height = None
                 pending_text_leading = None
+                current_text_source_start = None
+                current_text_content_origins = []
                 in_text = False
                 continue
         ai8_rgb_match = _AI8_RGB_COLOR_RE.match(line)
@@ -1050,11 +1104,15 @@ def _loads_ai7_source(
             if ai8_rgb_match.group(8) == "Xa":
                 fill = color
                 if token.operator_end is not None:
-                    current_fill_origin = field_origin(
-                        token.start, token.content_end, token.operator_end
+                    current_fill_origin = statement_field_origin(
+                        "fill", token.start, token.content_end, token.operator_end
                     )
             else:
                 stroke = color
+                if token.operator_end is not None:
+                    current_stroke_origin = statement_field_origin(
+                        "stroke", token.start, token.content_end, token.operator_end
+                    )
             continue
         color_match = _COLOR_RE.match(line)
         if color_match:
@@ -1062,11 +1120,15 @@ def _loads_ai7_source(
             if color_match.group(4) == "Xa":
                 fill = color
                 if token.operator_end is not None:
-                    current_fill_origin = field_origin(
-                        token.start, token.content_end, token.operator_end
+                    current_fill_origin = statement_field_origin(
+                        "fill", token.start, token.content_end, token.operator_end
                     )
             else:
                 stroke = color
+                if token.operator_end is not None:
+                    current_stroke_origin = statement_field_origin(
+                        "stroke", token.start, token.content_end, token.operator_end
+                    )
             continue
         cmyk_match = _CMYK_COLOR_RE.match(line)
         if cmyk_match:
@@ -1074,11 +1136,15 @@ def _loads_ai7_source(
             if cmyk_match.group(5) == "k":
                 fill = color
                 if token.operator_end is not None:
-                    current_fill_origin = field_origin(
-                        token.start, token.content_end, token.operator_end
+                    current_fill_origin = statement_field_origin(
+                        "fill", token.start, token.content_end, token.operator_end
                     )
             else:
                 stroke = color
+                if token.operator_end is not None:
+                    current_stroke_origin = statement_field_origin(
+                        "stroke", token.start, token.content_end, token.operator_end
+                    )
             continue
         width_match = _WIDTH_RE.search(line)
         if width_match:
@@ -1185,6 +1251,8 @@ def _loads_ai7_source(
             has_stroke = not is_clipping_mask and line in {"b", "s", "B", "S"}
             if has_fill:
                 count_fill_origin_use()
+            if has_stroke:
+                count_stroke_origin_use()
             parsed_path = Path(
                 id=pending_id or f"path-{path_counter}",
                 points=path_points,
@@ -1208,9 +1276,14 @@ def _loads_ai7_source(
                     path_origin_candidates.append(
                         (
                             parsed_path.id,
-                            current_path_source_start or token.start,
+                            (
+                                current_path_source_start
+                                if current_path_source_start is not None
+                                else token.start
+                            ),
                             token.end,
                             current_fill_origin if has_fill else None,
+                            current_stroke_origin if has_stroke else None,
                         )
                     )
                 if is_clipping_mask:
@@ -1233,24 +1306,31 @@ def _loads_ai7_source(
     if width is None or height is None:
         raise UnsupportedLegacyFeature("A numeric %%BoundingBox is required in Phase 0")
     if origins is not None:
-        for path_id, geometry_start, end, fill_origin in path_origin_candidates:
+        for path_id, geometry_start, end, fill_origin, stroke_origin in path_origin_candidates:
             unique_fill_origin = (
                 fill_origin
                 if fill_origin is not None
                 and fill_origin_use_counts[(fill_origin.start, fill_origin.end)] == 1
                 else None
             )
+            unique_stroke_origin = (
+                stroke_origin
+                if stroke_origin is not None
+                and stroke_origin_use_counts[(stroke_origin.start, stroke_origin.end)] == 1
+                else None
+            )
+            fields = tuple(
+                origin
+                for origin in (unique_fill_origin, unique_stroke_origin)
+                if origin is not None
+            )
             origins.append(
                 LegacyNodeOrigin(
                     node_type="path",
                     node_id=path_id,
-                    start=(
-                        min(geometry_start, unique_fill_origin.start)
-                        if unique_fill_origin is not None
-                        else geometry_start
-                    ),
+                    start=min((geometry_start, *(origin.start for origin in fields))),
                     end=end,
-                    fields=(unique_fill_origin,) if unique_fill_origin is not None else (),
+                    fields=fields,
                 )
             )
     return Document(
@@ -1298,6 +1378,32 @@ class SetPathFill:
             raise ValueError("path_id must not be empty")
 
 
+@dataclass(frozen=True, slots=True)
+class SetPathStroke:
+    """Typed local stroke-color edit with an explicit semantic precondition."""
+
+    path_id: str
+    stroke: ProcessColor
+    expected_stroke: ProcessColor
+
+    def __post_init__(self) -> None:
+        if not self.path_id:
+            raise ValueError("path_id must not be empty")
+
+
+@dataclass(frozen=True, slots=True)
+class ReplaceText:
+    """Typed local text edit with an explicit semantic precondition."""
+
+    text_id: str
+    text: str
+    expected_text: str
+
+    def __post_init__(self) -> None:
+        if not self.text_id:
+            raise ValueError("text_id must not be empty")
+
+
 def _container_paths(container: Layer | Group) -> list[Path]:
     paths = [
         *container.paths,
@@ -1313,15 +1419,71 @@ def _container_paths(container: Layer | Group) -> list[Path]:
     return paths
 
 
-def patch_path_fill(result: LegacyReadResult, operation: SetPathFill) -> LegacySource:
-    """Patch one uniquely selected path fill while preserving all other source bytes."""
+def _container_text_frames(container: Layer | Group) -> list[TextFrame]:
+    text_frames = list(container.text_frames)
+    for group in container.groups:
+        text_frames.extend(_container_text_frames(group))
+    return text_frames
 
-    matching_paths = [
+
+def _matching_paths(result: LegacyReadResult, path_id: str) -> list[Path]:
+    return [
         path
         for layer in result.document.layers
         for path in _container_paths(layer)
-        if path.id == operation.path_id
+        if path.id == path_id
     ]
+
+
+def _unique_origin(
+    result: LegacyReadResult, *, node_type: str, node_id: str
+) -> LegacyNodeOrigin:
+    matching_origins = [
+        origin
+        for origin in result.origins
+        if origin.node_type == node_type and origin.node_id == node_id
+    ]
+    if len(matching_origins) != 1:
+        raise UnsupportedLegacyFeature(
+            f"{node_type.capitalize()} {node_id!r} has {len(matching_origins)} source origins; "
+            "exactly one is required."
+        )
+    return matching_origins[0]
+
+
+def _validate_patch_field(
+    result: LegacyReadResult,
+    *,
+    origin: LegacyNodeOrigin,
+    field_name: str,
+    node_label: str,
+) -> LegacyFieldOrigin:
+    field_origin = origin.field(field_name)
+    if field_origin is None:
+        raise UnsupportedLegacyFeature(
+            f"{node_label} does not have an exclusive source {field_name} span."
+        )
+    actual = result.source.data[field_origin.start : field_origin.end]
+    if actual != field_origin.expected:
+        raise UnsupportedLegacyFeature(
+            f"{node_label} source precondition failed; the {field_name} span changed."
+        )
+    intersecting = [
+        diagnostic
+        for diagnostic in result.diagnostics
+        if diagnostic.start < field_origin.end and diagnostic.end > field_origin.start
+    ]
+    if intersecting:
+        raise UnsupportedLegacyFeature(
+            f"{node_label} {field_name} span intersects unsupported source syntax."
+        )
+    return field_origin
+
+
+def patch_path_fill(result: LegacyReadResult, operation: SetPathFill) -> LegacySource:
+    """Patch one uniquely selected path fill while preserving all other source bytes."""
+
+    matching_paths = _matching_paths(result, operation.path_id)
     if len(matching_paths) != 1:
         raise UnsupportedLegacyFeature(
             f"Path selector id={operation.path_id!r} matched {len(matching_paths)} nodes; "
@@ -1334,39 +1496,83 @@ def patch_path_fill(result: LegacyReadResult, operation: SetPathFill) -> LegacyS
             f"expected {operation.expected_fill!r}, found {path.fill!r}."
         )
 
-    matching_origins = [
-        origin
-        for origin in result.origins
-        if origin.node_type == "path" and origin.node_id == operation.path_id
-    ]
-    if len(matching_origins) != 1:
-        raise UnsupportedLegacyFeature(
-            f"Path {operation.path_id!r} has {len(matching_origins)} source origins; "
-            "exactly one is required."
-        )
-    fill_origin = matching_origins[0].field("fill")
-    if fill_origin is None:
-        raise UnsupportedLegacyFeature(
-            f"Path {operation.path_id!r} does not have an exclusive source fill span."
-        )
-    actual = result.source.data[fill_origin.start : fill_origin.end]
-    if actual != fill_origin.expected:
-        raise UnsupportedLegacyFeature(
-            f"Path {operation.path_id!r} source precondition failed; the fill span changed."
-        )
-    intersecting = [
-        diagnostic
-        for diagnostic in result.diagnostics
-        if diagnostic.start < fill_origin.end and diagnostic.end > fill_origin.start
-    ]
-    if intersecting:
-        raise UnsupportedLegacyFeature(
-            f"Path {operation.path_id!r} fill span intersects unsupported source syntax."
-        )
+    origin = _unique_origin(result, node_type="path", node_id=operation.path_id)
+    fill_origin = _validate_patch_field(
+        result,
+        origin=origin,
+        field_name="fill",
+        node_label=f"Path {operation.path_id!r}",
+    )
 
     replacement = _color_operator(operation.fill, stroke=False).encode("ascii")
     return result.source.patched(
         [SourceReplacement(fill_origin.start, fill_origin.end, replacement)]
+    )
+
+
+def patch_path_stroke(result: LegacyReadResult, operation: SetPathStroke) -> LegacySource:
+    """Patch one uniquely selected path stroke while preserving all other source bytes."""
+
+    matching_paths = _matching_paths(result, operation.path_id)
+    if len(matching_paths) != 1:
+        raise UnsupportedLegacyFeature(
+            f"Path selector id={operation.path_id!r} matched {len(matching_paths)} nodes; "
+            "exactly one is required."
+        )
+    path = matching_paths[0]
+    if path.stroke != operation.expected_stroke:
+        raise UnsupportedLegacyFeature(
+            f"Path {operation.path_id!r} stroke precondition failed: "
+            f"expected {operation.expected_stroke!r}, found {path.stroke!r}."
+        )
+
+    origin = _unique_origin(result, node_type="path", node_id=operation.path_id)
+    stroke_origin = _validate_patch_field(
+        result,
+        origin=origin,
+        field_name="stroke",
+        node_label=f"Path {operation.path_id!r}",
+    )
+
+    replacement = _color_operator(operation.stroke, stroke=True).encode("ascii")
+    return result.source.patched(
+        [SourceReplacement(stroke_origin.start, stroke_origin.end, replacement)]
+    )
+
+
+def patch_text(result: LegacyReadResult, operation: ReplaceText) -> LegacySource:
+    """Patch one uniquely selected text frame while preserving all other source bytes."""
+
+    matching_text_frames = [
+        text_frame
+        for layer in result.document.layers
+        for text_frame in _container_text_frames(layer)
+        if text_frame.id == operation.text_id
+    ]
+    if len(matching_text_frames) != 1:
+        raise UnsupportedLegacyFeature(
+            f"Text selector id={operation.text_id!r} matched {len(matching_text_frames)} nodes; "
+            "exactly one is required."
+        )
+    text_frame = matching_text_frames[0]
+    if text_frame.text != operation.expected_text:
+        raise UnsupportedLegacyFeature(
+            f"Text {operation.text_id!r} content precondition failed: "
+            f"expected {operation.expected_text!r}, found {text_frame.text!r}."
+        )
+
+    origin = _unique_origin(result, node_type="text", node_id=operation.text_id)
+    text_origin = _validate_patch_field(
+        result,
+        origin=origin,
+        field_name="text",
+        node_label=f"Text {operation.text_id!r}",
+    )
+    replacement = _escape_postscript_text(
+        operation.text, font_name=text_frame.font_name
+    ).encode("ascii")
+    return result.source.patched(
+        [SourceReplacement(text_origin.start, text_origin.end, replacement)]
     )
 
 

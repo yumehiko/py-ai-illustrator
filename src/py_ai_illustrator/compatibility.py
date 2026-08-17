@@ -22,8 +22,8 @@ class LegacyFieldOrigin:
     expected: bytes
 
     def __post_init__(self) -> None:
-        if not 0 <= self.start < self.end:
-            raise ValueError("field origin span must be ordered and non-empty")
+        if not 0 <= self.start <= self.end:
+            raise ValueError("field origin span must be ordered and non-negative")
         if len(self.expected) != self.end - self.start:
             raise ValueError("field origin bytes must match its source span")
 
