@@ -34,6 +34,8 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 
 JSONはIllustratorファイルを作るための唯一の記述言語ではありません。複雑な制作物では、Pythonのcomponentやtemplateが意味・規則・再利用可能な体裁を表現し、JSON化可能なグラフィックIRへrenderします。JSON IRはfixture、debug、semantic diff、言語間交換のための中間表現です。
 
+代表的な利用シナリオ、UX上の原則、pre-1.0ではpublic APIの後方互換を保証しない方針は[開発原則と想定ユースケース](docs/development-principles.md)に定義します。
+
 パラメトリック制作ではPython sourceと入力データ、既存ファイル編集では元の`.ai`をsource of truthとします。また、geometry等を保つ「グラフィック往復」と、表や商品カードの役割まで保つ「意味の往復」を区別します。詳細は[オーサリングモデル](docs/authoring-model.md)を参照してください。
 
 スタイル付き表の実装例は [examples/styled_table.py](examples/styled_table.py) です。JSONを手書きせず、行の`kind`、金額formatter、列幅、Illustratorのネイティブ段落揃え、header/body/variant配色、余白、罫線、書体要求をPythonで定義します。
@@ -219,6 +221,7 @@ legacy point textはASCIIに加え、`RKSJ-H` / `RKSJ-V` fontを明示した日�
 
 ## ドキュメント
 
+- [開発原則と想定ユースケース](docs/development-principles.md)
 - [実現可能性調査](docs/feasibility.md)
 - [推奨アーキテクチャ](docs/architecture.md)
 - [オーサリングモデル](docs/authoring-model.md)

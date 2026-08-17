@@ -10,7 +10,7 @@
 6. Python意味モデル、JSON化可能なグラフィックIR、Illustrator sourceを分離する
 7. JSON手書きをすべてのオーサリングworkflowへ強制しない
 
-意味モデルとsource of truthの詳細は[オーサリングモデル](authoring-model.md)に定義します。
+プロダクト上の代表ユースケース、UX原則、開発中の後方互換ポリシーは[開発原則と想定ユースケース](development-principles.md)に、意味モデルとsource of truthの詳細は[オーサリングモデル](authoring-model.md)に定義します。
 
 ## レイヤー構成
 

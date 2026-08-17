@@ -10,6 +10,8 @@
 2. **Authoring**: 意味・規則・再利用可能な体裁を持つPython componentからIRを生成する
 3. **Safe Edit / Agent**: 検証可能な編集APIとCLIを、エージェントから安全に利用する
 
+各トラックの優先順位と設計判断は、[開発原則と想定ユースケース](development-principles.md)に定義した利用者の仕事とUXを基準にします。
+
 旧Phase制は実装順と実際の進捗がずれたため、今後は三つの開発トラックと、トラック間の品質ゲートで管理します。各トラックは並行して進められますが、エージェント向けskillはConversion CoreとSafe Edit APIを迂回してファイルを操作しません。
 
 ## 現在地
