@@ -2,6 +2,8 @@
 
 `py-ai test-illustrator` は、生成したAIファイルが実際のIllustratorで編集可能な構造として開けるかを検査します。通常のPythonテストとは分離し、Illustratorを利用できるmacOS環境で明示的に実行します。
 
+実機結果を対応versionとして扱う条件とPython側のreader/writer/patch範囲は[Trusted Legacy Conversion feature profile](legacy-feature-profile.md)に定義します。
+
 ## 初回準備
 
 1. Adobe Creative Cloudへログインする。

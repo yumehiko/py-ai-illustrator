@@ -98,7 +98,9 @@ Adobe Illustrator 7 specification の DSC comments と operator を読みます�
 
 semantic readerの公開境界は`LegacyReadResult(document, source, coverage, diagnostics)`です。新規作成`Document`にはsource provenanceがなく、既存ファイル由来の結果には元bytesと互換性証拠があります。operator/resource inventoryに未対応項目がある場合、通常の再serializeは既定で拒否し、明示的なloss policyなしに未知sourceを捨てません。
 
-node provenanceはIR dataclassへ直接混在させず、`LegacyReadResult.origins`のside tableに保持します。`Path` nodeの排他的なfill / stroke fieldとgeometry statement群、`TextFrame` nodeと単一`Tx` statementの本文span、`LinkedImage` nodeとprivate metadata payloadを索引化し、`SetPathFill` / `SetPathStroke` / `TranslatePath` / `ReplaceText` / `ReplaceLinkedImageSource`から`SourceReplacement`を生成します。同じcolor stateを複数nodeが参照する場合や、本文が複数`Tx`へ分割される場合はfield originをpatch可能として公開せず、局所性を証明できる操作だけを許可します。path translateは`m` / `l` / `c` / `v` / `y`系の各statementだけを個別に置換し、statement間のsourceを保持します。画像source差し替えはmetadata payloadだけを更新し、placeholder geometryを保持します。
+node provenanceはIR dataclassへ直接混在させず、`LegacyReadResult.origins`のside tableに保持します。Document、Artboard、Layer、Group、CompoundPath、ClippingGroup、Path、TextFrame、LinkedImageの全nodeをsource spanへ接続します。`Path`の排他的なfill / strokeとgeometry statement群、`TextFrame`の`Tp` / `Tm`と各`Tx`本文、`LinkedImage`のprivate metadataとplaceholder geometryはfield spanも索引化します。
+
+`SetPathFill` / `SetPathStroke` / `TranslatePath` / `ReplaceText` / `ReplaceLinkedImageSource` / `TranslateContainer`はfield-localな`SourceReplacement`計画へ変換します。`LegacyPatchPlan`は元source全体のSHA-256、各field bytes、semantic precondition、selector一意性、unsupported交差、範囲、operation間競合をapply前に検証します。同じcolor stateを複数nodeが参照する場合、styled multi-`Tx`、または編集対象を排他的spanへ限定できない場合は停止します。詳細な対応範囲と変換policyは[Trusted Legacy Conversion feature profile](legacy-feature-profile.md)に定義します。
 
 ## Writer 戦略
 

@@ -18,11 +18,11 @@
 
 | トラック | 状態 | 現在の到達点 | 主な未完了 |
 | --- | --- | --- | --- |
-| Conversion Core | 限定subsetで実証済み | legacy AI7/AI8 subsetのIR/JSON往復、source付きreader result、parse coverage、fill / stroke / text / path translate / image source局所patch、Illustrator 30.7.0適合試験 | 残りのnode source span / typed patch、modern AI semantic reader/writer |
+| Conversion Core | Trusted legacy conversion成立（単一実機version） | legacy AI7/AI8 subsetのIR/JSON往復、全node source span、atomic typed patch、semantic diff、Illustrator 30.7.0適合試験 | Illustrator version matrix拡張、modern AI semantic reader/writer |
 | Authoring | Create MVP成立 | Table、共通component境界、point/area text、linked image、group、Artboard、rigid transform、複数の実制作例 | image crop、link診断、semantic manifest、高度なlayout/resource共有 |
 | Safe Edit / Agent | 設計段階 | inspect/export/validateとIllustrator検証CLI | selector、typed edit、precondition、dry-run、diff、preview、skill/plugin |
 
-2026-08-17時点のローカル基準は、`pytest` 132件成功、`ruff check`成功です。
+2026-08-17時点のローカル基準は、`pytest` 164件成功、`ruff check`成功です。
 
 現在の変換保証は、次のように区別します。
 
@@ -41,11 +41,11 @@
 - [x] readerが`document + source + coverage + diagnostics`相当の結果を返す
 - [x] 認識済み・未認識operator/resourceをcompatibility reportへ列挙する
 - [x] unsupported featureを含む通常のIR再serializeは既定で拒否する
-- [ ] 全IR nodeへorigin/source spanを接続する（`Path`、単一`Tx`の`TextFrame`、`LinkedImage` metadataは完了）
-- [ ] text / image / pathのtyped editを局所source patchへ変換する（fill / stroke / text / path translate / image sourceは完了）
-- [ ] patchのprecondition、競合、範囲外変更を検出する
-- [ ] read-onlyでは元bytesが完全一致し、局所編集では対象span外が一致する
-- [ ] 対応feature profileとIllustrator対象バージョンを文書化する
+- [x] 全IR nodeへorigin/source spanを接続する
+- [x] text / image / path / containerのtyped editを局所source patchへ変換する
+- [x] patchのprecondition、競合、範囲外変更を検出する
+- [x] read-onlyでは元bytesが完全一致し、局所編集では対象span外が一致する
+- [x] 対応feature profileとIllustrator対象バージョンを文書化する
 
 終了条件:
 
@@ -94,11 +94,11 @@
 Gate Aを満たします。
 
 - [x] parse coverageとunknown operator/resource inventory
-- [ ] node-level CST/source span（`Path`、単一`Tx`の`TextFrame`、`LinkedImage` metadataは実装済み）
+- [x] node-level CST/source span
 - [x] source付きreader resultと新規作成IRの明確な区別
 - [x] strict-by-default reserializeと明示的な`discard` loss policy
-- [ ] typed patch writer（fill / stroke / text / path translate / image sourceは実装済み）
-- [ ] semantic diffとcompatibility report
+- [x] typed patch writer（fill / stroke / text / path / container translate / image source）
+- [x] semantic diffとcompatibility report
 - [ ] Illustrator生成fixtureの種類と対象バージョンを拡張
 
 ### A2. Modern AI reader

@@ -55,10 +55,10 @@ legacy .ai bytes
 ## 次の検証ゲート
 
 1. Illustrator再保存をまたぐlayer/container IDとdocument metadataの保持方式を調査する。
-2. node source spanを複数`Tx` textとcontainerへ広げ、typed editをcontainer translateへ拡張する。
+2. Illustrator実機fixtureを30.7.0以外の対象versionへ広げ、version matrixを記録する。
 3. CP932以外のtext encodingとimageのcontain / cover / clipping cropを実装する。
 4. 実装した共通render境界へsemantic metadata manifestを追加する。
-5. 検証対象とするIllustratorバージョンの範囲を広げる。
+5. modern AI reader用の再配布可能fixtureと期待structure manifestを整備する。
 
 終了条件のうち、Python内の `IR -> AI7 -> IR` と、Illustrator 30.7.0でfixtureを開いた際の編集構造検査は完了しました。対応範囲はまだ小さいため、AI7 writer全体の位置付けは引き続き experimental です。
 
@@ -123,6 +123,10 @@ path geometryは`m` / `l` / `c` / `v` / `y`系statementごとのexact spanとし
 
 `LinkedImage`はprivate metadata commentからplaceholder pathの終端までをnode originとし、base64 payloadをfield spanとして保持します。`ReplaceLinkedImageSource`は安定ID、期待source、元payload bytes、payload内のID/sourceを検証し、sourceだけを変更したmetadata payloadへ局所置換します。配置・寸法・回転・名前とplaceholder geometryは保持します。リンク先の存在確認やpackageへのコピーは行わず、link診断 / packagingの責務として分離します。
 
-`TextFrame`にもnode originを接続し、単一`Tx` statementで表現された本文にはexact byte spanを保持します。`ReplaceText`は安定ID、期待本文、元source bytes、unsupported診断との交差、既存fontのASCII / CP932 encoding profileを検証して本文spanだけを差し替えます。複数`Tx`に分割された本文や既存fontで表現できない文字は、周辺構文を書き換えず明示的に停止します。
+Document、Artboard、Layer、通常Group、CompoundPath、ClippingGroup、Path、TextFrame、LinkedImageの全IR nodeをsource spanへ接続しました。`TextFrame`は各`Tx`本文と`Tp` / `Tm`、`LinkedImage`はmetadataとplaceholder geometryもfield spanとして保持します。`ReplaceText`は安定ID、期待本文、元source bytes、unsupported診断との交差、既存fontのASCII / CP932 encoding profileを検証して単一`Tx`本文だけを差し替えます。複数`Tx`のspanは保持しますが、styled run本文のpatchや既存fontで表現できない文字は明示的に停止します。
+
+`TranslateContainer`はLayer / Group / CompoundPath / ClippingGroupの期待leaf集合をpreconditionとし、descendant Path geometry、Textの`Tp` / `Tm`、LinkedImage metadata / placeholderを同期移動します。`LegacyPatchPlan`は複数typed operationを元source上のreplacementへ変換し、source全体のSHA-256、field bytes、span範囲、operation間競合をapply前に検証します。
+
+semantic diffは安定IDでnodeを対応付け、field変更・追加・削除・stacking変更を報告します。既知operator/resourceでもIRが表現できない構文、文脈、styled text run、未終端construct、壊れた/孤立metadataはdiagnosticとなり、通常re-serializeを拒否します。対応範囲、保証、policy、Illustrator対象versionは[Trusted Legacy Conversion feature profile](legacy-feature-profile.md)に固定しました。
 
 最初の試験では閉じた矩形が3 anchorsとして読まれました。AI7の閉じパスに開始点へ戻る明示的な最終segmentを出力するようwriterを修正し、4 anchorsで再試験に合格しています。また、日本語環境でExtendScript内のreverse solidusが円記号として解釈される問題を避けるため、検査用JSXは該当文字とファイルパスを文字コードから構築します。詳細は [Illustrator 適合試験](illustrator-testing.md) を参照してください。

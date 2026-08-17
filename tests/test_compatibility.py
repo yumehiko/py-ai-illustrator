@@ -309,6 +309,18 @@ def test_unknown_operator_and_resource_are_source_located_and_make_result_partia
     report = result.compatibility_report()
     assert report["safe_to_reserialize"] is False
     assert report["coverage"]["unsupported_statement_count"] == 1
+    assert report["profile"]["id"] == "legacy-ai7-trusted-v1"
+    assert report["profile"]["verified_illustrator_versions"] == ["30.7.0"]
+    assert report["guarantees"] == {
+        "read_only": "byte-preserving",
+        "typed_patch": "byte-preserving-outside-replacement-spans",
+        "reserialize": "rejected-without-discard-policy",
+    }
+    assert report["conversion_policies"][1] == {
+        "name": "discard-unmodeled-semantics",
+        "effect": "drop-diagnosed-or-unsupported-source-data",
+        "requires_explicit_opt_in": True,
+    }
 
 
 @pytest.mark.parametrize(

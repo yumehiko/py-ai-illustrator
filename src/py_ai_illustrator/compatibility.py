@@ -11,6 +11,31 @@ from .model import Document
 FeatureKind = Literal["operator", "resource"]
 FeatureSupport = Literal["modeled", "structural", "unsupported"]
 
+LEGACY_FEATURE_PROFILE_ID = "legacy-ai7-trusted-v1"
+LEGACY_VERIFIED_ILLUSTRATOR_VERSIONS = ("30.7.0",)
+LEGACY_SEMANTIC_FEATURES = (
+    "document-bounds-title-metadata",
+    "named-artboards",
+    "layers",
+    "nested-groups",
+    "paths-lines-beziers",
+    "rgb-cmyk-process-color",
+    "stroke-style",
+    "compound-paths",
+    "clipping-groups",
+    "point-area-text-intent",
+    "ascii-cp932-text",
+    "linked-image-intent",
+)
+LEGACY_TYPED_PATCHES = (
+    "set-path-fill",
+    "set-path-stroke",
+    "translate-path",
+    "replace-text-single-tx",
+    "replace-linked-image-source",
+    "translate-container",
+)
+
 
 @dataclass(frozen=True, slots=True)
 class LegacyFieldOrigin:
@@ -176,8 +201,35 @@ class LegacyReadResult:
 
     def compatibility_report(self) -> dict[str, object]:
         return {
+            "profile": {
+                "id": LEGACY_FEATURE_PROFILE_ID,
+                "verified_illustrator_versions": list(LEGACY_VERIFIED_ILLUSTRATOR_VERSIONS),
+                "semantic_features": list(LEGACY_SEMANTIC_FEATURES),
+                "typed_patches": list(LEGACY_TYPED_PATCHES),
+            },
             "classification": self.classification,
             "safe_to_reserialize": self.safe_to_reserialize,
+            "guarantees": {
+                "read_only": "byte-preserving",
+                "typed_patch": "byte-preserving-outside-replacement-spans",
+                "reserialize": (
+                    "graphic-semantic-round-trip"
+                    if self.safe_to_reserialize
+                    else "rejected-without-discard-policy"
+                ),
+            },
+            "conversion_policies": [
+                {
+                    "name": "canonical-reserialize",
+                    "effect": "syntax-and-nonsemantic-header-normalization",
+                    "requires_explicit_opt_in": False,
+                },
+                {
+                    "name": "discard-unmodeled-semantics",
+                    "effect": "drop-diagnosed-or-unsupported-source-data",
+                    "requires_explicit_opt_in": True,
+                },
+            ],
             "coverage": self.coverage.to_dict(),
             "diagnostics": [diagnostic.to_dict() for diagnostic in self.diagnostics],
             "origins": [origin.to_dict() for origin in self.origins],

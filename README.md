@@ -36,6 +36,8 @@ JSONはIllustratorファイルを作るための唯一の記述言語ではあ�
 
 代表的な利用シナリオ、UX上の原則、pre-1.0ではpublic APIの後方互換を保証しない方針は[開発原則と想定ユースケース](docs/development-principles.md)に定義します。
 
+legacy reader/writer/patchの正確な対応範囲、保証、変換policy、検証済みIllustrator versionは[Trusted Legacy Conversion feature profile](docs/legacy-feature-profile.md)に定義します。
+
 パラメトリック制作ではPython sourceと入力データ、既存ファイル編集では元の`.ai`をsource of truthとします。また、geometry等を保つ「グラフィック往復」と、表や商品カードの役割まで保つ「意味の往復」を区別します。詳細は[オーサリングモデル](docs/authoring-model.md)を参照してください。
 
 スタイル付き表の実装例は [examples/styled_table.py](examples/styled_table.py) です。JSONを手書きせず、行の`kind`、金額formatter、列幅、Illustratorのネイティブ段落揃え、header/body/variant配色、余白、罫線、書体要求をPythonで定義します。
@@ -127,8 +129,9 @@ output = reserialize_ai7(result)
 意味IRに含まれないfeatureの破棄を許す場合のみ、`--allow-partial`を指定します。
 
 既存のfill / stroke operatorを一つのpathだけが使用している場合、path geometryを既知statement
-として列挙できる場合、`TextFrame`の本文が単一の`Tx` statementで表現されている場合、または
-linked imageのprivate metadataを保持している場合は、
+として列挙できる場合、`TextFrame`の本文が単一の`Tx` statementで表現されている場合、
+linked imageのprivate metadataを保持している場合、またはcontainer内のleaf fieldをすべて
+排他的spanへ解決できる場合は、
 typed operationから局所patchを生成できます。IDが0件・
 複数件、意味/source precondition不一致、または編集対象を排他的なspanに限定できない場合は停止します。
 
@@ -209,9 +212,9 @@ image_patched = patch_linked_image_source(
 Path("image-output.ai").write_bytes(image_patched.to_bytes())
 ```
 
-これらのpatchはfill、stroke、geometry、textまたはimage metadata field spanだけを差し替え、対象spanの前後にある改行、未知
+複数操作は`plan_legacy_patch()`で一つのatomic planにでき、元source全体のSHA-256とoperation間のspan競合をapply前に検証します。これらのpatchはfill、stroke、geometry、textまたはimage metadata field spanだけを差し替え、対象spanの前後にある改行、未知
 operator、非UTF-8 byteをそのまま保持します。textは既存fontのASCII / CP932 profileで再encode
-します。画像source差し替えはリンク先の存在確認やassetコピーを行いません。現時点ではfill / stroke追加、共有color stateの分離、複数`Tx` text、container一括移動は未実装です。
+します。画像source差し替えはリンク先の存在確認やassetコピーを行いません。現時点ではfill / stroke追加、共有color stateの分離、styled/複数`Tx`本文patchは未実装です。container一括移動はLayer / Group / CompoundPath / ClippingGroupに対応します。
 
 既定では入力64 MiB、1行8 MiB、200万行を上限とし、超過時は`SourceLimitExceeded`を返します。`patched()`は範囲外・重複spanを拒否しますが、operatorの意味検証を行わない低レベルprimitiveです。IR編集では`SetPathFill` / `SetPathStroke` / `TranslatePath` / `ReplaceText` / `ReplaceLinkedImageSource`の高レベルpatch APIを使用します。
 
