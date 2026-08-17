@@ -9,6 +9,13 @@ from pathlib import Path
 from typing import Any
 
 from .format import FileFormat, inspect_file
+from .illustrator import (
+    list_illustrator_fonts,
+    materialize_native_ai,
+    run_illustrator_export_test,
+    run_illustrator_roundtrip_test,
+    run_illustrator_test,
+)
 from .legacy import UnsupportedLegacyFeature, dump_ai7, load_ai7
 from .model import Document
 
@@ -53,7 +60,7 @@ def _export(args: argparse.Namespace) -> int:
         if destination is None:
             raise ValueError("--output is required when writing binary/file output")
         data = json.loads(source.read_text(encoding="utf-8"))
-        dump_ai7(Document.from_dict(data), destination)
+        dump_ai7(Document.from_dict(data), destination, source_base=source.parent)
         return 0
     raise ValueError(f"Unsupported target: {args.to}")
 
@@ -86,6 +93,64 @@ def _validate(args: argparse.Namespace) -> int:
     return 0 if not errors else 1
 
 
+def _test_illustrator(args: argparse.Namespace) -> int:
+    result = run_illustrator_test(
+        args.input,
+        timeout=args.timeout,
+        application_name=args.application,
+    )
+    destination = Path(args.output) if args.output else None
+    _write_json(result, destination)
+    return 0 if result["status"] == "passed" else 1
+
+
+def _materialize_native(args: argparse.Namespace) -> int:
+    result = materialize_native_ai(
+        args.input,
+        args.output,
+        timeout=args.timeout,
+        application_name=args.application,
+    )
+    _write_json(result, None)
+    return 0 if result["status"] == "passed" else 1
+
+
+def _illustrator_fonts(args: argparse.Namespace) -> int:
+    result = list_illustrator_fonts(
+        query=args.query,
+        required=tuple(args.require),
+        timeout=args.timeout,
+        application_name=args.application,
+    )
+    destination = Path(args.output) if args.output else None
+    _write_json(result, destination)
+    return 0 if result["status"] == "passed" else 1
+
+
+def _test_illustrator_export(args: argparse.Namespace) -> int:
+    result = run_illustrator_export_test(
+        fixture=args.fixture,
+        output=args.ai_output,
+        timeout=args.timeout,
+        application_name=args.application,
+    )
+    destination = Path(args.output) if args.output else None
+    _write_json(result, destination)
+    return 0 if result["status"] == "passed" else 1
+
+
+def _test_illustrator_roundtrip(args: argparse.Namespace) -> int:
+    result = run_illustrator_roundtrip_test(
+        args.input,
+        output=args.ai_output,
+        timeout=args.timeout,
+        application_name=args.application,
+    )
+    destination = Path(args.output) if args.output else None
+    _write_json(result, destination)
+    return 0 if result["status"] == "passed" else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="py-ai", description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -104,6 +169,72 @@ def build_parser() -> argparse.ArgumentParser:
     validate_parser = subparsers.add_parser("validate", help="run available structural checks")
     validate_parser.add_argument("input")
     validate_parser.set_defaults(handler=_validate)
+
+    illustrator_parser = subparsers.add_parser(
+        "test-illustrator",
+        help="open a temporary copy in Illustrator and inspect the imported structure",
+    )
+    illustrator_parser.add_argument("input")
+    illustrator_parser.add_argument("--timeout", type=float, default=90.0)
+    illustrator_parser.add_argument("--application", default="Adobe Illustrator")
+    illustrator_parser.add_argument("-o", "--output")
+    illustrator_parser.set_defaults(handler=_test_illustrator)
+
+    native_parser = subparsers.add_parser(
+        "materialize-native",
+        help="convert legacy AI text to native editable text and save a modern AI",
+    )
+    native_parser.add_argument("input")
+    native_parser.add_argument("-o", "--output", required=True)
+    native_parser.add_argument("--timeout", type=float, default=90.0)
+    native_parser.add_argument("--application", default="Adobe Illustrator")
+    native_parser.set_defaults(handler=_materialize_native)
+
+    fonts_parser = subparsers.add_parser(
+        "illustrator-fonts",
+        help="list installed Illustrator fonts and validate PostScript names",
+    )
+    fonts_parser.add_argument("--query")
+    fonts_parser.add_argument("--require", action="append", default=[])
+    fonts_parser.add_argument("--timeout", type=float, default=30.0)
+    fonts_parser.add_argument("--application", default="Adobe Illustrator")
+    fonts_parser.add_argument("-o", "--output")
+    fonts_parser.set_defaults(handler=_illustrator_fonts)
+
+    illustrator_export_parser = subparsers.add_parser(
+        "test-illustrator-export",
+        help="create an AI8 fixture in Illustrator and parse it through the Python IR",
+    )
+    illustrator_export_parser.add_argument("--timeout", type=float, default=90.0)
+    illustrator_export_parser.add_argument("--application", default="Adobe Illustrator")
+    illustrator_export_parser.add_argument(
+        "--fixture",
+        choices=(
+            "rgb-rectangle",
+            "cmyk-curve",
+            "stroke-style",
+            "compound-path",
+            "clipping-group",
+            "group",
+            "point-text",
+            "unicode-text",
+        ),
+        default="rgb-rectangle",
+    )
+    illustrator_export_parser.add_argument("--ai-output")
+    illustrator_export_parser.add_argument("-o", "--output")
+    illustrator_export_parser.set_defaults(handler=_test_illustrator_export)
+
+    illustrator_roundtrip_parser = subparsers.add_parser(
+        "test-illustrator-roundtrip",
+        help="resave a legacy AI fixture in Illustrator and compare the Python IR",
+    )
+    illustrator_roundtrip_parser.add_argument("input")
+    illustrator_roundtrip_parser.add_argument("--timeout", type=float, default=90.0)
+    illustrator_roundtrip_parser.add_argument("--application", default="Adobe Illustrator")
+    illustrator_roundtrip_parser.add_argument("--ai-output")
+    illustrator_roundtrip_parser.add_argument("-o", "--output")
+    illustrator_roundtrip_parser.set_defaults(handler=_test_illustrator_roundtrip)
     return parser
 
 

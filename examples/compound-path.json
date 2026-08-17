@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "title": "Compound path frame",
+  "width": 300,
+  "height": 300,
+  "metadata": {
+    "feature_profile": "legacy-ai-compound-path"
+  },
+  "layers": [
+    {
+      "id": "layer-compound",
+      "name": "Compound",
+      "visible": true,
+      "locked": false,
+      "paths": [],
+      "compound_paths": [
+        {
+          "id": "compound-frame",
+          "name": "Blue frame",
+          "paths": [
+            {
+              "id": "outer",
+              "points": [
+                {"x": 20, "y": 20},
+                {"x": 280, "y": 20},
+                {"x": 280, "y": 280},
+                {"x": 20, "y": 280}
+              ],
+              "closed": true,
+              "fill": {"red": 0.25, "green": 0.5, "blue": 1.0},
+              "stroke": null,
+              "polarity": "positive"
+            },
+            {
+              "id": "inner",
+              "points": [
+                {"x": 90, "y": 90},
+                {"x": 90, "y": 210},
+                {"x": 210, "y": 210},
+                {"x": 210, "y": 90}
+              ],
+              "closed": true,
+              "fill": {"red": 0.25, "green": 0.5, "blue": 1.0},
+              "stroke": null,
+              "polarity": "negative"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

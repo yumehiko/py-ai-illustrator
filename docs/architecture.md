@@ -7,17 +7,19 @@
 3. reader / model / writer / renderer / validator を分離する
 4. 「見た目を保つ」と「編集意味を保つ」を別々に検証する
 5. エージェントには低レベル token 操作ではなく、安全な高レベル操作を公開する
+6. Python意味モデル、JSON化可能なグラフィックIR、Illustrator sourceを分離する
+7. JSON手書きをすべてのオーサリングworkflowへ強制しない
+
+意味モデルとsource of truthの詳細は[オーサリングモデル](authoring-model.md)に定義します。
 
 ## レイヤー構成
 
 ```text
-.ai bytes
-  -> format detector
-  -> container reader (legacy PS/EPS or PDF)
-  -> private-data extractor
-  -> lossless syntax tree
-  -> Illustrator document IR
-  -> edit operations / agent tools
+Python design components + input data -> deterministic render --.
+                                                               +-> Illustrator document IR
+.ai bytes -> format/container reader -> lossless syntax tree --'          |
+                                                                          v
+  edit operations / agent tools
   -> writer(s)
        |- AI7/AI8 writer
        |- PDF/SVG writer
@@ -28,6 +30,7 @@
 ## Python IR
 
 最初の IR は Illustrator の全 API を模倣せず、安定した共通部分に絞ります。
+IRはJSONへserializeできますが、JSON自体を複雑なデザインの主たるオーサリング言語とはしません。domain固有のcomponentはPython側でIRへrenderします。
 
 ```python
 Document
@@ -88,6 +91,10 @@ PlacedImage
 ### legacy AI
 
 Adobe Illustrator 7 specification の DSC comments と operator を読みます。古い形式を単なる中間形式とみなさず、最初の writer の仕様にも使います。
+
+最初のlossless層として、元bytesと各物理行の`start/content_end/end` spanを保持する`LegacySource`を実装済みです。改行や未知byteを正規化しないため`LegacySource.to_bytes()`は入力と完全一致します。statementはPostScript文字列とinline commentを飛ばして末尾operator spanも索引化します。semantic parserはこの行索引から既知subsetをIRへ投影します。
+
+`SourceReplacement`と`LegacySource.patched()`は、範囲内かつ非重複のspanだけを差し替えてsource mapを再構築します。これはlossless patch writerの低レベルprimitiveで、operatorの妥当性やIR preconditionは検証しません。次段階ではnode source spanとtyped editを結び、高レベル操作からのみreplacementを生成します。
 
 ## Writer 戦略
 

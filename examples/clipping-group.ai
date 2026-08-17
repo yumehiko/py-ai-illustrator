@@ -1,0 +1,50 @@
+%!PS-Adobe-3.0
+%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)
+%%Title: (Clipping group)
+%%BoundingBox: 0 0 300 300
+%%HiResBoundingBox: 0 0 300 300
+%%DocumentProcessColors: Cyan Magenta Yellow Black
+%AI5_FileFormat 3.0
+%AI3_ColorUsage: Color
+%AI3_DocumentPreview: None
+%%py-ai-metadata: eyJmZWF0dXJlX3Byb2ZpbGUiOiJsZWdhY3ktYWktY2xpcHBpbmctZ3JvdXAifQ==
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+%%EndSetup
+%AI5_BeginLayer
+%%py-ai-layer-id: (layer-clipping)
+1 1 1 1 0 0 0 79 128 255 Lb
+(Clipping) Ln
+%%py-ai-clipping-id: (clipping-square)
+%%py-ai-clipping-name: (Square crop)
+q
+%AI7_Tag: (mask)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im1hc2sifQ==
+80 80 m
+220 80 L
+220 220 L
+80 220 L
+80 80 L
+h
+W
+n
+%AI7_Tag: (content)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImNvbnRlbnQifQ==
+1 0.25 0.5 Xa
+20 20 m
+280 20 L
+280 280 L
+20 280 L
+20 20 L
+f
+Q
+LB
+%AI5_EndLayer
+%%Trailer
+%%EOF

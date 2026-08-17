@@ -1,5 +1,31 @@
 # 開発ロードマップ
 
+## 近接マイルストーン
+
+### MVP-A: Create — 新規の編集可能なAIを作る
+
+- [x] point text / native AreaText
+- [x] PNG/JPEG linked imageと同一出力先の`Links/` package
+- [x] 基本図形・Bézier・塗り・線
+- [x] layer / nested group / stacking order / multiple Artboards
+- [x] Illustrator保存・再オープン・PDF/PNG visual QA
+- [ ] linked imageのcontain / cover / clipping crop
+- [ ] missing / modified linkをまとめたcompatibility report
+- [ ] package移動後にsibling `Links/`へ安全に再リンクするmanifest / command
+
+### MVP-B: Edit — 対応要素を安全に編集する
+
+- [ ] stable selector (`id`, name, type, bounds, hierarchy)
+- [ ] text / image / pathのtyped editとprecondition
+- [ ] dry-run、impact report、semantic diff、preview
+- [ ] component identityとsidecar semantic manifest
+
+### MVP-C: Modern AI — 既存modern AIを高忠実度で往復する
+
+- [ ] PrivateData semantic reader
+- [ ] node-level CSTとsource spanベースの局所patch
+- [ ] 未知featureのlossless保持とIllustrator再保存検証
+
 ## Phase 0: 技術スパイク
 
 目標: 2〜3 種類の `.ai` で構造抽出と変更可能性を実証する。
@@ -8,7 +34,7 @@
 - 単純な Illustrator fixtures を用意する
   - 長方形 1 個
   - 2 artboards + 2 layers
-  - path + text + embedded image
+  - path + text + linked image
 - PDF object tree と PrivateData をダンプ
 - 同一ファイルを Illustrator で一項目ずつ変え、差分を記録
 - `parse -> IR -> JSON` の POC
@@ -20,10 +46,15 @@
 - Python から生成した AI8 ファイルを現行 Illustrator で開ける
 - reader の採用方針とライセンス方針を決定できる
 
-進捗（2026-08-14）:
+進捗（2026-08-15）:
 
-- 完了: 依存ゼロの形式判定、最小Python IR、legacy AIサブセットreader/writer、JSON往復、CLI、自動テスト
-- 未完了: Illustratorでの適合試験、現代AI fixtureのPrivateData dump、`inkai`比較環境、最終ライセンス決定
+- 完了: 依存ゼロの形式判定、最小Python IR、legacy AIサブセットreader/writer、JSON往復、CLI、自動テスト、Illustrator 30.7.0実機適合試験、MITライセンス決定
+- 実証済みsubset: RGB/CMYK、直線/Bézier、native stroke style、compound、clipping、ASCII/CP932 point/area text intent、異種itemのstacking order、path ID・名前のAI8再保存保持
+- 意味モデル実装済み: Python `Table`、共通`RenderedComponent` / `LayerBuilder`、`TextBlock` / `AreaTextBlock`、名札・ポスター・入れ子棚札・KPI chart・誌面作例からIRへのdeterministic render
+- native出力実証済み: legacy textをIllustrator経由でnative point/area TextFrameへ変換し、font/size/fill/leading/揃えと安定IDを設定してPDF-compatible AIとして保存
+- 基盤実装済み: legacy元bytes・物理行改行・operator byte spanを保持するlossless source map、resource limit、非重複local patch primitive
+- 実証済み画像subset: PNG/JPEGを`Links/`へpackageし、placeholderからlinked `PlacedItem`へnative復元。埋め込みは既定にしない
+- 未完了: 現代AI fixtureのPrivateData semantic reader、`inkai`比較環境、node-level CSTとtyped patch、CP932以外のtext、image crop、non-rigid transform
 - 詳細: [Phase 0 の実装状況](phase0-status.md)
 
 ## Phase 1: Reader + IR + inspection CLI
@@ -64,11 +95,14 @@
 - dry-run と impact report
 - before/after semantic diff
 - プレビューを含む agent workflow
+- Python component / templateからIRへのdeterministic render境界
+- semantic metadataとsidecar manifest
 
 終了条件:
 
 - 「ロゴの色変更」「見出し差し替え」「レイヤー移動」などの標準シナリオを、自然言語から安全に実行できる
 - 同名 node が複数ある場合に誤編集せず停止できる
+- Pythonで定義した表やカードのvariantを、共有styleから再現可能に生成できる
 
 ## Phase 4: modern AI patch writer
 
@@ -117,4 +151,4 @@
 
 ## 推奨する次の一手
 
-Phase 0 を先に行い、`inkai` を fork するか adapter として使うかを決めます。新規パーサーを先に書き始めるより、既存実装で 10〜20 個の代表 fixture を読み、欠落情報と writer に必要なデータを測る方が判断材料になります。
+MVP-Aの文字・linked image・図形を含む最小作成セットがIllustrator 30.7で成立しました。次はlinked imageのcontain / cover / clipping cropとlink診断を追加し、同時に未知operatorを保持するlossless token/CSTをtext / image / pathのtyped editへ接続します。

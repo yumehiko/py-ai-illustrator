@@ -1,0 +1,215 @@
+%!PS-Adobe-3.0
+%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)
+%%Title: (Editorial brochure with native area text)
+%%BoundingBox: 0 0 595 842
+%%HiResBoundingBox: 0 0 595 842
+%%DocumentProcessColors: Cyan Magenta Yellow Black
+%AI5_FileFormat 3.0
+%AI3_ColorUsage: Color
+%AI3_TemplateBox: 297.5 1263 297.5 1263
+%AI3_DocumentPreview: None
+%AI5_ArtSize: 595 842
+%AI5_RulerUnits: 2
+%AI5_ArtFlags: 0 0 0 1 0 0 1 0 0
+%AI5_NumLayers: 1
+%%PageOrigin:0 0
+%%py-ai-metadata: eyJzb3VyY2UiOiJleGFtcGxlcy9lZGl0b3JpYWxfYnJvY2h1cmUucHkiLCJjb21wb25lbnQiOiJFZGl0b3JpYWxCcm9jaHVyZSIsInRleHRfbW9kZWwiOiJuYXRpdmUtYXJlYS10ZXh0In0=
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+%AI3_BeginEncoding: _KozGoPr6N-Regular-83pv-RKSJ-H KozGoPr6N-Regular-83pv-RKSJ-H
+[/_KozGoPr6N-Regular-83pv-RKSJ-H/KozGoPr6N-Regular-83pv-RKSJ-H 0 1 0 TZ
+%AI3_EndEncoding AdobeType
+%%EndSetup
+%AI5_BeginLayer
+%%py-ai-layer-id: (brochure)
+1 1 1 1 0 0 0 79 128 255 Lb
+(Editorial brochure) Ln
+%AI7_Tag: (brochure.background)
+%%py-ai-path-name: (Paper)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJyb2NodXJlLmJhY2tncm91bmQiLCJuYW1lIjoiUGFwZXIifQ==
+0.96 0.94 0.88 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+0 0 m
+595 0 L
+595 842 L
+0 842 L
+0 0 L
+f
+%AI7_Tag: (brochure.header-band)
+%%py-ai-path-name: (Header band)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJyb2NodXJlLmhlYWRlci1iYW5kIiwibmFtZSI6IkhlYWRlciBiYW5kIn0=
+0.07 0.1 0.14 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+0 754 m
+595 754 L
+595 842 L
+0 842 L
+0 754 L
+f
+%AI7_Tag: (brochure.accent)
+%%py-ai-path-name: (Coral accent)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJyb2NodXJlLmFjY2VudCIsIm5hbWUiOiJDb3JhbCBhY2NlbnQifQ==
+0.91 0.28 0.2 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+596 672 m
+596 713.973641 561.973641 748 520 748 c
+478.026359 748 444 713.973641 444 672 c
+444 630.026359 478.026359 596 520 596 c
+561.973641 596 596 630.026359 596 672 c
+f
+%AI7_Tag: (brochure.article-panel)
+%%py-ai-path-name: (Article panel)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImJyb2NodXJlLmFydGljbGUtcGFuZWwiLCJuYW1lIjoiQXJ0aWNsZSBwYW5lbCJ9
+1 1 1 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+42 154 m
+553 154 L
+553 596 L
+42 596 L
+42 154 L
+f
+%%py-ai-text-id: (brochure.series.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-tracking: 180
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Series)
+0 A
+0 To
+1 0 0 1 42 800 0 Tp
+TP
+1 0 0 1 42 800 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 10 0 0 Tf
+0 Ta
+(DESIGN SYSTEMS / FIELD NOTE 04) Tx
+TO
+%%py-ai-text-id: (brochure.title.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
+%%py-ai-text-name: (Title)
+0 A
+0 To
+1 0 0 1 42 690 0 Tp
+TP
+1 0 0 1 42 690 Tm
+0 Tr
+0.07 0.1 0.14 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 30 0 0 Tf
+0 Ta
+(\210\323\226\241\202\251\202\347\221g\202\335\227\247\202\304\202\351\216\206\226\312) Tx
+TO
+%%py-ai-text-id: (brochure.deck)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-area: 390 66
+%%py-ai-text-leading: 20.15
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
+%%py-ai-text-name: (Introduction)
+0 A
+0 To
+1 0 0 1 42 650 0 Tp
+TP
+1 0 0 1 42 650 Tm
+0 Tr
+0.08 0.36 0.68 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 13 0 0 Tf
+0 Ta
+(\203f\201[\203^\202\360\215\300\225W\202\326\222u\202\253\212\267\202\246\202\351\202\276\202\257\202\305\202\315\201A\220\247\215\354\225\250\202\252\216\235\202\302\225\266\226\254\202\315\216c\202\350\202\334\202\271\202\361\201B\215\304\227\230\227p\202\265\202\275\202\242\213K\221\245\202\360Python\202\314\225\224\225i\202\306\202\265\202\304\225\\\214\273\202\265\201AIllustrator\202\305\202\315\225\322\217W\211\302\224\\\202\310\214`\202\360\225\333\202\277\202\334\202\267\201B) Tx
+TO
+%%py-ai-text-id: (brochure.body-left)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-area: 222 310
+%%py-ai-text-leading: 17.85
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
+%%py-ai-text-name: (Article body left)
+0 A
+0 To
+1 0 0 1 66 560 0 Tp
+TP
+1 0 0 1 66 560 Tm
+0 Tr
+0.07 0.1 0.14 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 10.5 0 0 Tf
+0 Ta
+(\223\257\202\266\221\314\215\331\202\360\213\244\227L\202\267\202\351\220\247\215\354\225\250\202\305\202\340\201A\227v\221f\202\314\210\323\226\241\202\315\210\304\214\217\202\262\202\306\202\311\210\331\202\310\202\350\202\334\202\267\201B\217\244\225i\210\352\227\227\202\310\202\347\211\277\212i\202\342\215\335\214\311\201A\203C\203x\203\223\203g\210\304\223\340\202\310\202\347\223\372\216\236\202\342\223o\222d\216\322\201A\225\361\215\220\217\221\202\310\202\347\216\300\220\321\202\306\226\332\225W\202\252\222\206\220S\202\305\202\267\201B\015\015\202\261\202\314\215\354\227\341\202\305\202\315\201A\225\266\217\315\202\360\215\300\225W\202\262\202\306\202\314\222Z\202\242\225\266\216\232\227\361\202\326\225\252\211\360\202\271\202\270\201A\210\352\202\302\202\314\225\266\217\315\230g\202\306\202\265\202\304\225\333\216\235\202\265\202\334\202\267\201BIllustrator\202\305\230g\225\235\202\360\225\317\215X\202\267\202\352\202\316\201A\225\266\217\315\202\315\202\273\202\314\217\352\202\305\215\304\227\254\202\265\215\236\202\335\202\263\202\352\202\334\202\267\201B) Tx
+TO
+%%py-ai-text-id: (brochure.body-right)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-area: 222 310
+%%py-ai-text-leading: 17.85
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
+%%py-ai-text-name: (Article body right)
+0 A
+0 To
+1 0 0 1 307 560 0 Tp
+TP
+1 0 0 1 307 560 Tm
+0 Tr
+0.07 0.1 0.14 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 10.5 0 0 Tf
+0 Ta
+(Python\221\244\202\305\202\315\201A\214\264\215e\201A\217\221\221\314\201A\222i\227\216\202\314\221\265\202\246\201A\215s\221\227\202\350\201A\225\266\217\315\230g\202\314\220\241\226@\202\360\210\323\226\241\202\314\202\240\202\351\221\256\220\253\202\306\202\265\202\304\216w\222\350\202\265\202\334\202\267\201B\203\214\203\223\203_\203\212\203\223\203O\214\343\202\340\210\300\222\350ID\202\252\216c\202\351\202\275\202\337\201A\225\312\202\314\216\251\223\256\217\210\227\235\202\251\202\347\223\257\202\266\225\266\217\315\230g\202\360\214\251\202\302\202\257\202\347\202\352\202\334\202\267\201B\015\015JSON\202\315\214\360\212\267\227p\202\314\222\206\212\324\225\\\214\273\202\305\202\267\201B\220\247\215\354\225\250\214\305\227L\202\314\224\273\222f\202\342\217\360\214\217\225\252\212\362\202\315Python component\202\311\222u\202\253\201AIllustrator\202\314\225W\217\200\213@\224\\\202\305\215\304\225\322\217W\202\305\202\253\202\351\225\266\217\221\202\326\225\317\212\267\202\265\202\334\202\267\201B) Tx
+TO
+%%py-ai-text-id: (brochure.pull-quote)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-area: 180 80
+%%py-ai-text-leading: 21.75
+%%py-ai-text-native-font: (KozGoPr6N-Regular)
+%%py-ai-text-name: (Pull quote)
+0 A
+0 To
+1 0 0 1 378 710 0 Tp
+TP
+1 0 0 1 378 710 Tm
+0 Tr
+1 1 1 Xa
+/_KozGoPr6N-Regular-83pv-RKSJ-H 15 0 0 Tf
+1 Ta
+(\225\266\217\315\230g\202\315\201A\214\251\202\275\226\332\202\276\202\257\202\305\202\310\202\255\225\322\217W\202\314\222P\210\312\202\305\202\340\202\240\202\351\201B) Tx
+TO
+%%py-ai-text-id: (brochure.footer.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-tracking: 120
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Footer)
+0 A
+0 To
+1 0 0 1 553 94.8 0 Tp
+TP
+1 0 0 1 553 94.8 Tm
+0 Tr
+0.07 0.1 0.14 Xa
+/Helvetica-Bold 9 0 0 Tf
+2 Ta
+(PY-AI / EDITABLE BY DESIGN) Tx
+TO
+LB
+%AI5_EndLayer
+%%Trailer
+%%EOF

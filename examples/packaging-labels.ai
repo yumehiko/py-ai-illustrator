@@ -1,0 +1,603 @@
+%!PS-Adobe-3.0
+%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)
+%%Title: (Rotated packaging label variants)
+%%BoundingBox: 0 0 660 400
+%%HiResBoundingBox: 0 0 660 400
+%%DocumentProcessColors: Cyan Magenta Yellow Black
+%AI5_FileFormat 3.0
+%AI3_ColorUsage: Color
+%AI3_TemplateBox: 330 600 330 600
+%AI3_DocumentPreview: None
+%AI5_ArtSize: 660 400
+%AI5_RulerUnits: 2
+%AI5_ArtFlags: 0 0 0 1 0 0 1 0 0
+%AI5_NumLayers: 1
+%%PageOrigin:0 0
+%%py-ai-metadata: eyJzb3VyY2UiOiJleGFtcGxlcy9wYWNrYWdpbmdfbGFiZWxzLnB5IiwiYnVzaW5lc3NfY2FzZSI6InBhY2thZ2luZy1sYWJlbC12YXJpYW50cyIsImNvbXBvbmVudCI6IlBhY2thZ2luZ0xhYmVsIn0=
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+%%EndSetup
+%AI5_BeginLayer
+%%py-ai-layer-id: (packaging)
+1 1 1 1 0 0 0 79 128 255 Lb
+(Packaging labels) Ln
+%%py-ai-group-id: (label-1.group)
+%%py-ai-group-name: (CITRUS MIST)
+u
+%AI7_Tag: (label-1.background)
+%%py-ai-path-name: (Label substrate)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImxhYmVsLTEuYmFja2dyb3VuZCIsIm5hbWUiOiJMYWJlbCBzdWJzdHJhdGUifQ==
+0.97 0.95 0.89 Xa
+0.06 0.08 0.09 XA
+0 J
+0 j
+0.8 w
+4 M
+[] 0 d
+30 60 m
+210 60 L
+210 360 L
+30 360 L
+30 60 L
+b
+%AI7_Tag: (label-1.accent)
+%%py-ai-path-name: (Flavor accent)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImxhYmVsLTEuYWNjZW50IiwibmFtZSI6IkZsYXZvciBhY2NlbnQifQ==
+0.96 0.65 0.12 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+30 342 m
+210 342 L
+210 360 L
+30 360 L
+30 342 L
+f
+%AI7_Tag: (label-1.mark)
+%%py-ai-path-name: (Product mark)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImxhYmVsLTEubWFyayIsIm5hbWUiOiJQcm9kdWN0IG1hcmsifQ==
+0.96 0.65 0.12 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+168 262 m
+168 288.509668 146.509668 310 120 310 c
+93.490332 310 72 288.509668 72 262 c
+72 235.490332 93.490332 214 120 214 c
+146.509668 214 168 235.490332 168 262 c
+f
+%AI7_Tag: (label-1.divider)
+%%py-ai-path-name: (Information divider)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImxhYmVsLTEuZGl2aWRlciIsIm5hbWUiOiJJbmZvcm1hdGlvbiBkaXZpZGVyIn0=
+0.06 0.08 0.09 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+58 163 m
+182 163 L
+182 164 L
+58 164 L
+58 163 L
+f
+%%py-ai-text-id: (label-1.category.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-tracking: 180
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (label-1.category)
+0 A
+0 To
+1 0 0 1 120 318.6 0 Tp
+TP
+1 0 0 1 120 318.6 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica 8 0 0 Tf
+1 Ta
+(BOTANICAL SODA) Tx
+TO
+%%py-ai-text-id: (label-1.name.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (label-1.name)
+0 A
+0 To
+1 0 0 1 120 180 0 Tp
+TP
+1 0 0 1 120 180 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica-Bold 20 0 0 Tf
+1 Ta
+(CITRUS MIST) Tx
+TO
+%%py-ai-text-id: (label-1.note.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (label-1.note)
+0 A
+0 To
+1 0 0 1 120 138.8 0 Tp
+TP
+1 0 0 1 120 138.8 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica 9 0 0 Tf
+1 Ta
+(Yuzu peel, green mandarin, and) Tx
+TO
+%%py-ai-text-id: (label-1.note.line-1)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (label-1.note)
+0 A
+0 To
+1 0 0 1 120 126.2 0 Tp
+TP
+1 0 0 1 120 126.2 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica 9 0 0 Tf
+1 Ta
+(a dry mineral finish.) Tx
+TO
+%%py-ai-text-id: (label-1.weight.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (label-1.weight)
+0 A
+0 To
+1 0 0 1 192 74.8 0 Tp
+TP
+1 0 0 1 192 74.8 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica-Bold 9 0 0 Tf
+2 Ta
+(250 mL) Tx
+TO
+%%py-ai-text-id: (label-1.side-code.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-tracking: 100
+%%py-ai-text-rotation: 90
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (label-1.side-code)
+0 A
+0 To
+1 0 0 1 40 149.4 0 Tp
+TP
+0 1 -1 0 40 149.4 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica 7 0 0 Tf
+0 Ta
+(CM-101 / SMALL BATCH) Tx
+TO
+%%py-ai-group-id: (label-1.badge-group)
+%%py-ai-group-name: (Rotated promotional badge)
+u
+%AI7_Tag: (label-1.badge.background)
+%%py-ai-path-name: (Badge background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImxhYmVsLTEuYmFkZ2UuYmFja2dyb3VuZCIsIm5hbWUiOiJCYWRnZSBiYWNrZ3JvdW5kIn0=
+0.06 0.08 0.09 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+133.346691 282.269815 m
+190.079252 270.210937 L
+194.653309 291.730185 L
+137.920748 303.789063 L
+133.346691 282.269815 L
+f
+%%py-ai-text-id: (label-1.badge.label.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-tracking: 80
+%%py-ai-text-rotation: -12
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (label-1.badge.label)
+0 A
+0 To
+1 0 0 1 163.916835 286.608741 0 Tp
+TP
+0.978148 -0.207912 0.207912 0.978148 163.916835 286.608741 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 8 0 0 Tf
+1 Ta
+(NEW) Tx
+TO
+U
+U
+%%py-ai-group-id: (label-2.group)
+%%py-ai-group-name: (FOREST TEA)
+u
+%AI7_Tag: (label-2.background)
+%%py-ai-path-name: (Label substrate)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImxhYmVsLTIuYmFja2dyb3VuZCIsIm5hbWUiOiJMYWJlbCBzdWJzdHJhdGUifQ==
+0.97 0.95 0.89 Xa
+0.06 0.08 0.09 XA
+0 J
+0 j
+0.8 w
+4 M
+[] 0 d
+240 60 m
+420 60 L
+420 360 L
+240 360 L
+240 60 L
+b
+%AI7_Tag: (label-2.accent)
+%%py-ai-path-name: (Flavor accent)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImxhYmVsLTIuYWNjZW50IiwibmFtZSI6IkZsYXZvciBhY2NlbnQifQ==
+0.18 0.48 0.32 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+240 342 m
+420 342 L
+420 360 L
+240 360 L
+240 342 L
+f
+%AI7_Tag: (label-2.mark)
+%%py-ai-path-name: (Product mark)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImxhYmVsLTIubWFyayIsIm5hbWUiOiJQcm9kdWN0IG1hcmsifQ==
+0.18 0.48 0.32 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+378 262 m
+378 288.509668 356.509668 310 330 310 c
+303.490332 310 282 288.509668 282 262 c
+282 235.490332 303.490332 214 330 214 c
+356.509668 214 378 235.490332 378 262 c
+f
+%AI7_Tag: (label-2.divider)
+%%py-ai-path-name: (Information divider)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImxhYmVsLTIuZGl2aWRlciIsIm5hbWUiOiJJbmZvcm1hdGlvbiBkaXZpZGVyIn0=
+0.06 0.08 0.09 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+268 163 m
+392 163 L
+392 164 L
+268 164 L
+268 163 L
+f
+%%py-ai-text-id: (label-2.category.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-tracking: 180
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (label-2.category)
+0 A
+0 To
+1 0 0 1 330 318.6 0 Tp
+TP
+1 0 0 1 330 318.6 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica 8 0 0 Tf
+1 Ta
+(COLD BREW TEA) Tx
+TO
+%%py-ai-text-id: (label-2.name.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (label-2.name)
+0 A
+0 To
+1 0 0 1 330 180 0 Tp
+TP
+1 0 0 1 330 180 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica-Bold 20 0 0 Tf
+1 Ta
+(FOREST TEA) Tx
+TO
+%%py-ai-text-id: (label-2.note.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (label-2.note)
+0 A
+0 To
+1 0 0 1 330 138.8 0 Tp
+TP
+1 0 0 1 330 138.8 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica 9 0 0 Tf
+1 Ta
+(Roasted tea, cedar leaf, and a) Tx
+TO
+%%py-ai-text-id: (label-2.note.line-1)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (label-2.note)
+0 A
+0 To
+1 0 0 1 330 126.2 0 Tp
+TP
+1 0 0 1 330 126.2 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica 9 0 0 Tf
+1 Ta
+(quiet smoky aroma.) Tx
+TO
+%%py-ai-text-id: (label-2.weight.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (label-2.weight)
+0 A
+0 To
+1 0 0 1 402 74.8 0 Tp
+TP
+1 0 0 1 402 74.8 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica-Bold 9 0 0 Tf
+2 Ta
+(250 mL) Tx
+TO
+%%py-ai-text-id: (label-2.side-code.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-tracking: 100
+%%py-ai-text-rotation: 90
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (label-2.side-code)
+0 A
+0 To
+1 0 0 1 250 149.4 0 Tp
+TP
+0 1 -1 0 250 149.4 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica 7 0 0 Tf
+0 Ta
+(FT-204 / SMALL BATCH) Tx
+TO
+U
+%%py-ai-group-id: (label-3.group)
+%%py-ai-group-name: (COCOA NIGHT)
+u
+%AI7_Tag: (label-3.background)
+%%py-ai-path-name: (Label substrate)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImxhYmVsLTMuYmFja2dyb3VuZCIsIm5hbWUiOiJMYWJlbCBzdWJzdHJhdGUifQ==
+0.97 0.95 0.89 Xa
+0.06 0.08 0.09 XA
+0 J
+0 j
+0.8 w
+4 M
+[] 0 d
+450 60 m
+630 60 L
+630 360 L
+450 360 L
+450 60 L
+b
+%AI7_Tag: (label-3.accent)
+%%py-ai-path-name: (Flavor accent)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImxhYmVsLTMuYWNjZW50IiwibmFtZSI6IkZsYXZvciBhY2NlbnQifQ==
+0.48 0.24 0.18 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+450 342 m
+630 342 L
+630 360 L
+450 360 L
+450 342 L
+f
+%AI7_Tag: (label-3.mark)
+%%py-ai-path-name: (Product mark)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImxhYmVsLTMubWFyayIsIm5hbWUiOiJQcm9kdWN0IG1hcmsifQ==
+0.48 0.24 0.18 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+588 262 m
+588 288.509668 566.509668 310 540 310 c
+513.490332 310 492 288.509668 492 262 c
+492 235.490332 513.490332 214 540 214 c
+566.509668 214 588 235.490332 588 262 c
+f
+%AI7_Tag: (label-3.divider)
+%%py-ai-path-name: (Information divider)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImxhYmVsLTMuZGl2aWRlciIsIm5hbWUiOiJJbmZvcm1hdGlvbiBkaXZpZGVyIn0=
+0.06 0.08 0.09 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+478 163 m
+602 163 L
+602 164 L
+478 164 L
+478 163 L
+f
+%%py-ai-text-id: (label-3.category.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-tracking: 180
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (label-3.category)
+0 A
+0 To
+1 0 0 1 540 318.6 0 Tp
+TP
+1 0 0 1 540 318.6 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica 8 0 0 Tf
+1 Ta
+(CACAO DRINK) Tx
+TO
+%%py-ai-text-id: (label-3.name.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (label-3.name)
+0 A
+0 To
+1 0 0 1 540 180 0 Tp
+TP
+1 0 0 1 540 180 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica-Bold 20 0 0 Tf
+1 Ta
+(COCOA NIGHT) Tx
+TO
+%%py-ai-text-id: (label-3.note.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (label-3.note)
+0 A
+0 To
+1 0 0 1 540 138.8 0 Tp
+TP
+1 0 0 1 540 138.8 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica 9 0 0 Tf
+1 Ta
+(Dark cacao, oat milk, and a) Tx
+TO
+%%py-ai-text-id: (label-3.note.line-1)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (label-3.note)
+0 A
+0 To
+1 0 0 1 540 126.2 0 Tp
+TP
+1 0 0 1 540 126.2 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica 9 0 0 Tf
+1 Ta
+(restrained sea-salt finish.) Tx
+TO
+%%py-ai-text-id: (label-3.weight.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (label-3.weight)
+0 A
+0 To
+1 0 0 1 612 74.8 0 Tp
+TP
+1 0 0 1 612 74.8 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica-Bold 9 0 0 Tf
+2 Ta
+(250 mL) Tx
+TO
+%%py-ai-text-id: (label-3.side-code.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-tracking: 100
+%%py-ai-text-rotation: 90
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (label-3.side-code)
+0 A
+0 To
+1 0 0 1 460 149.4 0 Tp
+TP
+0 1 -1 0 460 149.4 Tm
+0 Tr
+0.06 0.08 0.09 Xa
+/Helvetica 7 0 0 Tf
+0 Ta
+(CN-308 / SMALL BATCH) Tx
+TO
+%%py-ai-group-id: (label-3.badge-group)
+%%py-ai-group-name: (Rotated promotional badge)
+u
+%AI7_Tag: (label-3.badge.background)
+%%py-ai-path-name: (Badge background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImxhYmVsLTMuYmFkZ2UuYmFja2dyb3VuZCIsIm5hbWUiOiJCYWRnZSBiYWNrZ3JvdW5kIn0=
+0.06 0.08 0.09 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+553.346691 282.269815 m
+610.079252 270.210937 L
+614.653309 291.730185 L
+557.920748 303.789063 L
+553.346691 282.269815 L
+f
+%%py-ai-text-id: (label-3.badge.label.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-tracking: 80
+%%py-ai-text-rotation: -12
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (label-3.badge.label)
+0 A
+0 To
+1 0 0 1 583.916835 286.608741 0 Tp
+TP
+0.978148 -0.207912 0.207912 0.978148 583.916835 286.608741 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 8 0 0 Tf
+1 Ta
+(LIMITED) Tx
+TO
+U
+U
+LB
+%AI5_EndLayer
+%%Trailer
+%%EOF

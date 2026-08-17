@@ -1,0 +1,92 @@
+%!PS-Adobe-3.0
+%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)
+%%Title: (Mixed stacking order)
+%%BoundingBox: 0 0 300 300
+%%HiResBoundingBox: 0 0 300 300
+%%DocumentProcessColors: Cyan Magenta Yellow Black
+%AI5_FileFormat 3.0
+%AI3_ColorUsage: Color
+%AI3_DocumentPreview: None
+%%py-ai-metadata: eyJmZWF0dXJlX3Byb2ZpbGUiOiJsZWdhY3ktYWktbWl4ZWQtc3RhY2sifQ==
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+%%EndSetup
+%AI5_BeginLayer
+%%py-ai-layer-id: (layer-mixed)
+1 1 1 1 0 0 0 79 128 255 Lb
+(Mixed Stack) Ln
+%%py-ai-clipping-id: (bottom-clipping)
+%%py-ai-clipping-name: (Bottom clipping)
+q
+%AI7_Tag: (clip-mask)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImNsaXAtbWFzayJ9
+70 70 m
+230 70 L
+230 230 L
+70 230 L
+70 70 L
+h
+W
+n
+%AI7_Tag: (clip-content)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImNsaXAtY29udGVudCJ9
+0.95 0.2 0.35 Xa
+1 w
+20 100 m
+280 100 L
+280 200 L
+20 200 L
+20 100 L
+f
+Q
+%AI7_Tag: (middle-diamond)
+%%py-ai-path-name: (Middle diamond)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im1pZGRsZS1kaWFtb25kIiwibmFtZSI6Ik1pZGRsZSBkaWFtb25kIn0=
+1 0.8 0.1 Xa
+1 w
+150 40 m
+260 150 L
+150 260 L
+40 150 L
+150 40 L
+f
+%%py-ai-compound-id: (top-frame)
+%%py-ai-compound-name: (Top frame)
+*u
+%AI7_Tag: (frame-outer)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImZyYW1lLW91dGVyIn0=
+0.1 0.3 0.9 Xa
+1 w
+20 20 m
+280 20 L
+280 280 L
+20 280 L
+20 20 L
+f
+%AI7_Tag: (frame-inner)
+0 A
+0 D
+%AI3_Note:py-ai:eyJpZCI6ImZyYW1lLWlubmVyIn0=
+0.1 0.3 0.9 Xa
+1 w
+55 55 m
+55 245 L
+245 245 L
+245 55 L
+55 55 L
+f
+*U
+LB
+%AI5_EndLayer
+%%Trailer
+%%EOF

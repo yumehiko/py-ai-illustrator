@@ -1,0 +1,174 @@
+%!PS-Adobe-3.0
+%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)
+%%Title: (Linked Image Product Catalog)
+%%BoundingBox: 0 0 720 420
+%%HiResBoundingBox: 0 0 720 420
+%%DocumentProcessColors: Cyan Magenta Yellow Black
+%AI5_FileFormat 3.0
+%AI3_ColorUsage: Color
+%AI3_TemplateBox: 360 630 360 630
+%AI3_DocumentPreview: None
+%AI5_ArtSize: 720 420
+%AI5_RulerUnits: 2
+%AI5_ArtFlags: 0 0 0 1 0 0 1 0 0
+%AI5_NumLayers: 1
+%%PageOrigin:0 0
+%%py-ai-metadata: eyJzb3VyY2UiOiJleGFtcGxlcy9wcm9kdWN0X2NhdGFsb2cucHkiLCJidXNpbmVzc19jYXNlIjoibGlua2VkLWltYWdlLXByb2R1Y3QtY2FyZCIsImFzc2V0X3BvbGljeSI6InBvcnRhYmxlLWxpbmtzLWRpcmVjdG9yeSJ9
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+%%EndSetup
+%AI5_BeginLayer
+%%py-ai-layer-id: (catalog)
+1 1 1 1 0 0 0 79 128 255 Lb
+(Product card) Ln
+%AI7_Tag: (card.background)
+%%py-ai-path-name: (Card background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImNhcmQuYmFja2dyb3VuZCIsIm5hbWUiOiJDYXJkIGJhY2tncm91bmQifQ==
+0.96 0.97 0.99 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+24 24 m
+696 24 L
+696 396 L
+24 396 L
+24 24 L
+f
+%%py-ai-linked-image: eyJpZCI6InByb2R1Y3QucGhvdG8iLCJzb3VyY2UiOiJMaW5rcy9wcm9kdWN0LXN3YXRjaC5wbmciLCJ4Ijo0OCwieSI6MzQ4LCJ3aWR0aCI6MzAwLCJoZWlnaHQiOjI1Miwicm90YXRpb24iOjAuMCwibmFtZSI6IkxpbmtlZCBwcm9kdWN0IGltYWdlIn0=
+%AI7_Tag: (pyai-image-e162ddf482894c29)
+0 A
+1 D
+%AI3_Note:py-ai-image-placeholder:e162ddf482894c2920e6a56d4e4f7bf71f8beeef9183c44a17fbb9ec95d1e87c
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+48 96 m
+348 96 L
+348 348 L
+48 348 L
+48 96 L
+n
+%AI7_Tag: (product.badge)
+%%py-ai-path-name: (New badge)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InByb2R1Y3QuYmFkZ2UiLCJuYW1lIjoiTmV3IGJhZGdlIn0=
+0.98 0.37 0.22 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+356 320 m
+356 338.777681 340.777681 354 322 354 c
+303.222319 354 288 338.777681 288 320 c
+288 301.222319 303.222319 286 322 286 c
+340.777681 286 356 301.222319 356 320 c
+f
+%%py-ai-text-id: (product.badge-label.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Badge label)
+0 A
+0 To
+1 0 0 1 322 316.4 0 Tp
+TP
+1 0 0 1 322 316.4 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 12 0 0 Tf
+1 Ta
+(NEW) Tx
+TO
+%%py-ai-text-id: (product.eyebrow.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-tracking: 140
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Category)
+0 A
+0 To
+1 0 0 1 384 340 0 Tp
+TP
+1 0 0 1 384 340 Tm
+0 Tr
+0.23 0.39 0.75 Xa
+/Helvetica-Bold 10 0 0 Tf
+0 Ta
+(STUDIO ESSENTIALS) Tx
+TO
+%%py-ai-text-id: (product.title.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Product title)
+0 A
+0 To
+1 0 0 1 384 286 0 Tp
+TP
+1 0 0 1 384 286 Tm
+0 Tr
+0.08 0.1 0.16 Xa
+/Helvetica-Bold 30 0 0 Tf
+0 Ta
+(Focus Lamp 02) Tx
+TO
+%%py-ai-text-id: (product.description)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-area: 264 104
+%%py-ai-text-leading: 15.95
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (Product description)
+0 A
+0 To
+1 0 0 1 384 260 0 Tp
+TP
+1 0 0 1 384 260 Tm
+0 Tr
+0 0 0 Xa
+/Helvetica 11 0 0 Tf
+0 Ta
+(A compact task light designed for focused work. The linked image can be replaced independently, while this paragraph remains a reflowable area text frame.) Tx
+TO
+%AI7_Tag: (product.cta)
+%%py-ai-path-name: (CTA background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6InByb2R1Y3QuY3RhIiwibmFtZSI6IkNUQSBiYWNrZ3JvdW5kIn0=
+0.1 0.18 0.34 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+384 82 m
+526 82 L
+526 120 L
+384 120 L
+384 82 L
+f
+%%py-ai-text-id: (product.cta-label.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (CTA label)
+0 A
+0 To
+1 0 0 1 455 96 0 Tp
+TP
+1 0 0 1 455 96 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 10 0 0 Tf
+1 Ta
+(VIEW DETAILS) Tx
+TO
+LB
+%AI5_EndLayer
+%%Trailer
+%%EOF

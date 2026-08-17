@@ -1,0 +1,33 @@
+%!PS-Adobe-3.0
+%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)
+%%Title: (CMYK Bezier curve)
+%%BoundingBox: 0 0 200 200
+%%HiResBoundingBox: 0 0 200 200
+%%DocumentProcessColors: Cyan Magenta Yellow Black
+%AI5_FileFormat 3.0
+%AI3_ColorUsage: Color
+%AI3_DocumentPreview: None
+%%py-ai-metadata: eyJmZWF0dXJlX3Byb2ZpbGUiOiJsZWdhY3ktYWktYmV6aWVyLWNteWsifQ==
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+%%EndSetup
+%AI5_BeginLayer
+%%py-ai-layer-id: (layer-curves)
+1 1 1 1 0 0 0 79 128 255 Lb
+(Curves) Ln
+%AI7_Tag: (cmyk-curve)
+%%py-ai-path-name: (CMYK curve)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImNteWstY3VydmUiLCJuYW1lIjoiQ01ZSyBjdXJ2ZSJ9
+1 0.25 0 0.1 K
+4 w
+20 20 m
+20 150 180 50 180 180 c
+S
+LB
+%AI5_EndLayer
+%%Trailer
+%%EOF

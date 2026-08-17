@@ -1,0 +1,491 @@
+%!PS-Adobe-3.0
+%%Creator: py-ai-illustrator (Adobe Illustrator 7 compatible subset)
+%%Title: (Campaign variants with multiple artboards)
+%%BoundingBox: 0 0 1250 400
+%%HiResBoundingBox: 0 0 1250 400
+%%DocumentProcessColors: Cyan Magenta Yellow Black
+%AI5_FileFormat 3.0
+%AI3_ColorUsage: Color
+%AI3_TemplateBox: 625 600 625 600
+%AI3_DocumentPreview: None
+%AI5_ArtSize: 1250 400
+%AI5_RulerUnits: 2
+%AI5_ArtFlags: 0 0 0 1 0 0 1 0 0
+%AI5_NumLayers: 1
+%%PageOrigin:0 0
+%%py-ai-metadata: eyJzb3VyY2UiOiJleGFtcGxlcy9jYW1wYWlnbl92YXJpYW50cy5weSIsImJ1c2luZXNzX2Nhc2UiOiJtdWx0aS1mb3JtYXQtY2FtcGFpZ24iLCJ2YXJpYW50X2NvdW50IjozfQ==
+%%py-ai-artboard: eyJpZCI6ImNhbXBhaWduLnNxdWFyZSIsIm5hbWUiOiJTcXVhcmUgMXgxIiwibGVmdCI6MjAsInRvcCI6MzgwLCJ3aWR0aCI6MzYwLCJoZWlnaHQiOjM2MH0=
+%%py-ai-artboard: eyJpZCI6ImNhbXBhaWduLnBvcnRyYWl0IiwibmFtZSI6IlBvcnRyYWl0IDN4NCIsImxlZnQiOjQwMCwidG9wIjozODAsIndpZHRoIjoyNzAsImhlaWdodCI6MzYwfQ==
+%%py-ai-artboard: eyJpZCI6ImNhbXBhaWduLmJhbm5lciIsIm5hbWUiOiJCYW5uZXIgM3gxIiwibGVmdCI6NjkwLCJ0b3AiOjM4MCwid2lkdGgiOjU0MCwiaGVpZ2h0IjoxODB9
+%%EndComments
+%%BeginProlog
+%%EndProlog
+%%BeginSetup
+%%EndSetup
+%AI5_BeginLayer
+%%py-ai-layer-id: (campaign)
+1 1 1 1 0 0 0 79 128 255 Lb
+(Campaign variants) Ln
+%%py-ai-group-id: (campaign.square.group)
+%%py-ai-group-name: (Square 1x1)
+u
+%AI7_Tag: (campaign.square.background)
+%%py-ai-path-name: (Background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImNhbXBhaWduLnNxdWFyZS5iYWNrZ3JvdW5kIiwibmFtZSI6IkJhY2tncm91bmQifQ==
+0.04 0.08 0.15 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+20 20 m
+380 20 L
+380 380 L
+20 380 L
+20 20 L
+f
+%AI7_Tag: (campaign.square.accent)
+%%py-ai-path-name: (Campaign accent)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImNhbXBhaWduLnNxdWFyZS5hY2NlbnQiLCJuYW1lIjoiQ2FtcGFpZ24gYWNjZW50In0=
+0.96 0.3 0.2 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+376 320 m
+376 349.823376 351.823376 374 322 374 c
+292.176624 374 268 349.823376 268 320 c
+268 290.176624 292.176624 266 322 266 c
+351.823376 266 376 290.176624 376 320 c
+f
+%%py-ai-text-id: (campaign.square.eyebrow.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-tracking: 160
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Campaign series)
+0 A
+0 To
+1 0 0 1 47 345.8 0 Tp
+TP
+1 0 0 1 47 345.8 Tm
+0 Tr
+0.72 0.92 0.24 Xa
+/Helvetica-Bold 9 0 0 Tf
+0 Ta
+(DESIGN SYSTEMS / WORKSHOP) Tx
+TO
+%%py-ai-text-id: (campaign.square.title.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Campaign title)
+0 A
+0 To
+1 0 0 1 47 268.4 0 Tp
+TP
+1 0 0 1 47 268.4 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 32 0 0 Tf
+0 Ta
+(BUILD) Tx
+TO
+%%py-ai-text-id: (campaign.square.title.line-1)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Campaign title)
+0 A
+0 To
+1 0 0 1 47 237.04 0 Tp
+TP
+1 0 0 1 47 237.04 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 32 0 0 Tf
+0 Ta
+(WITH MEANING) Tx
+TO
+%%py-ai-text-id: (campaign.square.description.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (Campaign description)
+0 A
+0 To
+1 0 0 1 47 181.2 0 Tp
+TP
+1 0 0 1 47 181.2 Tm
+0 Tr
+0.73 0.78 0.84 Xa
+/Helvetica 11 0 0 Tf
+0 Ta
+(Turn shared rules into editable, reusable design.) Tx
+TO
+%AI7_Tag: (campaign.square.action-background)
+%%py-ai-path-name: (Action background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImNhbXBhaWduLnNxdWFyZS5hY3Rpb24tYmFja2dyb3VuZCIsIm5hbWUiOiJBY3Rpb24gYmFja2dyb3VuZCJ9
+0.72 0.92 0.24 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+47 72 m
+211 72 L
+211 110 L
+47 110 L
+47 72 L
+f
+%%py-ai-text-id: (campaign.square.action.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-tracking: 70
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Action label)
+0 A
+0 To
+1 0 0 1 129 90.2 0 Tp
+TP
+1 0 0 1 129 90.2 Tm
+0 Tr
+0.04 0.08 0.15 Xa
+/Helvetica-Bold 11 0 0 Tf
+1 Ta
+(RESERVE A SEAT) Tx
+TO
+%%py-ai-text-id: (campaign.square.footer.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-tracking: 120
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Format label)
+0 A
+0 To
+1 0 0 1 353 37.6 0 Tp
+TP
+1 0 0 1 353 37.6 Tm
+0 Tr
+0.73 0.78 0.84 Xa
+/Helvetica-Bold 8 0 0 Tf
+2 Ta
+(SQUARE 1X1) Tx
+TO
+U
+%%py-ai-group-id: (campaign.portrait.group)
+%%py-ai-group-name: (Portrait 3x4)
+u
+%AI7_Tag: (campaign.portrait.background)
+%%py-ai-path-name: (Background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImNhbXBhaWduLnBvcnRyYWl0LmJhY2tncm91bmQiLCJuYW1lIjoiQmFja2dyb3VuZCJ9
+0.04 0.08 0.15 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+400 20 m
+670 20 L
+670 380 L
+400 380 L
+400 20 L
+f
+%AI7_Tag: (campaign.portrait.accent)
+%%py-ai-path-name: (Campaign accent)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImNhbXBhaWduLnBvcnRyYWl0LmFjY2VudCIsIm5hbWUiOiJDYW1wYWlnbiBhY2NlbnQifQ==
+0.96 0.3 0.2 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+666 320 m
+666 349.823376 641.823376 374 612 374 c
+582.176624 374 558 349.823376 558 320 c
+558 290.176624 582.176624 266 612 266 c
+641.823376 266 666 290.176624 666 320 c
+f
+%%py-ai-text-id: (campaign.portrait.eyebrow.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-tracking: 160
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Campaign series)
+0 A
+0 To
+1 0 0 1 427 345.8 0 Tp
+TP
+1 0 0 1 427 345.8 Tm
+0 Tr
+0.72 0.92 0.24 Xa
+/Helvetica-Bold 9 0 0 Tf
+0 Ta
+(DESIGN SYSTEMS / WORKSHOP) Tx
+TO
+%%py-ai-text-id: (campaign.portrait.title.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Campaign title)
+0 A
+0 To
+1 0 0 1 427 272.4 0 Tp
+TP
+1 0 0 1 427 272.4 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 27 0 0 Tf
+0 Ta
+(BUILD) Tx
+TO
+%%py-ai-text-id: (campaign.portrait.title.line-1)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Campaign title)
+0 A
+0 To
+1 0 0 1 427 245.94 0 Tp
+TP
+1 0 0 1 427 245.94 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 27 0 0 Tf
+0 Ta
+(WITH MEANING) Tx
+TO
+%%py-ai-text-id: (campaign.portrait.description.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (Campaign description)
+0 A
+0 To
+1 0 0 1 427 181.2 0 Tp
+TP
+1 0 0 1 427 181.2 Tm
+0 Tr
+0.73 0.78 0.84 Xa
+/Helvetica 11 0 0 Tf
+0 Ta
+(Turn shared rules into editable, reusable) Tx
+TO
+%%py-ai-text-id: (campaign.portrait.description.line-1)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (Campaign description)
+0 A
+0 To
+1 0 0 1 427 166.35 0 Tp
+TP
+1 0 0 1 427 166.35 Tm
+0 Tr
+0.73 0.78 0.84 Xa
+/Helvetica 11 0 0 Tf
+0 Ta
+(design.) Tx
+TO
+%AI7_Tag: (campaign.portrait.action-background)
+%%py-ai-path-name: (Action background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImNhbXBhaWduLnBvcnRyYWl0LmFjdGlvbi1iYWNrZ3JvdW5kIiwibmFtZSI6IkFjdGlvbiBiYWNrZ3JvdW5kIn0=
+0.72 0.92 0.24 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+427 72 m
+591 72 L
+591 110 L
+427 110 L
+427 72 L
+f
+%%py-ai-text-id: (campaign.portrait.action.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-tracking: 70
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Action label)
+0 A
+0 To
+1 0 0 1 509 90.2 0 Tp
+TP
+1 0 0 1 509 90.2 Tm
+0 Tr
+0.04 0.08 0.15 Xa
+/Helvetica-Bold 11 0 0 Tf
+1 Ta
+(RESERVE A SEAT) Tx
+TO
+%%py-ai-text-id: (campaign.portrait.footer.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-tracking: 120
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Format label)
+0 A
+0 To
+1 0 0 1 643 37.6 0 Tp
+TP
+1 0 0 1 643 37.6 Tm
+0 Tr
+0.73 0.78 0.84 Xa
+/Helvetica-Bold 8 0 0 Tf
+2 Ta
+(PORTRAIT 3X4) Tx
+TO
+U
+%%py-ai-group-id: (campaign.banner.group)
+%%py-ai-group-name: (Banner 3x1)
+u
+%AI7_Tag: (campaign.banner.background)
+%%py-ai-path-name: (Background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImNhbXBhaWduLmJhbm5lci5iYWNrZ3JvdW5kIiwibmFtZSI6IkJhY2tncm91bmQifQ==
+0.04 0.08 0.15 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+690 200 m
+1230 200 L
+1230 380 L
+690 380 L
+690 200 L
+f
+%AI7_Tag: (campaign.banner.accent)
+%%py-ai-path-name: (Campaign accent)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImNhbXBhaWduLmJhbm5lci5hY2NlbnQiLCJuYW1lIjoiQ2FtcGFpZ24gYWNjZW50In0=
+0.96 0.3 0.2 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+1220 290 m
+1220 324.241654 1192.241654 352 1158 352 c
+1123.758346 352 1096 324.241654 1096 290 c
+1096 255.758346 1123.758346 228 1158 228 c
+1192.241654 228 1220 255.758346 1220 290 c
+f
+%%py-ai-text-id: (campaign.banner.eyebrow.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-tracking: 160
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Campaign series)
+0 A
+0 To
+1 0 0 1 717 348.8 0 Tp
+TP
+1 0 0 1 717 348.8 Tm
+0 Tr
+0.72 0.92 0.24 Xa
+/Helvetica-Bold 9 0 0 Tf
+0 Ta
+(DESIGN SYSTEMS / WORKSHOP) Tx
+TO
+%%py-ai-text-id: (campaign.banner.title.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Campaign title)
+0 A
+0 To
+1 0 0 1 717 299.4 0 Tp
+TP
+1 0 0 1 717 299.4 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 27 0 0 Tf
+0 Ta
+(BUILD) Tx
+TO
+%%py-ai-text-id: (campaign.banner.title.line-1)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Campaign title)
+0 A
+0 To
+1 0 0 1 717 272.94 0 Tp
+TP
+1 0 0 1 717 272.94 Tm
+0 Tr
+1 1 1 Xa
+/Helvetica-Bold 27 0 0 Tf
+0 Ta
+(WITH MEANING) Tx
+TO
+%%py-ai-text-id: (campaign.banner.description.line-0)
+%%py-ai-text-alignment: (left)
+%%py-ai-text-native-font: (Helvetica)
+%%py-ai-text-name: (Campaign description)
+0 A
+0 To
+1 0 0 1 717 244.2 0 Tp
+TP
+1 0 0 1 717 244.2 Tm
+0 Tr
+0.73 0.78 0.84 Xa
+/Helvetica 11 0 0 Tf
+0 Ta
+(Turn shared rules into editable, reusable design.) Tx
+TO
+%AI7_Tag: (campaign.banner.action-background)
+%%py-ai-path-name: (Action background)
+0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6ImNhbXBhaWduLmJhbm5lci5hY3Rpb24tYmFja2dyb3VuZCIsIm5hbWUiOiJBY3Rpb24gYmFja2dyb3VuZCJ9
+0.72 0.92 0.24 Xa
+0 J
+0 j
+1 w
+4 M
+[] 0 d
+1010 275 m
+1148 275 L
+1148 313 L
+1010 313 L
+1010 275 L
+f
+%%py-ai-text-id: (campaign.banner.action.line-0)
+%%py-ai-text-alignment: (center)
+%%py-ai-text-tracking: 70
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Action label)
+0 A
+0 To
+1 0 0 1 1079 293.2 0 Tp
+TP
+1 0 0 1 1079 293.2 Tm
+0 Tr
+0.04 0.08 0.15 Xa
+/Helvetica-Bold 11 0 0 Tf
+1 Ta
+(RESERVE A SEAT) Tx
+TO
+%%py-ai-text-id: (campaign.banner.footer.line-0)
+%%py-ai-text-alignment: (right)
+%%py-ai-text-tracking: 120
+%%py-ai-text-native-font: (Helvetica-Bold)
+%%py-ai-text-name: (Format label)
+0 A
+0 To
+1 0 0 1 1203 215.6 0 Tp
+TP
+1 0 0 1 1203 215.6 Tm
+0 Tr
+0.73 0.78 0.84 Xa
+/Helvetica-Bold 8 0 0 Tf
+2 Ta
+(BANNER 3X1) Tx
+TO
+U
+LB
+%AI5_EndLayer
+%%Trailer
+%%EOF

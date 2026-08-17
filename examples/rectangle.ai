@@ -20,6 +20,8 @@
 %AI7_Tag: (orange-rectangle)
 %%py-ai-path-name: (Orange rectangle)
 0 A
+1 D
+%AI3_Note:py-ai:eyJpZCI6Im9yYW5nZS1yZWN0YW5nbGUiLCJuYW1lIjoiT3JhbmdlIHJlY3RhbmdsZSJ9
 1 0.3 0 Xa
 0.15 0.1 0.05 XA
 3 w
@@ -27,6 +29,7 @@
 280 40 L
 280 200 L
 40 200 L
+40 40 L
 b
 LB
 %AI5_EndLayer

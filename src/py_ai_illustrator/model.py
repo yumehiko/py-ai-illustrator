@@ -2,18 +2,53 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
-class Point:
+class ControlPoint:
+    """A Bézier control handle in document coordinates."""
+
     x: float
     y: float
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Point:
+    def from_dict(cls, data: dict[str, Any]) -> ControlPoint:
         return cls(float(data["x"]), float(data["y"]))
+
+
+@dataclass(frozen=True, slots=True)
+class Point:
+    """A path anchor and its optional incoming/outgoing Bézier handles."""
+
+    x: float
+    y: float
+    in_handle: ControlPoint | None = None
+    out_handle: ControlPoint | None = None
+    smooth: bool = False
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Point:
+        return cls(
+            x=float(data["x"]),
+            y=float(data["y"]),
+            in_handle=(
+                ControlPoint.from_dict(data["in_handle"])
+                if data.get("in_handle") is not None
+                else None
+            ),
+            out_handle=(
+                ControlPoint.from_dict(data["out_handle"])
+                if data.get("out_handle") is not None
+                else None
+            ),
+            smooth=bool(data.get("smooth", False)),
+        )
+
+    def with_out_handle(self, handle: ControlPoint | None) -> Point:
+        return Point(self.x, self.y, self.in_handle, handle, self.smooth)
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,15 +68,56 @@ class Color:
         return cls(float(data["red"]), float(data["green"]), float(data["blue"]))
 
 
+@dataclass(frozen=True, slots=True)
+class CmykColor:
+    """A CMYK process color with normalized 0..1 components."""
+
+    cyan: float
+    magenta: float
+    yellow: float
+    black: float
+
+    def __post_init__(self) -> None:
+        values = (self.cyan, self.magenta, self.yellow, self.black)
+        if not all(0.0 <= value <= 1.0 for value in values):
+            raise ValueError("CMYK components must be between 0.0 and 1.0")
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CmykColor:
+        return cls(
+            float(data["cyan"]),
+            float(data["magenta"]),
+            float(data["yellow"]),
+            float(data["black"]),
+        )
+
+
+ProcessColor = Color | CmykColor
+
+
+def _process_color_from_dict(data: dict[str, Any]) -> ProcessColor:
+    if {"cyan", "magenta", "yellow", "black"}.issubset(data):
+        return CmykColor.from_dict(data)
+    if {"red", "green", "blue"}.issubset(data):
+        return Color.from_dict(data)
+    raise ValueError("A process color must contain RGB or CMYK components")
+
+
 @dataclass(slots=True)
 class Path:
     id: str
     points: list[Point]
     closed: bool = True
-    fill: Color | None = None
-    stroke: Color | None = None
+    fill: ProcessColor | None = None
+    stroke: ProcessColor | None = None
     stroke_width: float = 1.0
+    dash_pattern: list[float] = field(default_factory=list)
+    dash_offset: float = 0.0
+    line_cap: str = "butt"
+    line_join: str = "miter"
+    miter_limit: float = 4.0
     name: str | None = None
+    polarity: str = "positive"
     unknown: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -49,6 +125,18 @@ class Path:
             raise ValueError("A path needs at least two points")
         if self.stroke_width < 0:
             raise ValueError("stroke_width must not be negative")
+        if any(value < 0 for value in self.dash_pattern):
+            raise ValueError("dash_pattern values must not be negative")
+        if self.dash_pattern and not any(self.dash_pattern):
+            raise ValueError("dash_pattern must contain a positive value")
+        if self.line_cap not in {"butt", "round", "projecting"}:
+            raise ValueError("line_cap must be 'butt', 'round', or 'projecting'")
+        if self.line_join not in {"miter", "round", "bevel"}:
+            raise ValueError("line_join must be 'miter', 'round', or 'bevel'")
+        if self.miter_limit <= 0:
+            raise ValueError("miter_limit must be positive")
+        if self.polarity not in {"positive", "negative"}:
+            raise ValueError("polarity must be 'positive' or 'negative'")
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Path:
@@ -57,9 +145,277 @@ class Path:
             name=data.get("name"),
             points=[Point.from_dict(point) for point in data["points"]],
             closed=bool(data.get("closed", True)),
-            fill=Color.from_dict(data["fill"]) if data.get("fill") is not None else None,
-            stroke=(Color.from_dict(data["stroke"]) if data.get("stroke") is not None else None),
+            fill=(_process_color_from_dict(data["fill"]) if data.get("fill") is not None else None),
+            stroke=(
+                _process_color_from_dict(data["stroke"]) if data.get("stroke") is not None else None
+            ),
             stroke_width=float(data.get("stroke_width", 1.0)),
+            dash_pattern=[float(value) for value in data.get("dash_pattern", [])],
+            dash_offset=float(data.get("dash_offset", 0.0)),
+            line_cap=str(data.get("line_cap", "butt")),
+            line_join=str(data.get("line_join", "miter")),
+            miter_limit=float(data.get("miter_limit", 4.0)),
+            polarity=str(data.get("polarity", "positive")),
+            unknown=dict(data.get("unknown", {})),
+        )
+
+
+@dataclass(slots=True)
+class TextFrame:
+    """Editable point or area text positioned in document coordinates.
+
+    ``font_name`` is the name written to the legacy AI stream.  Japanese AI7
+    text may need a composite RKSJ name there, so ``native_font_name`` can keep
+    the actual Illustrator PostScript name to apply during native
+    materialization.
+    """
+
+    id: str
+    text: str
+    x: float
+    y: float
+    font_size: float = 12.0
+    font_name: str = "Helvetica"
+    native_font_name: str | None = None
+    tracking: float = 0.0
+    rotation: float = 0.0
+    area_width: float | None = None
+    area_height: float | None = None
+    leading: float | None = None
+    fill: ProcessColor = field(default_factory=lambda: Color(0.0, 0.0, 0.0))
+    alignment: str = "left"
+    name: str | None = None
+    unknown: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if self.font_size <= 0:
+            raise ValueError("font_size must be positive")
+        if not math.isfinite(self.tracking):
+            raise ValueError("tracking must be finite")
+        if not math.isfinite(self.rotation):
+            raise ValueError("rotation must be finite")
+        if (self.area_width is None) != (self.area_height is None):
+            raise ValueError("area_width and area_height must be specified together")
+        if self.area_width is not None and (
+            self.area_width <= 0 or self.area_height is None or self.area_height <= 0
+        ):
+            raise ValueError("Area text dimensions must be positive")
+        if self.leading is not None and self.leading <= 0:
+            raise ValueError("leading must be positive")
+        if self.alignment not in {"left", "center", "right"}:
+            raise ValueError("alignment must be 'left', 'center', or 'right'")
+
+    @property
+    def is_area_text(self) -> bool:
+        return self.area_width is not None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> TextFrame:
+        return cls(
+            id=str(data["id"]),
+            text=str(data["text"]),
+            x=float(data["x"]),
+            y=float(data["y"]),
+            font_size=float(data.get("font_size", 12.0)),
+            font_name=str(data.get("font_name", "Helvetica")),
+            native_font_name=(
+                str(data["native_font_name"]) if data.get("native_font_name") is not None else None
+            ),
+            tracking=float(data.get("tracking", 0.0)),
+            rotation=float(data.get("rotation", 0.0)),
+            area_width=(float(data["area_width"]) if data.get("area_width") is not None else None),
+            area_height=(
+                float(data["area_height"]) if data.get("area_height") is not None else None
+            ),
+            leading=(float(data["leading"]) if data.get("leading") is not None else None),
+            fill=_process_color_from_dict(
+                data.get("fill", {"red": 0.0, "green": 0.0, "blue": 0.0})
+            ),
+            alignment=str(data.get("alignment", "left")),
+            name=data.get("name"),
+            unknown=dict(data.get("unknown", {})),
+        )
+
+
+@dataclass(slots=True)
+class LinkedImage:
+    """An externally linked raster image with editable Illustrator placement."""
+
+    id: str
+    source: str
+    x: float
+    y: float
+    width: float
+    height: float
+    rotation: float = 0.0
+    name: str | None = None
+    unknown: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.id:
+            raise ValueError("A linked image id must not be empty")
+        if not self.source or "\x00" in self.source:
+            raise ValueError("A linked image source must be a non-empty path")
+        if not all(
+            math.isfinite(value)
+            for value in (self.x, self.y, self.width, self.height, self.rotation)
+        ):
+            raise ValueError("Linked image placement values must be finite")
+        if self.width <= 0 or self.height <= 0:
+            raise ValueError("Linked image dimensions must be positive")
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> LinkedImage:
+        return cls(
+            id=str(data["id"]),
+            source=str(data["source"]),
+            x=float(data["x"]),
+            y=float(data["y"]),
+            width=float(data["width"]),
+            height=float(data["height"]),
+            rotation=float(data.get("rotation", 0.0)),
+            name=data.get("name"),
+            unknown=dict(data.get("unknown", {})),
+        )
+
+
+@dataclass(slots=True)
+class CompoundPath:
+    id: str
+    paths: list[Path]
+    name: str | None = None
+    unknown: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if len(self.paths) < 2:
+            raise ValueError("A compound path needs at least two component paths")
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CompoundPath:
+        return cls(
+            id=str(data["id"]),
+            name=data.get("name"),
+            paths=[Path.from_dict(path) for path in data.get("paths", [])],
+            unknown=dict(data.get("unknown", {})),
+        )
+
+
+@dataclass(slots=True)
+class ClippingGroup:
+    id: str
+    clipping_path: Path
+    paths: list[Path]
+    name: str | None = None
+    unknown: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.paths:
+            raise ValueError("A clipping group needs at least one content path")
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ClippingGroup:
+        return cls(
+            id=str(data["id"]),
+            name=data.get("name"),
+            clipping_path=Path.from_dict(data["clipping_path"]),
+            paths=[Path.from_dict(path) for path in data.get("paths", [])],
+            unknown=dict(data.get("unknown", {})),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class LayerItemRef:
+    kind: str
+    id: str
+
+    def __post_init__(self) -> None:
+        if self.kind not in {
+            "path",
+            "text",
+            "image",
+            "compound_path",
+            "clipping_group",
+            "group",
+        }:
+            raise ValueError(f"Unsupported layer item kind: {self.kind}")
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> LayerItemRef:
+        return cls(kind=str(data["kind"]), id=str(data["id"]))
+
+
+@dataclass(slots=True)
+class Group:
+    """An editable group that may contain heterogeneous and nested artwork."""
+
+    id: str
+    name: str | None = None
+    paths: list[Path] = field(default_factory=list)
+    text_frames: list[TextFrame] = field(default_factory=list)
+    linked_images: list[LinkedImage] = field(default_factory=list)
+    compound_paths: list[CompoundPath] = field(default_factory=list)
+    clipping_groups: list[ClippingGroup] = field(default_factory=list)
+    groups: list[Group] = field(default_factory=list)
+    item_order: list[LayerItemRef] = field(default_factory=list)
+    unknown: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.id:
+            raise ValueError("A group id must not be empty")
+        if not self.item_order:
+            self.item_order = [
+                *(LayerItemRef("path", path.id) for path in self.paths),
+                *(LayerItemRef("text", text.id) for text in self.text_frames),
+                *(LayerItemRef("image", image.id) for image in self.linked_images),
+                *(LayerItemRef("compound_path", compound.id) for compound in self.compound_paths),
+                *(LayerItemRef("clipping_group", group.id) for group in self.clipping_groups),
+                *(LayerItemRef("group", group.id) for group in self.groups),
+            ]
+
+    def ordered_items(
+        self,
+    ) -> list[Path | TextFrame | LinkedImage | CompoundPath | ClippingGroup | Group]:
+        typed_items: list[
+            tuple[str, Path | TextFrame | LinkedImage | CompoundPath | ClippingGroup | Group]
+        ] = [
+            *(("path", path) for path in self.paths),
+            *(("text", text) for text in self.text_frames),
+            *(("image", image) for image in self.linked_images),
+            *(("compound_path", compound) for compound in self.compound_paths),
+            *(("clipping_group", group) for group in self.clipping_groups),
+            *(("group", group) for group in self.groups),
+        ]
+        remaining = list(typed_items)
+        ordered: list[Path | TextFrame | LinkedImage | CompoundPath | ClippingGroup | Group] = []
+        for reference in self.item_order:
+            for index, (kind, item) in enumerate(remaining):
+                if kind == reference.kind and item.id == reference.id:
+                    ordered.append(item)
+                    remaining.pop(index)
+                    break
+        ordered.extend(item for _, item in remaining)
+        return ordered
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Group:
+        return cls(
+            id=str(data["id"]),
+            name=data.get("name"),
+            paths=[Path.from_dict(path) for path in data.get("paths", [])],
+            text_frames=[TextFrame.from_dict(text) for text in data.get("text_frames", [])],
+            linked_images=[
+                LinkedImage.from_dict(image) for image in data.get("linked_images", [])
+            ],
+            compound_paths=[
+                CompoundPath.from_dict(path) for path in data.get("compound_paths", [])
+            ],
+            clipping_groups=[
+                ClippingGroup.from_dict(group) for group in data.get("clipping_groups", [])
+            ],
+            groups=[Group.from_dict(group) for group in data.get("groups", [])],
+            item_order=[
+                LayerItemRef.from_dict(reference) for reference in data.get("item_order", [])
+            ],
             unknown=dict(data.get("unknown", {})),
         )
 
@@ -69,9 +425,50 @@ class Layer:
     id: str
     name: str
     paths: list[Path] = field(default_factory=list)
+    text_frames: list[TextFrame] = field(default_factory=list)
+    linked_images: list[LinkedImage] = field(default_factory=list)
+    compound_paths: list[CompoundPath] = field(default_factory=list)
+    clipping_groups: list[ClippingGroup] = field(default_factory=list)
+    groups: list[Group] = field(default_factory=list)
+    item_order: list[LayerItemRef] = field(default_factory=list)
     visible: bool = True
     locked: bool = False
     unknown: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.item_order:
+            self.item_order = [
+                *(LayerItemRef("path", path.id) for path in self.paths),
+                *(LayerItemRef("text", text.id) for text in self.text_frames),
+                *(LayerItemRef("image", image.id) for image in self.linked_images),
+                *(LayerItemRef("compound_path", compound.id) for compound in self.compound_paths),
+                *(LayerItemRef("clipping_group", group.id) for group in self.clipping_groups),
+                *(LayerItemRef("group", group.id) for group in self.groups),
+            ]
+
+    def ordered_items(
+        self,
+    ) -> list[Path | TextFrame | LinkedImage | CompoundPath | ClippingGroup | Group]:
+        typed_items: list[
+            tuple[str, Path | TextFrame | LinkedImage | CompoundPath | ClippingGroup | Group]
+        ] = [
+            *(("path", path) for path in self.paths),
+            *(("text", text) for text in self.text_frames),
+            *(("image", image) for image in self.linked_images),
+            *(("compound_path", compound) for compound in self.compound_paths),
+            *(("clipping_group", group) for group in self.clipping_groups),
+            *(("group", group) for group in self.groups),
+        ]
+        remaining = list(typed_items)
+        ordered: list[Path | TextFrame | LinkedImage | CompoundPath | ClippingGroup | Group] = []
+        for reference in self.item_order:
+            for index, (kind, item) in enumerate(remaining):
+                if kind == reference.kind and item.id == reference.id:
+                    ordered.append(item)
+                    remaining.pop(index)
+                    break
+        ordered.extend(item for _, item in remaining)
+        return ordered
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Layer:
@@ -79,9 +476,55 @@ class Layer:
             id=str(data["id"]),
             name=str(data["name"]),
             paths=[Path.from_dict(path) for path in data.get("paths", [])],
+            text_frames=[TextFrame.from_dict(text) for text in data.get("text_frames", [])],
+            linked_images=[
+                LinkedImage.from_dict(image) for image in data.get("linked_images", [])
+            ],
+            compound_paths=[
+                CompoundPath.from_dict(path) for path in data.get("compound_paths", [])
+            ],
+            clipping_groups=[
+                ClippingGroup.from_dict(group) for group in data.get("clipping_groups", [])
+            ],
+            groups=[Group.from_dict(group) for group in data.get("groups", [])],
+            item_order=[
+                LayerItemRef.from_dict(reference) for reference in data.get("item_order", [])
+            ],
             visible=bool(data.get("visible", True)),
             locked=bool(data.get("locked", False)),
             unknown=dict(data.get("unknown", {})),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class Artboard:
+    """A named rectangular output region inside document coordinates."""
+
+    id: str
+    name: str
+    left: float
+    top: float
+    width: float
+    height: float
+
+    def __post_init__(self) -> None:
+        values = (self.left, self.top, self.width, self.height)
+        if not self.id or not self.name:
+            raise ValueError("Artboard id and name must not be empty")
+        if not all(math.isfinite(value) for value in values):
+            raise ValueError("Artboard coordinates and dimensions must be finite")
+        if self.width <= 0 or self.height <= 0:
+            raise ValueError("Artboard dimensions must be positive")
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Artboard:
+        return cls(
+            id=str(data["id"]),
+            name=str(data["name"]),
+            left=float(data["left"]),
+            top=float(data["top"]),
+            width=float(data["width"]),
+            height=float(data["height"]),
         )
 
 
@@ -93,10 +536,25 @@ class Document:
     title: str = "Untitled"
     version: int = 1
     metadata: dict[str, Any] = field(default_factory=dict)
+    artboards: list[Artboard] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.width <= 0 or self.height <= 0:
             raise ValueError("Document width and height must be positive")
+        if len(self.artboards) > 100:
+            raise ValueError("Illustrator documents support at most 100 artboards")
+        if len({artboard.id for artboard in self.artboards}) != len(self.artboards):
+            raise ValueError("Artboard ids must be unique")
+        if len({artboard.name for artboard in self.artboards}) != len(self.artboards):
+            raise ValueError("Artboard names must be unique")
+        for artboard in self.artboards:
+            if (
+                artboard.left < 0
+                or artboard.top > self.height
+                or artboard.left + artboard.width > self.width
+                or artboard.top - artboard.height < 0
+            ):
+                raise ValueError(f"Artboard {artboard.id!r} must fit inside document bounds")
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -110,4 +568,5 @@ class Document:
             version=int(data.get("version", 1)),
             layers=[Layer.from_dict(layer) for layer in data.get("layers", [])],
             metadata=dict(data.get("metadata", {})),
+            artboards=[Artboard.from_dict(board) for board in data.get("artboards", [])],
         )

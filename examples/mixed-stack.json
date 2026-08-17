@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "title": "Mixed stacking order",
+  "width": 300,
+  "height": 300,
+  "metadata": {
+    "feature_profile": "legacy-ai-mixed-stack"
+  },
+  "layers": [
+    {
+      "id": "layer-mixed",
+      "name": "Mixed Stack",
+      "visible": true,
+      "locked": false,
+      "paths": [
+        {
+          "id": "middle-diamond",
+          "name": "Middle diamond",
+          "points": [
+            {"x": 150, "y": 40},
+            {"x": 260, "y": 150},
+            {"x": 150, "y": 260},
+            {"x": 40, "y": 150}
+          ],
+          "closed": true,
+          "fill": {"red": 1.0, "green": 0.8, "blue": 0.1},
+          "stroke": null
+        }
+      ],
+      "compound_paths": [
+        {
+          "id": "top-frame",
+          "name": "Top frame",
+          "paths": [
+            {
+              "id": "frame-outer",
+              "points": [
+                {"x": 20, "y": 20},
+                {"x": 280, "y": 20},
+                {"x": 280, "y": 280},
+                {"x": 20, "y": 280}
+              ],
+              "closed": true,
+              "fill": {"red": 0.1, "green": 0.3, "blue": 0.9},
+              "stroke": null,
+              "polarity": "positive"
+            },
+            {
+              "id": "frame-inner",
+              "points": [
+                {"x": 55, "y": 55},
+                {"x": 55, "y": 245},
+                {"x": 245, "y": 245},
+                {"x": 245, "y": 55}
+              ],
+              "closed": true,
+              "fill": {"red": 0.1, "green": 0.3, "blue": 0.9},
+              "stroke": null,
+              "polarity": "negative"
+            }
+          ]
+        }
+      ],
+      "clipping_groups": [
+        {
+          "id": "bottom-clipping",
+          "name": "Bottom clipping",
+          "clipping_path": {
+            "id": "clip-mask",
+            "points": [
+              {"x": 70, "y": 70},
+              {"x": 230, "y": 70},
+              {"x": 230, "y": 230},
+              {"x": 70, "y": 230}
+            ],
+            "closed": true,
+            "fill": null,
+            "stroke": null
+          },
+          "paths": [
+            {
+              "id": "clip-content",
+              "points": [
+                {"x": 20, "y": 100},
+                {"x": 280, "y": 100},
+                {"x": 280, "y": 200},
+                {"x": 20, "y": 200}
+              ],
+              "closed": true,
+              "fill": {"red": 0.95, "green": 0.2, "blue": 0.35},
+              "stroke": null
+            }
+          ]
+        }
+      ],
+      "item_order": [
+        {"kind": "clipping_group", "id": "bottom-clipping"},
+        {"kind": "path", "id": "middle-diamond"},
+        {"kind": "compound_path", "id": "top-frame"}
+      ]
+    }
+  ]
+}
