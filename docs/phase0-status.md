@@ -55,7 +55,7 @@ legacy .ai bytes
 ## 次の検証ゲート
 
 1. Illustrator再保存をまたぐlayer/container IDとdocument metadataの保持方式を調査する。
-2. Illustrator実機fixtureを30.7.0以外の対象versionへ広げ、version matrixを記録する。
+2. 次期Illustrator正式版の公開時に実機fixtureを追加versionへ広げ、version matrixを記録する。
 3. CP932以外のtext encodingとimageのcontain / cover / clipping cropを実装する。
 4. 実装した共通render境界へsemantic metadata manifestを追加する。
 5. modern AI reader用の再配布可能fixtureと期待structure manifestを整備する。

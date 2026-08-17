@@ -147,6 +147,8 @@ AI8互換のlegacy再保存ではfont名の置換やparagraph alignmentの正規
 
 ## 確認済み環境
 
+現時点の正式サポート対象はIllustrator 2026です。新しい正式版が公開された場合は、この文書のfixture一式をそのversionで検証し、合格後にのみ対応versionへ追加します。
+
 2026-08-15にIllustrator 30.7.0で次のfixtureが`passed`になりました。
 
 | fixture | 構造 | Illustratorが取得した主な属性 |

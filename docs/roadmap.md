@@ -18,7 +18,7 @@
 
 | トラック | 状態 | 現在の到達点 | 主な未完了 |
 | --- | --- | --- | --- |
-| Conversion Core | Trusted legacy conversion成立（単一実機version） | legacy AI7/AI8 subsetのIR/JSON往復、全node source span、atomic typed patch、semantic diff、Illustrator 30.7.0適合試験 | Illustrator version matrix拡張、modern AI semantic reader/writer |
+| Conversion Core | Trusted legacy conversion成立（Illustrator 2026） | legacy AI7/AI8 subsetのIR/JSON往復、全node source span、atomic typed patch、semantic diff、Illustrator 30.7.0適合試験 | 次期Illustrator公開時のversion matrix拡張、modern AI semantic reader/writer |
 | Authoring | Create MVP成立 | Table、共通component境界、point/area text、linked image、group、Artboard、rigid transform、複数の実制作例 | image crop、link診断、semantic manifest、高度なlayout/resource共有 |
 | Safe Edit / Agent | 設計段階 | inspect/export/validateとIllustrator検証CLI | selector、typed edit、precondition、dry-run、diff、preview、skill/plugin |
 
@@ -100,7 +100,7 @@ Gate Aを満たします。
 - [x] typed patch writer（fill / stroke / text / path / container translate / image source）
 - [x] semantic diffとcompatibility report
 - [x] Illustrator生成fixtureをRGB / CMYK / text / CP932 / group / stroke styleへ拡張
-- [ ] Illustrator実機対象を30.7.0以外のversionへ拡張
+- [x] 現行の正式サポートをIllustrator 2026（30.7.0）に定め、次期version追加時の検証方針を文書化
 
 ### A2. Modern AI reader
 

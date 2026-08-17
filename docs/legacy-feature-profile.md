@@ -47,9 +47,9 @@
 
 ## Illustrator適合範囲
 
-実機確認済み対象はmacOS上のAdobe Illustrator 30.7.0です。AI7/AI8互換open/save、native materialization、PDF-compatible native AI再openについて、fixture、font、保存option、既知advisory lossを[Illustrator適合試験](illustrator-testing.md)に記録しています。
+現時点の正式サポート対象はmacOS上のAdobe Illustrator 2026（30.7.0）です。AI7/AI8互換open/save、native materialization、PDF-compatible native AI再openについて、fixture、font、保存option、既知advisory lossを[Illustrator適合試験](illustrator-testing.md)に記録しています。
 
-30.7.0以外のIllustrator version、Windows、異なるfont環境は未検証です。未検証versionをreport上の対応versionとして扱いません。
+30.7.0以外のIllustrator version、Windows、異なるfont環境は未検証であり、現行profileのサポート対象外です。将来、新しいIllustratorの正式版が公開されたときに適合試験を実施し、合格したversionだけをreport上の対応versionとprofileへ追加します。
 
 ## 自動検証
 
@@ -60,4 +60,4 @@
 - plan後のsource変更、重複span、同一点の空span挿入、範囲外spanを拒否すること
 - container translateがPath、Text、LinkedImage、およびCompoundPath/ClippingGroup descendantを同期更新すること
 
-実機試験は自動Python test suiteと分離されています。新しいIllustrator versionをprofileへ追加する前に、`docs/illustrator-testing.md`の双方向fixtureと再open検証をそのversionで実行し、結果を記録します。
+実機試験は自動Python test suiteと分離されています。新しいIllustrator versionをprofileへ追加する前に、`docs/illustrator-testing.md`の双方向fixtureと再open検証をそのversionで実行し、結果を記録します。新versionが公開されていない間、複数versionの同時サポートはこのprofileの完了条件に含めません。
