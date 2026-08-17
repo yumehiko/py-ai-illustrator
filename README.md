@@ -2,12 +2,13 @@
 
 Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Python オブジェクトとして読み取り・編集・書き出すプロジェクトです。
 
-Gate AのTrusted Legacy Conversion、Gate B / C1の安全編集CLI最小縦切り、A2のmodern AI read-only抽出縦切りが動作します。
+Gate AのTrusted Legacy Conversion、Gate B / C1の安全編集CLI最小縦切り、A2のmodern AI read-only semantic縦切りが動作します。
 
 - 内容に基づく legacy AI / PDF-compatible AI / PDF / EPS の形式判定
 - bounded PDF object readerによる`PieceInfo / Illustrator / PrivateData`参照解決
 - modern AI PrivateDataのsegment順序・raw span・filter・raw/decoded SHA-256保持
 - Flate / Illustrator zstd streamの上限制御付き展開とlossless token/section索引
+- modern decoded bytesのexact-span lexer / CST、layer / path / RGB paint投影、partial AI11 text保持
 - 基本的な document / named artboard / layer / path / Bézier handle / RGB・CMYK process color の Python IR
 - dash pattern・offset・cap・join・miter limitを持つnative stroke style
 - 複数subpathとpolarityを保持するcompound path IR
@@ -32,7 +33,7 @@ Gate AのTrusted Legacy Conversion、Gate B / C1の安全編集CLI最小縦切�
 - Illustrator 30.7.0との双方向fixture実機適合試験
 - Python生成AIをIllustratorで再保存してPython IRへ戻す完全往復試験
 
-現代版 AI はPrivateDataのread-only抽出・索引化まで対応し、Document IRへの意味投影と書き戻しはまだ実装していません。ファイル拡張子を変えただけの PDF を「AI writer」と呼ばず、対応範囲を明示して段階的に広げます。
+現代版 AI はPrivateDataのread-only抽出・索引化に加え、layer / 直線path / RGB paintを`Document` IRへ投影します。AI11 textはstory本文とidentityを読みますが、配置を証明できないためpartial nodeとして保持します。書き戻しは未実装です。ファイル拡張子を変えただけの PDF を「AI writer」と呼ばず、対応範囲を明示して段階的に広げます。
 
 ## オーサリング方針
 
@@ -111,7 +112,9 @@ from py_ai_illustrator import read_modern_ai
 result = read_modern_ai("input.ai")
 print(result.container_status)       # parsed
 print(result.private_data_status)    # extracted / absent / partial / failed
-print(result.semantic_status)        # unsupported
+print(result.semantic_status)        # partial
+print(result.semantic.coverage.to_dict())
+print(result.semantic.document.to_dict())
 
 for segment in result.segments:
     print(segment.key, segment.filters)
@@ -119,7 +122,7 @@ for segment in result.segments:
     print(segment.decoded_sha256, len(segment.tokens), len(segment.sections))
 ```
 
-抽出成功時も`safe_to_reserialize`は`false`です。通常PDFは`ordinary_pdf`、PrivateDataまで読めたAIは`read_only_private_data`、参照・filter・展開の失敗は`unconvertible`として区別します。対応PDF構造、filter、resource limit、fixture manifestの詳細は[Modern AI read-only feature profile](docs/modern-ai-read-profile.md)を参照してください。
+抽出成功時も`safe_to_reserialize`は`false`です。通常PDFは`ordinary_pdf`、semantic最小縦切りを適用したAIは`read_only_semantic_partial`、PrivateData抽出だけのAIは`read_only_private_data`、参照・filter・展開の失敗は`unconvertible`として区別します。未終端pathはEndLayer、新しいmoveto、segment終端でpartial nodeとして保持し、AI11 text documentの深すぎる入れ子や構文エラーはsource span付きdiagnosticにします。対応PDF構造、filter、resource limit、fixture manifestの詳細は[Modern AI read-only feature profile](docs/modern-ai-read-profile.md)を参照してください。
 
 ## 既存legacy AIの安全編集CLI
 

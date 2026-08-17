@@ -58,11 +58,11 @@ Phase 0後のA2縦切りで、PDF-compatible AIはbounded container readerとPri
 2. 次期Illustrator正式版の公開時に実機fixtureを追加versionへ広げ、version matrixを記録する。
 3. CP932以外のtext encodingとimageのcontain / cover / clipping cropを実装する。
 4. 実装した共通render境界へsemantic metadata manifestを追加する。
-5. modern AIのdecoded PrivateDataから対応nodeを共通IRへ投影する。
+5. modern AI semantic projectionを曲線、CMYK、複合object、配置を証明できるtextへ拡張する。
 
 終了条件のうち、Python内の `IR -> AI7 -> IR` と、Illustrator 30.7.0でfixtureを開いた際の編集構造検査は完了しました。対応範囲はまだ小さいため、AI7 writer全体の位置付けは引き続き experimental です。
 
-現在のソースはMITで公開しています。Decision Gate Lでは現行source-preserving層上へmodern semantic parserを独自実装し、`inkai`は隔離comparison oracleに限定する方針を決めました。比較結果と再評価条件は[ADR 0001](adr/0001-modern-semantic-reader-strategy.md)を参照してください。
+現在のソースはMITで公開しています。Decision Gate Lでは現行source-preserving層上へmodern semantic parserを独自実装し、`inkai`は隔離comparison oracleに限定する方針を決めました。比較結果と再評価条件は[ADR 0001](adr/0001-modern-semantic-reader-strategy.md)を参照してください。project-owned semantic reducerはAI11 text documentへ64段の専用nesting limitを適用し、構文・復号・深さ超過をdecoded span付きpartial diagnosticへ閉じ込めます。paintされないpathは新しいmoveto、EndLayer、segment終端の各境界でpartial nodeとして保持し、projected / partial nodeのID衝突はdiagnostic付きで決定的に一意化します。
 
 ### Illustrator 2026 適合試験メモ
 

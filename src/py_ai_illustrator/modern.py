@@ -15,12 +15,16 @@ import re
 import zlib
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import TypeAlias
+from typing import TYPE_CHECKING, TypeAlias
+
+if TYPE_CHECKING:
+    from .modern_semantic import ModernSemanticResult
 
 DEFAULT_MAX_PDF_BYTES = 64 * 1024 * 1024
 DEFAULT_MAX_OBJECTS = 100_000
 DEFAULT_MAX_OBJECT_BYTES = 16 * 1024 * 1024
 DEFAULT_MAX_REFERENCE_DEPTH = 64
+DEFAULT_MAX_TEXT_DOCUMENT_NESTING = 64
 DEFAULT_MAX_SEGMENT_RAW_BYTES = 64 * 1024 * 1024
 DEFAULT_MAX_SEGMENT_DECODED_BYTES = 128 * 1024 * 1024
 DEFAULT_MAX_TOTAL_DECODED_BYTES = 256 * 1024 * 1024
@@ -46,6 +50,7 @@ class ModernReadLimits:
     max_objects: int = DEFAULT_MAX_OBJECTS
     max_object_bytes: int = DEFAULT_MAX_OBJECT_BYTES
     max_reference_depth: int = DEFAULT_MAX_REFERENCE_DEPTH
+    max_text_document_nesting: int = DEFAULT_MAX_TEXT_DOCUMENT_NESTING
     max_segment_raw_bytes: int = DEFAULT_MAX_SEGMENT_RAW_BYTES
     max_segment_decoded_bytes: int = DEFAULT_MAX_SEGMENT_DECODED_BYTES
     max_total_decoded_bytes: int = DEFAULT_MAX_TOTAL_DECODED_BYTES
@@ -87,6 +92,8 @@ class ModernDiagnostic:
     segment: str | None = None
     source_start: int | None = None
     source_end: int | None = None
+    decoded_start: int | None = None
+    decoded_end: int | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {key: value for key, value in asdict(self).items() if value is not None}
@@ -177,6 +184,7 @@ class ModernAIReadResult:
     piece_info_paths: tuple[str, ...]
     segments: tuple[PrivateDataSegment, ...]
     diagnostics: tuple[ModernDiagnostic, ...]
+    semantic: ModernSemanticResult | None = None
 
     @property
     def valid(self) -> bool:
@@ -205,11 +213,15 @@ class ModernAIReadResult:
                 "segment_count": len(self.segments),
                 "segments": [segment.to_dict() for segment in self.segments],
             },
-            "semantic": {
-                "status": self.semantic_status,
-                "supported": False,
-                "message": "PrivateData semantic projection to Document IR is not implemented.",
-            },
+            "semantic": (
+                self.semantic.to_dict()
+                if self.semantic is not None
+                else {
+                    "status": self.semantic_status,
+                    "supported": False,
+                    "message": "No decoded PrivateData was available for semantic projection.",
+                }
+            ),
             "diagnostics": [diagnostic.to_dict() for diagnostic in self.diagnostics],
         }
 
@@ -1152,6 +1164,20 @@ def read_modern_ai(
             )
         )
 
+    semantic = None
+    semantic_status = "unsupported"
+    if segments and any(segment.decoded_bytes is not None for segment in segments):
+        from .modern_semantic import project_modern_semantics
+
+        semantic = project_modern_semantics(
+            tuple(segments),
+            max_lexemes=active_limits.max_tokens,
+            max_lexeme_bytes=active_limits.max_token_bytes,
+            max_text_document_nesting=active_limits.max_text_document_nesting,
+        )
+        semantic_status = semantic.status
+        diagnostics.extend(semantic.diagnostics)
+
     return ModernAIReadResult(
         path=path,
         source_bytes=data,
@@ -1160,8 +1186,9 @@ def read_modern_ai(
         object_count=len(objects),
         container_status=container_status,
         private_data_status=private_status,
-        semantic_status="unsupported",
+        semantic_status=semantic_status,
         piece_info_paths=unique_paths,
         segments=tuple(segments),
         diagnostics=tuple(diagnostics),
+        semantic=semantic,
     )

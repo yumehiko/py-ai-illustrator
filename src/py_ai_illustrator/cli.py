@@ -171,16 +171,26 @@ def _validate(args: argparse.Namespace) -> int:
             if diagnostic.severity in {"warning", "info"}
         )
         if modern.private_data_status == "extracted":
-            classification = "read_only_private_data"
+            classification = (
+                f"read_only_semantic_{modern.semantic_status}"
+                if modern.semantic_status in {"supported", "partial"}
+                else "read_only_private_data"
+            )
             modern_valid = modern.container_status == "parsed" and not errors
         elif modern.private_data_status == "absent":
             classification = "ordinary_pdf"
             modern_valid = modern.container_status == "parsed" and not errors
         else:
             modern_valid = False
-        warnings.append(
-            "Modern AI semantic projection is unsupported; no Document IR was produced."
-        )
+        if modern.semantic_status == "partial":
+            warnings.append(
+                "Modern AI semantic projection is partial and read-only; unknown bytes and "
+                "unsupported nodes remain preserved in the read result."
+            )
+        elif modern.semantic_status == "unsupported":
+            warnings.append(
+                "Modern AI semantic projection is unsupported; no Document IR was produced."
+            )
     else:
         errors.append(f"Unsupported input format: {report.format.value}")
 
