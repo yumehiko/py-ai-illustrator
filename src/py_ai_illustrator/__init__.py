@@ -27,6 +27,7 @@ from .lossless import (
     tokenize_legacy,
 )
 from .model import (
+    Artboard,
     ClippingGroup,
     CmykColor,
     Color,
@@ -42,6 +43,7 @@ from .model import (
 )
 
 __all__ = [
+    "Artboard",
     "CmykColor",
     "AffineTransform",
     "AreaTextBlock",

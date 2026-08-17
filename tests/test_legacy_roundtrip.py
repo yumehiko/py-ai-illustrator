@@ -10,6 +10,7 @@ from py_ai_illustrator.legacy import (
     loads_ai7,
 )
 from py_ai_illustrator.model import (
+    Artboard,
     ClippingGroup,
     CmykColor,
     Color,
@@ -525,6 +526,33 @@ def test_layer_derives_legacy_grouped_item_order_when_field_is_missing() -> None
     del data["layers"][0]["item_order"]
     document = Document.from_dict(data)
     assert document.layers[0].item_order == [LayerItemRef("path", "rectangle")]
+
+
+def test_artboard_intent_roundtrips_through_legacy_bridge_metadata() -> None:
+    original = Document(
+        width=700,
+        height=400,
+        artboards=[
+            Artboard("square", "Square", left=20, top=380, width=360, height=360),
+            Artboard("portrait", "Portrait", left=400, top=380, width=270, height=360),
+        ],
+    )
+
+    serialized = dumps_ai7(original)
+    restored = loads_ai7(serialized)
+
+    assert serialized.count(b"%%py-ai-artboard: ") == 2
+    assert restored.artboards == original.artboards
+    assert restored.to_dict() == original.to_dict()
+
+
+def test_document_rejects_artboards_outside_composite_bounds() -> None:
+    with pytest.raises(ValueError, match="must fit inside document bounds"):
+        Document(
+            width=100,
+            height=100,
+            artboards=[Artboard("outside", "Outside", left=80, top=100, width=30, height=30)],
+        )
 
 
 def test_point_text_roundtrip_preserves_editable_text_semantics() -> None:

@@ -95,6 +95,11 @@ def test_native_materialization_assigns_identity_notes_after_conversion(
         desired_area_widths=(180,),
         desired_area_heights=(96,),
         desired_leadings=(16,),
+        desired_artboards=(
+            {"name": "Square", "left": 20, "top": 380, "width": 360, "height": 360},
+            {"name": "Portrait", "left": 400, "top": 380, "width": 270, "height": 360},
+        ),
+        source_document_height=400,
     )
 
     conversion = javascript.index("legacyTextItems.convertToNative()")
@@ -116,6 +121,9 @@ def test_native_materialization_assigns_identity_notes_after_conversion(
     assert "characterAttributes.leading" in javascript
     assert "paragraphAttributes.justification = desiredJustification" in javascript
     assert "normalizedText(textFrame.contents)" in javascript
+    assert "documentRef.artboards.add(artboardRect)" in javascript
+    assert "documentRef.artboards.remove" in javascript
+    assert "artboard.name = artboardSpec.name" in javascript
     assert "String.fromCharCode(72,101,108,118,101,116,105,99,97,45,66,111,108,100)" in javascript
 
 

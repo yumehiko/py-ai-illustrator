@@ -5,7 +5,7 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 現在は Phase 0（技術スパイク）です。次の小さな縦切りが動作します。
 
 - 内容に基づく legacy AI / PDF-compatible AI / PDF / EPS の形式判定
-- 基本的な document / layer / path / Bézier handle / RGB・CMYK process color の Python IR
+- 基本的な document / named artboard / layer / path / Bézier handle / RGB・CMYK process color の Python IR
 - dash pattern・offset・cap・join・miter limitを持つnative stroke style
 - 複数subpathとpolarityを保持するcompound path IR
 - mask pathとcontent pathsを保持するclipping group IR
@@ -45,6 +45,8 @@ JSONはIllustratorファイルを作るための唯一の記述言語ではあ�
 
 [examples/editorial_brochure.py](examples/editorial_brochure.py) は日本語の導入文・2段本文・引用を、枠幅の変更で再流し込みできるnative AreaTextとして保持する誌面作例です。font size、色、行送り、LEFT/CENTER揃え、文章枠寸法も明示します。
 
+[examples/campaign_variants.py](examples/campaign_variants.py) は共通キャンペーンをSquare・Portrait・Bannerの3サイズへ展開します。各variantを独立group、各出力領域を名前付きArtboardとして保持し、native AIのPDF-compatible部分も3ページになります。
+
 ```bash
 uv run python examples/styled_table.py
 uv run py-ai test-illustrator examples/styled-table.ai
@@ -57,6 +59,7 @@ uv run python examples/retail_price_tags.py
 uv run python examples/quarterly_kpi_report.py
 uv run python examples/packaging_labels.py
 uv run python examples/editorial_brochure.py
+uv run python examples/campaign_variants.py
 
 # Illustratorを使い、legacy textを編集可能なnative TextFrameへ変換
 uv run py-ai illustrator-fonts --query "小塚ゴシック" \
@@ -147,6 +150,7 @@ uv run py-ai test-illustrator examples/quarterly-kpi-report.ai
 uv run py-ai test-illustrator examples/quarterly-kpi-report.native.ai
 uv run py-ai test-illustrator examples/packaging-labels.native.ai
 uv run py-ai test-illustrator examples/editorial-brochure.native.ai
+uv run py-ai test-illustrator examples/campaign-variants.native.ai
 ```
 
 同梱fixtureをIllustratorで開く方向に加え、Illustrator自身が作成・AI8保存したfixtureをPython IRへ読む方向も確認済みです。layer/path/anchor、開閉、塗り・線、Bézier方向点、RGB/CMYK属性、point textを照合します。これは現在の限定subsetに対する結果で、任意のAIファイルの完全互換を意味しません。

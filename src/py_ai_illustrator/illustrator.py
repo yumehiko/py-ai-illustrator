@@ -751,6 +751,8 @@ def _build_native_materialization_javascript(
     desired_area_widths: tuple[float | None, ...] = (),
     desired_area_heights: tuple[float | None, ...] = (),
     desired_leadings: tuple[float | None, ...] = (),
+    desired_artboards: tuple[dict[str, Any], ...] = (),
+    source_document_height: float = 0.0,
 ) -> str:
     source_literal = _character_code_expression(source)
     destination_literal = _character_code_expression(destination)
@@ -779,6 +781,14 @@ def _build_native_materialization_javascript(
     desired_leadings_literal = ",".join(
         "null" if value is None else str(value) for value in desired_leadings
     )
+    desired_artboards_literal = ",".join(
+        "{name:"
+        + _character_code_expression(str(value["name"]))
+        + f",left:{value['left']},top:{value['top']},"
+        + f"width:{value['width']},height:{value['height']}"
+        + "}"
+        for value in desired_artboards
+    )
     return f"""#target illustrator
 (function () {{
     var source = new File({source_literal});
@@ -802,6 +812,14 @@ def _build_native_materialization_javascript(
         var desiredAreaWidths = [{desired_area_widths_literal}];
         var desiredAreaHeights = [{desired_area_heights_literal}];
         var desiredLeadings = [{desired_leadings_literal}];
+        var desiredArtboards = [{desired_artboards_literal}];
+        var sourceDocumentHeight = {source_document_height};
+        var sourceArtboardRect = [
+            documentRef.artboards[0].artboardRect[0],
+            documentRef.artboards[0].artboardRect[1],
+            documentRef.artboards[0].artboardRect[2],
+            documentRef.artboards[0].artboardRect[3]
+        ];
         var converted = legacyTextCount === 0
             ? true
             : documentRef.legacyTextItems.convertToNative();
@@ -819,6 +837,7 @@ def _build_native_materialization_javascript(
         var recreatedAreaTextCount = 0;
         var matchingAreaTextCount = 0;
         var matchingLeadingCount = 0;
+        var matchingArtboardCount = 0;
         var nativeFrames = [];
         for (var frameIndex = 0; frameIndex < nativeTextCount; frameIndex++) {{
             nativeFrames.push(documentRef.textFrames[frameIndex]);
@@ -1012,6 +1031,43 @@ def _build_native_materialization_javascript(
             }}
         }}
 
+        if (desiredArtboards.length > 0) {{
+            while (documentRef.artboards.length > 1) {{
+                documentRef.artboards.remove(documentRef.artboards.length - 1);
+            }}
+            for (
+                var artboardIndex = 0;
+                artboardIndex < desiredArtboards.length;
+                artboardIndex++
+            ) {{
+                var artboardSpec = desiredArtboards[artboardIndex];
+                var artboardLeft = sourceArtboardRect[0] + artboardSpec.left;
+                var artboardTop = (
+                    sourceArtboardRect[1] + artboardSpec.top - sourceDocumentHeight
+                );
+                var artboardRect = [
+                    artboardLeft,
+                    artboardTop,
+                    artboardLeft + artboardSpec.width,
+                    artboardTop - artboardSpec.height
+                ];
+                var artboard = artboardIndex === 0
+                    ? documentRef.artboards[0]
+                    : documentRef.artboards.add(artboardRect);
+                if (artboardIndex === 0) artboard.artboardRect = artboardRect;
+                artboard.name = artboardSpec.name;
+                var savedRect = artboard.artboardRect;
+                if (
+                    artboard.name === artboardSpec.name
+                    && Math.abs(savedRect[0] - artboardRect[0]) < 0.01
+                    && Math.abs(savedRect[1] - artboardRect[1]) < 0.01
+                    && Math.abs(savedRect[2] - artboardRect[2]) < 0.01
+                    && Math.abs(savedRect[3] - artboardRect[3]) < 0.01
+                ) matchingArtboardCount++;
+            }}
+            documentRef.artboards.setActiveArtboardIndex(0);
+        }}
+
         var options = new IllustratorSaveOptions();
         options.pdfCompatible = true;
         options.embedLinkedFiles = false;
@@ -1037,7 +1093,8 @@ def _build_native_materialization_javascript(
             matchingRotationCount,
             recreatedAreaTextCount,
             matchingAreaTextCount,
-            matchingLeadingCount
+            matchingLeadingCount,
+            matchingArtboardCount
         ].join(":");
     }} catch (error) {{
         return "error:" + String(error) + ":line:" + String(error.line || "");
@@ -1535,6 +1592,16 @@ def materialize_native_ai(
     desired_area_heights = tuple(text.area_height for text in dom_ordered_text)
     desired_leadings = tuple(text.leading for text in dom_ordered_text)
     expected_area_text_count = sum(text.is_area_text for text in dom_ordered_text)
+    desired_artboards = tuple(
+        {
+            "name": artboard.name,
+            "left": artboard.left,
+            "top": artboard.top,
+            "width": artboard.width,
+            "height": artboard.height,
+        }
+        for artboard in source_document.artboards
+    )
 
     destination_path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="py-ai-illustrator-native-") as temp_directory:
@@ -1557,6 +1624,8 @@ def materialize_native_ai(
                     desired_area_widths=desired_area_widths,
                     desired_area_heights=desired_area_heights,
                     desired_leadings=desired_leadings,
+                    desired_artboards=desired_artboards,
+                    source_document_height=source_document.height,
                 ),
                 temp_path,
                 timeout=timeout,
@@ -1582,8 +1651,8 @@ def materialize_native_ai(
             "error": "Illustrator reported success but did not create the native AI file.",
         }
 
-    parts = response.split(":", 19)
-    if len(parts) != 20:
+    parts = response.split(":", 20)
+    if len(parts) != 21:
         return {"status": "failed", "illustrator_response": response}
     (
         _,
@@ -1606,6 +1675,7 @@ def materialize_native_ai(
         recreated_area_texts,
         matching_area_texts,
         matching_leadings,
+        matching_artboards,
     ) = parts
     legacy_text_count = int(legacy_count)
     native_text_count = int(native_count)
@@ -1624,6 +1694,7 @@ def materialize_native_ai(
     recreated_area_text_count = int(recreated_area_texts)
     matching_area_text_count = int(matching_area_texts)
     matching_leading_count = int(matching_leadings)
+    matching_artboard_count = int(matching_artboards)
     checks = {
         "legacy_conversion_succeeded": converted == "true",
         "text_frame_count": native_text_count == legacy_text_count,
@@ -1640,6 +1711,7 @@ def materialize_native_ai(
         "native_area_text": recreated_area_text_count == expected_area_text_count
         and matching_area_text_count == expected_area_text_count,
         "native_leading": matching_leading_count == legacy_text_count,
+        "native_artboards": matching_artboard_count == len(desired_artboards),
     }
     return {
         "status": "passed" if all(checks.values()) else "mismatch",
@@ -1662,6 +1734,8 @@ def materialize_native_ai(
         "recreated_area_text_count": recreated_area_text_count,
         "matching_area_text_count": matching_area_text_count,
         "matching_leading_count": matching_leading_count,
+        "expected_artboard_count": len(desired_artboards),
+        "matching_artboard_count": matching_artboard_count,
         "native_justifications": native_justifications,
         "checks": checks,
         "format": inspect_file(destination_path).to_dict(),

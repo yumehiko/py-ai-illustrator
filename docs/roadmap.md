@@ -27,7 +27,7 @@
 - 意味モデル実装済み: Python `Table`、共通`RenderedComponent` / `LayerBuilder`、`TextBlock` / `AreaTextBlock`、名札・ポスター・入れ子棚札・KPI chart・誌面作例からIRへのdeterministic render
 - native出力実証済み: legacy textをIllustrator経由でnative point/area TextFrameへ変換し、font/size/fill/leading/揃えと安定IDを設定してPDF-compatible AIとして保存
 - 基盤実装済み: legacy元bytes・物理行改行・operator byte spanを保持するlossless source map、resource limit、非重複local patch primitive
-- 未完了: 現代AI fixtureのPrivateData semantic reader、`inkai`比較環境、node-level CSTとtyped patch、CP932以外のtext/image/multiple artboards/non-rigid transform
+- 未完了: 現代AI fixtureのPrivateData semantic reader、`inkai`比較環境、node-level CSTとtyped patch、CP932以外のtext/image/non-rigid transform
 - 詳細: [Phase 0 の実装状況](phase0-status.md)
 
 ## Phase 1: Reader + IR + inspection CLI
@@ -124,4 +124,4 @@
 
 ## 推奨する次の一手
 
-Phase 0のlegacy縦切り、semantic component合成、入れ子group、native stroke、rigid transform、native AreaTextを含むIllustrator materializationが成立しました。次は画像配置またはmultiple artboardsを含む作例を検討しながら、未知operatorを保持するlossless token/CSTをtyped editへ接続します。
+Phase 0のlegacy縦切り、semantic component合成、入れ子group、native stroke、rigid transform、native AreaText、multiple Artboardsを含むIllustrator materializationが成立しました。次は画像配置を含む作例を検討しながら、未知operatorを保持するlossless token/CSTをtyped editへ接続します。

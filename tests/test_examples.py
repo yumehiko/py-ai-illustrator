@@ -175,6 +175,34 @@ def test_editorial_brochure_preserves_reflowable_article_frames() -> None:
     assert all(text.leading is not None for text in area_frames)
 
 
+def test_campaign_variants_preserve_named_artboards_and_editable_groups() -> None:
+    example = Path(__file__).parents[1] / "examples" / "campaign-variants.ai"
+    document = load_ai7(example)
+    layer = document.layers[0]
+
+    assert document.metadata["business_case"] == "multi-format-campaign"
+    assert [artboard.name for artboard in document.artboards] == [
+        "Square 1x1",
+        "Portrait 3x4",
+        "Banner 3x1",
+    ]
+    assert [
+        (artboard.left, artboard.top, artboard.width, artboard.height)
+        for artboard in document.artboards
+    ] == [
+        (20, 380, 360, 360),
+        (400, 380, 270, 360),
+        (690, 380, 540, 180),
+    ]
+    assert len(layer.groups) == 3
+    assert sum(len(group.paths) for group in layer.groups) == 9
+    assert sum(len(group.text_frames) for group in layer.groups) == 19
+    assert all(
+        group.name == artboard.name
+        for group, artboard in zip(layer.groups, document.artboards, strict=True)
+    )
+
+
 def test_materialized_examples_are_pdf_compatible_native_ai() -> None:
     examples = Path(__file__).parents[1] / "examples"
     native_examples = (
@@ -186,6 +214,7 @@ def test_materialized_examples_are_pdf_compatible_native_ai() -> None:
         "quarterly-kpi-report.native.ai",
         "packaging-labels.native.ai",
         "editorial-brochure.native.ai",
+        "campaign-variants.native.ai",
     )
 
     for name in native_examples:

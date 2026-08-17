@@ -11,6 +11,7 @@ from pathlib import Path as FilePath
 
 from .lossless import tokenize_legacy
 from .model import (
+    Artboard,
     ClippingGroup,
     CmykColor,
     Color,
@@ -190,6 +191,21 @@ def _parse_path_note(note: str) -> tuple[str | None, str | None]:
         path_id if isinstance(path_id, str) and path_id else None,
         path_name if isinstance(path_name, str) else None,
     )
+
+
+def _artboard_comment(artboard: Artboard) -> str:
+    payload = {
+        "id": artboard.id,
+        "name": artboard.name,
+        "left": artboard.left,
+        "top": artboard.top,
+        "width": artboard.width,
+        "height": artboard.height,
+    }
+    encoded = base64.b64encode(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode()
+    ).decode("ascii")
+    return "%%py-ai-artboard: " + encoded
 
 
 def _color_operator(color: ProcessColor, *, stroke: bool) -> str:
@@ -473,6 +489,7 @@ def dumps_ai7(document: Document) -> bytes:
         + base64.b64encode(
             json.dumps(document.metadata, ensure_ascii=False, separators=(",", ":")).encode()
         ).decode("ascii"),
+        *(_artboard_comment(artboard) for artboard in document.artboards),
         "%%EndComments",
         "%%BeginProlog",
         "%%EndProlog",
@@ -566,6 +583,7 @@ def loads_ai7(data: bytes) -> Document:
     pending_text_area_height: float | None = None
     pending_text_leading: float | None = None
     metadata: dict[str, object] = {}
+    artboards: list[Artboard] = []
 
     def active_container() -> Layer | Group:
         nonlocal current_layer
@@ -604,6 +622,17 @@ def loads_ai7(data: bytes) -> Document:
                 candidate = json.loads(decoded)
                 if isinstance(candidate, dict):
                     metadata = candidate
+            except (ValueError, UnicodeError, json.JSONDecodeError):
+                pass
+            continue
+        if line.startswith("%%py-ai-artboard: "):
+            try:
+                decoded = base64.b64decode(
+                    line.removeprefix("%%py-ai-artboard: "), validate=True
+                ).decode("utf-8")
+                candidate = json.loads(decoded)
+                if isinstance(candidate, dict):
+                    artboards.append(Artboard.from_dict(candidate))
             except (ValueError, UnicodeError, json.JSONDecodeError):
                 pass
             continue
@@ -1057,7 +1086,14 @@ def loads_ai7(data: bytes) -> Document:
         layers.append(current_layer)
     if width is None or height is None:
         raise UnsupportedLegacyFeature("A numeric %%BoundingBox is required in Phase 0")
-    return Document(width=width, height=height, title=title, layers=layers, metadata=metadata)
+    return Document(
+        width=width,
+        height=height,
+        title=title,
+        layers=layers,
+        metadata=metadata,
+        artboards=artboards,
+    )
 
 
 def load_ai7(source: str | FilePath) -> Document:

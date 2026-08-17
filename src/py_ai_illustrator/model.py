@@ -437,6 +437,38 @@ class Layer:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class Artboard:
+    """A named rectangular output region inside document coordinates."""
+
+    id: str
+    name: str
+    left: float
+    top: float
+    width: float
+    height: float
+
+    def __post_init__(self) -> None:
+        values = (self.left, self.top, self.width, self.height)
+        if not self.id or not self.name:
+            raise ValueError("Artboard id and name must not be empty")
+        if not all(math.isfinite(value) for value in values):
+            raise ValueError("Artboard coordinates and dimensions must be finite")
+        if self.width <= 0 or self.height <= 0:
+            raise ValueError("Artboard dimensions must be positive")
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Artboard:
+        return cls(
+            id=str(data["id"]),
+            name=str(data["name"]),
+            left=float(data["left"]),
+            top=float(data["top"]),
+            width=float(data["width"]),
+            height=float(data["height"]),
+        )
+
+
 @dataclass(slots=True)
 class Document:
     width: float
@@ -445,10 +477,25 @@ class Document:
     title: str = "Untitled"
     version: int = 1
     metadata: dict[str, Any] = field(default_factory=dict)
+    artboards: list[Artboard] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.width <= 0 or self.height <= 0:
             raise ValueError("Document width and height must be positive")
+        if len(self.artboards) > 100:
+            raise ValueError("Illustrator documents support at most 100 artboards")
+        if len({artboard.id for artboard in self.artboards}) != len(self.artboards):
+            raise ValueError("Artboard ids must be unique")
+        if len({artboard.name for artboard in self.artboards}) != len(self.artboards):
+            raise ValueError("Artboard names must be unique")
+        for artboard in self.artboards:
+            if (
+                artboard.left < 0
+                or artboard.top > self.height
+                or artboard.left + artboard.width > self.width
+                or artboard.top - artboard.height < 0
+            ):
+                raise ValueError(f"Artboard {artboard.id!r} must fit inside document bounds")
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -462,4 +509,5 @@ class Document:
             version=int(data.get("version", 1)),
             layers=[Layer.from_dict(layer) for layer in data.get("layers", [])],
             metadata=dict(data.get("metadata", {})),
+            artboards=[Artboard.from_dict(board) for board in data.get("artboards", [])],
         )
