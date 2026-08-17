@@ -667,6 +667,7 @@ def _loads_ai7_source(
     metadata: dict[str, object] = {}
     artboards: list[Artboard] = []
     current_path_source_start: int | None = None
+    current_geometry_origins: list[LegacyFieldOrigin] = []
     current_fill_origin: LegacyFieldOrigin | None = None
     current_stroke_origin: LegacyFieldOrigin | None = None
     path_origin_candidates: list[
@@ -676,6 +677,7 @@ def _loads_ai7_source(
             int,
             LegacyFieldOrigin | None,
             LegacyFieldOrigin | None,
+            tuple[LegacyFieldOrigin, ...],
         ]
     ] = []
     fill_origin_use_counts: dict[tuple[int, int], int] = {}
@@ -1182,8 +1184,18 @@ def _loads_ai7_source(
             if operator == "m":
                 current_points = [point]
                 current_path_source_start = token.start
+                current_geometry_origins = []
             else:
                 current_points.append(point)
+            if token.operator_end is not None:
+                current_geometry_origins.append(
+                    statement_field_origin(
+                        f"geometry.{len(current_geometry_origins)}",
+                        token.start,
+                        token.content_end,
+                        token.operator_end,
+                    )
+                )
             continue
         cubic_match = _CUBIC_RE.match(line)
         if cubic_match and current_points:
@@ -1199,6 +1211,15 @@ def _loads_ai7_source(
                     smooth=cubic_match.group(7) == "c",
                 )
             )
+            if token.operator_end is not None:
+                current_geometry_origins.append(
+                    statement_field_origin(
+                        f"geometry.{len(current_geometry_origins)}",
+                        token.start,
+                        token.content_end,
+                        token.operator_end,
+                    )
+                )
             continue
         short_cubic_match = _SHORT_CUBIC_RE.match(line)
         if short_cubic_match and current_points:
@@ -1219,6 +1240,15 @@ def _loads_ai7_source(
                     smooth=operator.islower(),
                 )
             )
+            if token.operator_end is not None:
+                current_geometry_origins.append(
+                    statement_field_origin(
+                        f"geometry.{len(current_geometry_origins)}",
+                        token.start,
+                        token.content_end,
+                        token.operator_end,
+                    )
+                )
             continue
         if line in {"b", "f", "s", "n", "B", "F", "S", "N"} and current_points:
             path_counter += 1
@@ -1284,6 +1314,7 @@ def _loads_ai7_source(
                             token.end,
                             current_fill_origin if has_fill else None,
                             current_stroke_origin if has_stroke else None,
+                            tuple(current_geometry_origins),
                         )
                     )
                 if is_clipping_mask:
@@ -1297,6 +1328,7 @@ def _loads_ai7_source(
                     append_item("path", parsed_path)
             current_points = []
             current_path_source_start = None
+            current_geometry_origins = []
             pending_id = None
             pending_name = None
             polarity = "positive"
@@ -1306,7 +1338,14 @@ def _loads_ai7_source(
     if width is None or height is None:
         raise UnsupportedLegacyFeature("A numeric %%BoundingBox is required in Phase 0")
     if origins is not None:
-        for path_id, geometry_start, end, fill_origin, stroke_origin in path_origin_candidates:
+        for (
+            path_id,
+            geometry_start,
+            end,
+            fill_origin,
+            stroke_origin,
+            geometry_origins,
+        ) in path_origin_candidates:
             unique_fill_origin = (
                 fill_origin
                 if fill_origin is not None
@@ -1319,10 +1358,13 @@ def _loads_ai7_source(
                 and stroke_origin_use_counts[(stroke_origin.start, stroke_origin.end)] == 1
                 else None
             )
-            fields = tuple(
-                origin
-                for origin in (unique_fill_origin, unique_stroke_origin)
-                if origin is not None
+            fields = (
+                *(
+                    origin
+                    for origin in (unique_fill_origin, unique_stroke_origin)
+                    if origin is not None
+                ),
+                *geometry_origins,
             )
             origins.append(
                 LegacyNodeOrigin(
@@ -1389,6 +1431,24 @@ class SetPathStroke:
     def __post_init__(self) -> None:
         if not self.path_id:
             raise ValueError("path_id must not be empty")
+
+
+@dataclass(frozen=True, slots=True)
+class TranslatePath:
+    """Typed local path translation with an explicit geometry precondition."""
+
+    path_id: str
+    dx: float
+    dy: float
+    expected_points: tuple[Point, ...]
+
+    def __post_init__(self) -> None:
+        if not self.path_id:
+            raise ValueError("path_id must not be empty")
+        if not math.isfinite(self.dx) or not math.isfinite(self.dy):
+            raise ValueError("translation offsets must be finite")
+        if not self.expected_points:
+            raise ValueError("expected_points must not be empty")
 
 
 @dataclass(frozen=True, slots=True)
@@ -1538,6 +1598,103 @@ def patch_path_stroke(result: LegacyReadResult, operation: SetPathStroke) -> Leg
     return result.source.patched(
         [SourceReplacement(stroke_origin.start, stroke_origin.end, replacement)]
     )
+
+
+def _translated_geometry_statement(statement: bytes, *, dx: float, dy: float) -> bytes:
+    line = statement.decode("latin-1")
+    point_match = _POINT_RE.fullmatch(line)
+    if point_match:
+        return (
+            f"{_number(float(point_match.group(1)) + dx)} "
+            f"{_number(float(point_match.group(2)) + dy)} {point_match.group(3)}"
+        ).encode("ascii")
+
+    cubic_match = _CUBIC_RE.fullmatch(line)
+    if cubic_match:
+        values = [float(cubic_match.group(index)) for index in range(1, 7)]
+        translated = [
+            value + (dx if index % 2 == 0 else dy) for index, value in enumerate(values)
+        ]
+        return " ".join(
+            [*(_number(value) for value in translated), cubic_match.group(7)]
+        ).encode("ascii")
+
+    short_cubic_match = _SHORT_CUBIC_RE.fullmatch(line)
+    if short_cubic_match:
+        values = [float(short_cubic_match.group(index)) for index in range(1, 5)]
+        translated = [
+            value + (dx if index % 2 == 0 else dy) for index, value in enumerate(values)
+        ]
+        return " ".join(
+            [*(_number(value) for value in translated), short_cubic_match.group(5)]
+        ).encode("ascii")
+
+    raise UnsupportedLegacyFeature(
+        "Path geometry source precondition failed; a geometry statement is no longer recognized."
+    )
+
+
+def patch_path_translate(result: LegacyReadResult, operation: TranslatePath) -> LegacySource:
+    """Translate one path through statement-local replacements."""
+
+    matching_paths = _matching_paths(result, operation.path_id)
+    if len(matching_paths) != 1:
+        raise UnsupportedLegacyFeature(
+            f"Path selector id={operation.path_id!r} matched {len(matching_paths)} nodes; "
+            "exactly one is required."
+        )
+    path = matching_paths[0]
+    if tuple(path.points) != operation.expected_points:
+        raise UnsupportedLegacyFeature(
+            f"Path {operation.path_id!r} geometry precondition failed: expected points do not "
+            "match the parsed path."
+        )
+
+    origin = _unique_origin(result, node_type="path", node_id=operation.path_id)
+    intersecting = [
+        diagnostic
+        for diagnostic in result.diagnostics
+        if diagnostic.start < origin.end and diagnostic.end > origin.start
+    ]
+    if intersecting:
+        raise UnsupportedLegacyFeature(
+            f"Path {operation.path_id!r} source span intersects unsupported source syntax."
+        )
+
+    geometry_origins = origin.fields_with_prefix("geometry.")
+    if not geometry_origins:
+        raise UnsupportedLegacyFeature(
+            f"Path {operation.path_id!r} does not have local source geometry spans."
+        )
+
+    replacements: list[SourceReplacement] = []
+    for index, geometry_origin in enumerate(geometry_origins):
+        if geometry_origin.field != f"geometry.{index}":
+            raise UnsupportedLegacyFeature(
+                f"Path {operation.path_id!r} has incomplete source geometry spans."
+            )
+        validated = _validate_patch_field(
+            result,
+            origin=origin,
+            field_name=geometry_origin.field,
+            node_label=f"Path {operation.path_id!r}",
+        )
+        replacements.append(
+            SourceReplacement(
+                validated.start,
+                validated.end,
+                (
+                    validated.expected
+                    if operation.dx == 0 and operation.dy == 0
+                    else _translated_geometry_statement(
+                        validated.expected,
+                        dx=operation.dx,
+                        dy=operation.dy,
+                    )
+                ),
+            )
+        )
+    return result.source.patched(replacements)
 
 
 def patch_text(result: LegacyReadResult, operation: ReplaceText) -> LegacySource:

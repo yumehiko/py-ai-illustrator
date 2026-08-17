@@ -55,7 +55,7 @@ legacy .ai bytes
 ## 次の検証ゲート
 
 1. Illustrator再保存をまたぐlayer/container IDとdocument metadataの保持方式を調査する。
-2. node source spanをimage/path geometryと複数`Tx` textへ広げ、typed editをtranslate / image差し替えへ拡張する。
+2. node source spanをimageと複数`Tx` textへ広げ、typed editをimage差し替え / container translateへ拡張する。
 3. CP932以外のtext encodingとimageのcontain / cover / clipping cropを実装する。
 4. 実装した共通render境界へsemantic metadata manifestを追加する。
 5. 検証対象とするIllustratorバージョンの範囲を広げる。
@@ -118,6 +118,8 @@ lossless source prototypeは元bytesを所有し、各物理行を`start/content
 最初のnode-level縦切りとして、各`Path`のsource originと、そのpathだけが使用するfill field spanをreader resultへ接続しました。`SetPathFill`は安定IDを0件・1件・複数件で判定し、期待色と元source bytesをpreconditionとして、fill spanだけをRGB/CMYK operatorへ差し替えます。色stateが複数path/textで共有される場合は局所変更と証明できないため停止します。
 
 同じ排他性判定をstroke color stateへ拡張しました。`SetPathStroke`はRGB / CMYKの期待色と元source bytesを検証し、選択したpathだけが使用するstroke operatorを局所置換します。同じstroke stateを複数pathが使用する場合は、他pathの見た目を変えない局所編集と証明できないため停止します。
+
+path geometryは`m` / `l` / `c` / `v` / `y`系statementごとのexact spanとして保持します。`TranslatePath`は全anchorとBézier handleの期待値、各statementの元source bytes、node span内のunsupported診断を検証し、座標statementだけを個別に差し替えます。statement間の空行や既知resource、対象外の未知byteは保持し、ゼロ移動は元bytesと完全一致します。
 
 `TextFrame`にもnode originを接続し、単一`Tx` statementで表現された本文にはexact byte spanを保持します。`ReplaceText`は安定ID、期待本文、元source bytes、unsupported診断との交差、既存fontのASCII / CP932 encoding profileを検証して本文spanだけを差し替えます。複数`Tx`に分割された本文や既存fontで表現できない文字は、周辺構文を書き換えず明示的に停止します。
 

@@ -57,6 +57,11 @@ class LegacyNodeOrigin:
             raise ValueError(f"node origin contains duplicate {name!r} fields")
         return matches[0] if matches else None
 
+    def fields_with_prefix(self, prefix: str) -> tuple[LegacyFieldOrigin, ...]:
+        """Return fields whose names share a prefix, preserving source order."""
+
+        return tuple(field for field in self.fields if field.field.startswith(prefix))
+
     def to_dict(self) -> dict[str, object]:
         return {
             "node_type": self.node_type,
