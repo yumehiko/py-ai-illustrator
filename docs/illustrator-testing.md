@@ -42,6 +42,12 @@ uv run py-ai test-illustrator-export --fixture rgb-rectangle
 uv run py-ai test-illustrator-export --fixture cmyk-curve
 uv run py-ai test-illustrator-export --fixture group
 uv run py-ai test-illustrator-export --fixture stroke-style
+uv run py-ai test-illustrator-export --fixture point-text
+uv run py-ai test-illustrator-export --fixture unicode-text
+
+# generator/parserの追加回帰fixture（実機version matrixへ加える場合は結果を下表へ記録）
+uv run py-ai test-illustrator-export --fixture compound-path
+uv run py-ai test-illustrator-export --fixture clipping-group
 ```
 
 完全往復（Python生成AIをIllustratorでAI8再保存し、Python IRへ戻す）:

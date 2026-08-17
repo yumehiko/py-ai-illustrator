@@ -99,7 +99,8 @@ Gate Aを満たします。
 - [x] strict-by-default reserializeと明示的な`discard` loss policy
 - [x] typed patch writer（fill / stroke / text / path / container translate / image source）
 - [x] semantic diffとcompatibility report
-- [ ] Illustrator生成fixtureの種類と対象バージョンを拡張
+- [x] Illustrator生成fixtureをRGB / CMYK / text / CP932 / group / stroke styleへ拡張
+- [ ] Illustrator実機対象を30.7.0以外のversionへ拡張
 
 ### A2. Modern AI reader
 
