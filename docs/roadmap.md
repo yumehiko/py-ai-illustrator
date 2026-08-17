@@ -12,6 +12,8 @@
 
 各トラックの優先順位と設計判断は、[開発原則と想定ユースケース](development-principles.md)に定義した利用者の仕事とUXを基準にします。
 
+将来の配布licenseとGPL-2.0-or-laterの`inkai`利用方式は未決定です。判断手順と作業の停止線は[ライセンス・先行実装利用方針](license-policy.md)に定義します。
+
 旧Phase制は実装順と実際の進捗がずれたため、今後は三つの開発トラックと、トラック間の品質ゲートで管理します。各トラックは並行して進められますが、エージェント向けskillはConversion CoreとSafe Edit APIを迂回してファイルを操作しません。
 
 ## 現在地
@@ -78,6 +80,16 @@
 
 ## Track A: Conversion Core
 
+### Decision Gate L: licenseとinkai利用方式 — A2意味解析前に完了
+
+- [ ] 代表的なlegacy / modern AI fixtureで`inkai`を隔離比較する
+- [ ] semantic coverage、lossless性、安全性、IR mapping、依存関係、保守性を比較する
+- [ ] 直接利用、hybrid、比較oracleのみ、独自実装継続の工数と配布条件を比較する
+- [ ] 商用組み込み、copyleft、外部contributionに関する製品要件を決める
+- [ ] 採用案と棄却案をADRに記録し、package / repository境界を確定する
+
+A2 read-only最小縦切りは完了済みで、Gate Lの比較基準として利用します。PrivateDataから共通グラフィックIRへのsemantic projectionを本格実装する前にGate Lを完了します。
+
 ### A0. Legacy subset spike — 完了
 
 - [x] 内容に基づくlegacy AI / PDF-compatible AI / PDF / EPSの形式判定
@@ -90,7 +102,7 @@
 - [x] 元bytes・物理行・operator spanを保持するlossless source prototype
 - [x] resource limitと非重複local replacement primitive
 - [x] Illustrator 30.7.0での構造・再保存・visual QA
-- [x] MITライセンスとGPL実装をコア依存に含めない方針
+- [x] 現在のソースをMITで公開（将来の配布licenseとGPL依存方針はDecision Gate Lで再検討）
 
 ### A1. Trusted legacy conversion — 最優先
 
@@ -114,7 +126,7 @@ Gate Aを満たします。
 - [ ] 対応nodeを共通グラフィックIRへ投影
 - [ ] PDF表示表現をpreview/fallbackとして抽出
 - [ ] PrivateDataとPDF表示表現の不一致を診断
-- [x] GPL実装をコアへ含めず、自作fixtureとpermissive dependencyによるライセンス境界を文書化
+- [ ] Decision Gate Lで`inkai`等の先行実装を隔離比較し、semantic readerの実装方式を決める
 
 終了条件:
 
@@ -260,7 +272,7 @@ py-ai-core ----------------> 他の層へ依存しない
 1. Gate B / C1へraster/PDF previewとvisual diffを追加する
 2. 実利用fixtureをもとにname、bounds、hierarchy selectorを段階的に追加する
 3. B1のimage crop・link診断を並行実装する
-4. A2の次段としてPrivateData semantic parserと共通IRへの限定投影を進める
+4. Decision Gate Lで`inkai`を比較し、A2 semantic readerの実装方式とlicense方針を決める
 5. C1のAPI/CLI境界を固定できた後にC2のCodex skill/pluginへ進む
 
 Phase 0の詳細な実機試験記録は[Phase 0の実装状況](phase0-status.md)と[Illustrator適合試験](illustrator-testing.md)へ残します。

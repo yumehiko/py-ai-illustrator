@@ -94,7 +94,7 @@ uv run pytest
 uv run ruff check .
 ```
 
-modern AIのzstd展開にはBSDライセンスの`zstandard` packageを使用します。GPL-2.0-or-later の `inkai` は先行実装の比較・検証対象ですが、コア依存、fixture、テストには含めていません。
+modern AIのzstd展開にはBSDライセンスの`zstandard` packageを使用します。GPL-2.0-or-laterの`inkai`は現在の配布依存、fixture、テストには含めていませんが、将来の利用方式は未決定です。PrivateDataの意味解析を本格実装する前に、独自実装との比較評価を行います。
 
 ## Modern AIのread-only診断
 
@@ -370,6 +370,7 @@ legacy point textはASCIIに加え、`RKSJ-H` / `RKSJ-V` fontを明示した日�
 - [開発ロードマップ](docs/roadmap.md)
 - [調査ソース](docs/sources.md)
 - [Phase 0 の実装状況](docs/phase0-status.md)
+- [ライセンス・先行実装利用方針](docs/license-policy.md)
 - [Illustrator 適合試験](docs/illustrator-testing.md)
 - [Modern AI read-only feature profile](docs/modern-ai-read-profile.md)
 
@@ -385,4 +386,6 @@ legacy point textはASCIIに加え、`RKSJ-H` / `RKSJ-V` fontを明示した日�
 
 ## ライセンス
 
-[MIT License](LICENSE) で公開しています。GPLコードをコアへコピーせず、公開仕様と自作fixtureに基づく実装を維持します。GPL依存を将来追加する場合も、任意の隔離adapterとして扱います。
+現在のソースは[MIT License](LICENSE)で公開しています。すでにMITで提供した版の利用許諾は維持されます。
+
+将来のreleaseをMITのまま配布するか、別のlicenseへ変更するか、GPL-2.0-or-laterの`inkai`を利用するかは未決定です。licenseだけを理由に先行実装を排除せず、技術適合性、削減できる開発工数、製品の配布要件を比較して決めます。判断手順は[ライセンス・先行実装利用方針](docs/license-policy.md)を参照してください。
