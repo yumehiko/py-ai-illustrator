@@ -1,6 +1,6 @@
 # 調査ソース
 
-調査日: 2026-08-14
+調査日: 2026-08-14（Decision Gate L更新: 2026-08-17）
 
 技術判断では、Adobe の公式資料、仕様書、実装リポジトリなどの一次情報を優先しました。
 
@@ -27,6 +27,10 @@
   - Python の AI PrivateData reader/parser、typed object、SVG conversion。GPL-2.0-or-later。
 - [inkai pyproject.toml](https://gitlab.com/inkscape/extras/extension-ai/-/blob/main/pyproject.toml)
   - Python 要件、依存関係、version、Pre-Alpha classification。
+- [Decision Gate Lで評価したinkai revision](https://gitlab.com/inkscape/extras/extension-ai/-/commit/1a5f42a0b0407fc869e032420570682048810108)
+  - 2026-03-17 commit。隔離評価と静的比較の再現基準。
+- [inkai Feature list](https://gitlab.com/inkscape/extras/extension-ai/-/blob/main/Feature%20list.md)
+  - layer、path、style、text、image、clip等のupstream自己評価。
 - [Inkscape AI Import Project – Take 2](https://lists.inkscape.org/hyperkitty/list/inkscape-board%40lists.inkscape.org/message/WGWWBRUMJKBM3TOFGZAJQ2P5GFWPLLXT/attachment/4/AIImportProjectTake2.pdf)
   - PrivateData 抽出、deflate/zstd、対応済み構造、未実装 feature の整理。
 - [opendesigndev/illustrator-parser-pdfcpu](https://github.com/opendesigndev/illustrator-parser-pdfcpu)

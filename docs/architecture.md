@@ -91,6 +91,8 @@ PlacedImage
 
 この結果は`container_status`、`private_data_status`、`semantic_status`を分離します。現段階の`semantic_status`は常に`unsupported`で、token/section indexは未知領域を保持するCST前段です。object/xref stream等を含む汎用PDF全体、PrivateData semantic parser、共通IRへのreducer、PDF preview/fallback、不一致診断は後続作業です。正確な保証境界は[Modern AI read-only feature profile](modern-ai-read-profile.md)に定義します。
 
+Decision Gate Lでは、現行のbounded / source-preserving readerをauthoritative layerとして維持し、そのdecoded PrivateDataを読むlexer / CST / semantic reducerをproject-owned実装とする方針を決めました。operator / operandのexact spanを保持し、証明可能にsourceへ対応できないfieldはpatch対象にしません。`inkai`は任意の隔離comparison oracleに限定し、runtime architectureへ含めません。詳細は[ADR 0001](adr/0001-modern-semantic-reader-strategy.md)を参照してください。
+
 ### legacy AI
 
 Adobe Illustrator 7 specification の DSC comments と operator を読みます。古い形式を単なる中間形式とみなさず、最初の writer の仕様にも使います。

@@ -94,7 +94,7 @@ uv run pytest
 uv run ruff check .
 ```
 
-modern AIのzstd展開にはBSDライセンスの`zstandard` packageを使用します。GPL-2.0-or-laterの`inkai`は現在の配布依存、fixture、テストには含めていませんが、将来の利用方式は未決定です。PrivateDataの意味解析を本格実装する前に、独自実装との比較評価を行います。
+modern AIのzstd展開にはBSDライセンスの`zstandard` packageを使用します。Decision Gate Lの隔離比較を経て、modern semantic parserは現行source-preserving reader上へ独自実装する方針としました。GPL-2.0-or-laterの`inkai`は配布・開発依存へ含めず、任意の隔離comparison oracleとしてのみ利用します。詳細は[ADR 0001](docs/adr/0001-modern-semantic-reader-strategy.md)を参照してください。
 
 ## Modern AIのread-only診断
 
@@ -388,4 +388,4 @@ legacy point textはASCIIに加え、`RKSJ-H` / `RKSJ-V` fontを明示した日�
 
 現在のソースは[MIT License](LICENSE)で公開しています。すでにMITで提供した版の利用許諾は維持されます。
 
-将来のreleaseをMITのまま配布するか、別のlicenseへ変更するか、GPL-2.0-or-laterの`inkai`を利用するかは未決定です。licenseだけを理由に先行実装を排除せず、技術適合性、削減できる開発工数、製品の配布要件を比較して決めます。判断手順は[ライセンス・先行実装利用方針](docs/license-policy.md)を参照してください。
+Decision Gate Lでは現在のMIT方針を維持し、modern AI semantic readerをproject-owned実装とする判断をしました。GPL-2.0-or-laterの`inkai`は製品へ組み込まず、隔離comparison oracleに限定します。比較結果、棄却案、再評価条件は[ADR 0001](docs/adr/0001-modern-semantic-reader-strategy.md)、運用方針は[ライセンス・先行実装利用方針](docs/license-policy.md)を参照してください。

@@ -42,6 +42,8 @@
 
 zstd展開にはBSDライセンスの`zstandard` packageを使用します。GPL-2.0-or-laterの`inkai`コードやsample bytesはコア、fixture、テストへ取り込んでいません。
 
+Decision Gate Lの隔離比較では、現行readerが評価modern fixture 2/2を抽出した一方、inkai revision `1a5f42a0`はIllustrator実機zstd fixtureを同一decoded SHA-256で抽出したものの、2-segmentのgenerated fixtureに失敗しました。このprofileを維持し、semantic parserもproject-owned実装として段階的に追加します。inkaiは隔離comparison oracleに限定します。[ADR 0001](adr/0001-modern-semantic-reader-strategy.md)に実測と判断を記録しています。
+
 ## Lossless token / section index
 
 展開成功した各segmentは、decoded bytes自体を保持し、物理行単位のtokenで全byte範囲を隙間なく覆います。tokenは`start / content_end / end`を持ち、改行、未知operator、非UTF-8 byte、NULを正規化しません。

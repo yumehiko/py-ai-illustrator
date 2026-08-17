@@ -62,7 +62,7 @@ Phase 0後のA2縦切りで、PDF-compatible AIはbounded container readerとPri
 
 終了条件のうち、Python内の `IR -> AI7 -> IR` と、Illustrator 30.7.0でfixtureを開いた際の編集構造検査は完了しました。対応範囲はまだ小さいため、AI7 writer全体の位置付けは引き続き experimental です。
 
-現在のソースはMITで公開しています。将来の配布licenseとGPL-2.0-or-laterの`inkai`利用方式は未決定であり、modern AIの意味解析を本格実装する前に比較評価します。判断手順は[ライセンス・先行実装利用方針](license-policy.md)を参照してください。
+現在のソースはMITで公開しています。Decision Gate Lでは現行source-preserving層上へmodern semantic parserを独自実装し、`inkai`は隔離comparison oracleに限定する方針を決めました。比較結果と再評価条件は[ADR 0001](adr/0001-modern-semantic-reader-strategy.md)を参照してください。
 
 ### Illustrator 2026 適合試験メモ
 

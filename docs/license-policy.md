@@ -1,4 +1,4 @@
-# ライセンス・先行実装利用方針（検討中）
+# ライセンス・先行実装利用方針
 
 更新日: 2026-08-17
 
@@ -6,7 +6,7 @@
 
 現在リポジトリにあるコードはMIT Licenseで公開されています。すでにMITで提供した版に対する利用許諾は維持されます。
 
-一方、将来のreleaseを引き続きMITで配布するか、別のlicenseへ変更するか、GPL-2.0-or-laterの`inkai`をruntime dependencyまたは実装基盤として利用するかは未決定です。「permissive licenseを維持する」「GPL実装をコア依存に含めない」は、現時点の確定した製品要件として扱いません。
+Decision Gate Lでは、現在のMIT方針を維持し、modern AI semantic parserをproject-owned実装とする判断をしました。GPL-2.0-or-laterの`inkai`は製品へ組み込まず、任意の隔離comparison oracleとしてのみ利用します。根拠、実測、再評価条件は[ADR 0001](adr/0001-modern-semantic-reader-strategy.md)に記録しています。
 
 このプロジェクトは現時点で外部利用や外部contributorを前提としていないため、作者が保有するコードの将来版については、技術・製品上の判断を先に行います。第三者由来のコード、fixture、依存packageについては、それぞれのlicenseと由来を別途遵守します。
 
@@ -20,29 +20,31 @@
 - PDF表示表現とPrivateDataの同期
 - このプロジェクトのグラフィックIR、diagnostics、compatibility reportとの統合
 
-したがって、license名だけで採否を決めず、独自実装の継続コストを含む技術比較を行います。
+したがって、license名だけで採否を決めず、独自実装の継続コストを含む技術比較を行いました。
 
-## Decision Gate L: licenseとinkai利用方式
+## Decision Gate L: licenseとinkai利用方式（完了）
 
-A2のread-only container / PrivateData抽出の最小縦切りは完了済みです。それ以降のPrivateData semantic parserを大きく独自実装する前に、次を完了します。
+A2のread-only container / PrivateData抽出の最小縦切りを比較基準に、2026-08-17に次を完了しました。
 
-1. 自作した代表fixtureとIllustrator実機fixtureを固定する。
-2. `inkai`を隔離した評価環境で実行し、コードやsample bytesを現在の実装へコピーせず結果を比較する。
-3. 抽出成功率、semantic coverage、未知データ保持、source span、resource limit、診断、IR mapping、依存関係、保守状況を評価する。
-4. 次の利用方式ごとの開発工数と配布条件を比較する。
+1. 自作したlegacy / modern fixtureとIllustrator 30.7.0実機fixtureを固定しました。
+2. `inkai` revision `1a5f42a0`をnetworkなし、read-only、non-root、resource limit付きcontainerで実行し、コードやsample bytesを現在の実装へコピーせず比較しました。
+3. 抽出成功率、semantic coverage、未知データ保持、source span、resource limit、診断、IR mapping、依存関係、保守状況を評価しました。
+4. 次の利用方式の技術責務、長期保守、配布条件を比較しました。
    - GPLを採用して`inkai`を直接利用する
    - 自前のsource-preserving層と`inkai`の意味解析を組み合わせる
    - `inkai`を開発時のreference / comparison oracleとしてのみ利用する
    - permissiveな独自実装を継続する
-5. 商用・proprietary製品への組み込みを必要条件とするか、copyleftを許容するか、外部contributionを受けるかを決める。
-6. 採用案、棄却案、根拠、再評価条件をADRとして記録し、package metadata、LICENSE、third-party notices、repository境界を整合させる。
+5. agent中心の開発では人間向けengineer-week見積もりの不確実性が大きいため、長期依存を決める根拠から除外しました。
+6. MITを維持し、project-owned semantic parserを実装し、inkaiをcomparison oracleに限定する判断を[ADR 0001](adr/0001-modern-semantic-reader-strategy.md)へ記録しました。
 
-別process、optional dependency、adapter、別repositoryに分離すれば自動的にlicense上の問題が解消するとは仮定しません。配布形態が決まった段階で、必要に応じて専門家の確認を行います。
+別process、optional dependency、adapter、別repositoryへの分離をlicense回避の根拠にはしません。将来GPL実装を製品へ導入する案を再検討する場合は、配布形態とlicenseを改めて評価します。
 
-## Gate完了までの運用
+## Semantic implementationの運用
 
 - 現在のソースと配布物にはMITの表示を維持する。
 - `inkai`のコードやfixtureをコア、テスト、配布物へコピーしない。
-- `inkai`は隔離した比較評価には利用できる。
-- A2最小縦切りを越える大規模なPrivateData semantic parserの独自実装は開始しない。
-- licenseを理由に先行実装を最初から排除せず、同時にGPL適用範囲を未確認のまま配布依存へ追加しない。
+- `inkai`はrepository外の隔離環境でcomparison oracleとして利用できる。
+- A2 semantic readerは現行decoded bytes上のproject-owned lexer / CST / reducerとして実装する。
+- inkai固有型やinternal APIをpublic API、runtime、fixture contractへ持ち込まない。
+- 新しいIllustrator objectはunknown bytesを保持して安全に停止し、自作fixtureと実機fixtureを追加してから段階対応する。
+- 将来別実装の採用が明確に安全性・保守性を改善する場合はADRを再評価する。

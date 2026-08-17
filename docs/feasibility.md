@@ -108,10 +108,10 @@ Illustrator 9 以降の `.ai` を PDF importer として読む方式です。表
 
 ## ライセンスと検証環境
 
-- 現在のソースはMITで公開していますが、将来の配布licenseと`inkai`の利用方式は未決定です。
-- `inkai`を内部ライブラリとして直接組み込む案はGPL-2.0-or-laterを前提に、開発工数を削減できる範囲と不足する保証を比較します。
-- permissive licenseを選ぶ場合は、Apache-2.0の先行実装や公開仕様と独自fixturesによる実装を評価します。permissiveであること自体を、技術比較より先に固定した要件にはしません。
-- `inkai`を利用しない場合も、隔離環境での比較referenceとして活用し、既存機能を理由なく再実装しないようにします。
+- 現在のソースと将来のsemantic coreはMIT方針を維持します。
+- 隔離比較の結果、現行source-preserving層をauthoritativeに保ち、PrivateData semantic parserもproject-owned実装とする方針を選びました。
+- inkai単独readerとhybrid runtime依存は、lossless / source span、安全上限、複数segment、長期保守の条件から棄却しました。`inkai`は隔離comparison oracleとしてのみ利用します。
+- 実測、棄却案、再評価条件は[ADR 0001](adr/0001-modern-semantic-reader-strategy.md)に記録しています。
 - Adobe の仕様書本文や第三者の `.ai` サンプルを無断で再配布しない運用が必要です。
 - 互換性検証に Illustrator を使うことと、実行時に Illustrator を不要にすることは両立します。CI の通常テストは Illustrator なし、リリース前の適合試験だけ Illustrator ありに分けるのが現実的です。
 - adapter、別process、別repository等の境界だけで配布条件を判断せず、公開・商用化前にライセンスとリバースエンジニアリング条件を別途確認します。
