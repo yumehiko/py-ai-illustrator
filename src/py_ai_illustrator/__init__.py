@@ -30,10 +30,12 @@ from .compatibility import (
 )
 from .format import FileFormat, FormatReport, inspect_file
 from .legacy import (
+    ReplaceLinkedImageSource,
     ReplaceText,
     SetPathFill,
     SetPathStroke,
     TranslatePath,
+    patch_linked_image_source,
     patch_path_fill,
     patch_path_stroke,
     patch_path_translate,
@@ -95,6 +97,7 @@ __all__ = [
     "PackagedLink",
     "Point",
     "RenderedComponent",
+    "ReplaceLinkedImageSource",
     "ReplaceText",
     "TextFrame",
     "TextBlock",
@@ -114,6 +117,7 @@ __all__ = [
     "patch_path_fill",
     "patch_path_stroke",
     "patch_path_translate",
+    "patch_linked_image_source",
     "patch_text",
     "polyline_path",
     "rectangle_path",

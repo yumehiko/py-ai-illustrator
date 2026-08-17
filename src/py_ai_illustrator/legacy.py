@@ -664,6 +664,8 @@ def _loads_ai7_source(
     pending_text_area_height: float | None = None
     pending_text_leading: float | None = None
     pending_linked_image: LinkedImage | None = None
+    pending_linked_image_source_start: int | None = None
+    pending_linked_image_metadata_origin: LegacyFieldOrigin | None = None
     metadata: dict[str, object] = {}
     artboards: list[Artboard] = []
     current_path_source_start: int | None = None
@@ -763,14 +765,28 @@ def _loads_ai7_source(
             continue
         if line.startswith("%%py-ai-linked-image: "):
             try:
-                decoded = base64.b64decode(
-                    line.removeprefix("%%py-ai-linked-image: "), validate=True
-                ).decode("utf-8")
+                prefix = "%%py-ai-linked-image: "
+                encoded = line.removeprefix(prefix)
+                decoded = base64.b64decode(encoded, validate=True).decode("utf-8")
                 candidate = json.loads(decoded)
                 if isinstance(candidate, dict):
                     pending_linked_image = LinkedImage.from_dict(candidate)
+                    raw_content = source.line_content(token)
+                    decoded_content = raw_content.decode("latin-1")
+                    leading_length = len(decoded_content) - len(decoded_content.lstrip())
+                    metadata_start = token.start + leading_length + len(prefix)
+                    metadata_end = metadata_start + len(encoded)
+                    pending_linked_image_source_start = token.start
+                    pending_linked_image_metadata_origin = LegacyFieldOrigin(
+                        field="metadata",
+                        start=metadata_start,
+                        end=metadata_end,
+                        expected=data[metadata_start:metadata_end],
+                    )
             except (ValueError, UnicodeError, json.JSONDecodeError):
                 pending_linked_image = None
+                pending_linked_image_source_start = None
+                pending_linked_image_metadata_origin = None
             continue
         bounds_match = _BOUNDS_RE.match(line)
         if bounds_match and width is None:
@@ -1299,8 +1315,25 @@ def _loads_ai7_source(
                 polarity=polarity,
             )
             if pending_linked_image is not None and not is_clipping_mask:
-                append_item("image", pending_linked_image)
+                linked_image = pending_linked_image
+                append_item("image", linked_image)
+                if origins is not None and pending_linked_image_metadata_origin is not None:
+                    origins.append(
+                        LegacyNodeOrigin(
+                            node_type="linked_image",
+                            node_id=linked_image.id,
+                            start=(
+                                pending_linked_image_source_start
+                                if pending_linked_image_source_start is not None
+                                else pending_linked_image_metadata_origin.start
+                            ),
+                            end=token.end,
+                            fields=(pending_linked_image_metadata_origin,),
+                        )
+                    )
                 pending_linked_image = None
+                pending_linked_image_source_start = None
+                pending_linked_image_metadata_origin = None
             else:
                 if origins is not None:
                     path_origin_candidates.append(
@@ -1452,6 +1485,23 @@ class TranslatePath:
 
 
 @dataclass(frozen=True, slots=True)
+class ReplaceLinkedImageSource:
+    """Typed local linked-image source edit with an explicit precondition."""
+
+    image_id: str
+    source: str
+    expected_source: str
+
+    def __post_init__(self) -> None:
+        if not self.image_id:
+            raise ValueError("image_id must not be empty")
+        if not self.source or "\x00" in self.source:
+            raise ValueError("source must be a non-empty path without NUL bytes")
+        if not self.expected_source or "\x00" in self.expected_source:
+            raise ValueError("expected_source must be a non-empty path without NUL bytes")
+
+
+@dataclass(frozen=True, slots=True)
 class ReplaceText:
     """Typed local text edit with an explicit semantic precondition."""
 
@@ -1484,6 +1534,13 @@ def _container_text_frames(container: Layer | Group) -> list[TextFrame]:
     for group in container.groups:
         text_frames.extend(_container_text_frames(group))
     return text_frames
+
+
+def _container_linked_images(container: Layer | Group) -> list[LinkedImage]:
+    linked_images = list(container.linked_images)
+    for group in container.groups:
+        linked_images.extend(_container_linked_images(group))
+    return linked_images
 
 
 def _matching_paths(result: LegacyReadResult, path_id: str) -> list[Path]:
@@ -1695,6 +1752,61 @@ def patch_path_translate(result: LegacyReadResult, operation: TranslatePath) -> 
             )
         )
     return result.source.patched(replacements)
+
+
+def patch_linked_image_source(
+    result: LegacyReadResult, operation: ReplaceLinkedImageSource
+) -> LegacySource:
+    """Patch one linked-image source in its private legacy metadata."""
+
+    matching_images = [
+        image
+        for layer in result.document.layers
+        for image in _container_linked_images(layer)
+        if image.id == operation.image_id
+    ]
+    if len(matching_images) != 1:
+        raise UnsupportedLegacyFeature(
+            f"Linked image selector id={operation.image_id!r} matched {len(matching_images)} "
+            "nodes; exactly one is required."
+        )
+    image = matching_images[0]
+    if image.source != operation.expected_source:
+        raise UnsupportedLegacyFeature(
+            f"Linked image {operation.image_id!r} source precondition failed: "
+            f"expected {operation.expected_source!r}, found {image.source!r}."
+        )
+
+    origin = _unique_origin(result, node_type="linked_image", node_id=operation.image_id)
+    metadata_origin = _validate_patch_field(
+        result,
+        origin=origin,
+        field_name="metadata",
+        node_label=f"Linked image {operation.image_id!r}",
+    )
+    try:
+        decoded = base64.b64decode(metadata_origin.expected, validate=True).decode("utf-8")
+        payload = json.loads(decoded)
+    except (ValueError, UnicodeError, json.JSONDecodeError) as error:
+        raise UnsupportedLegacyFeature(
+            f"Linked image {operation.image_id!r} metadata precondition failed."
+        ) from error
+    if (
+        not isinstance(payload, dict)
+        or payload.get("id") != operation.image_id
+        or payload.get("source") != operation.expected_source
+    ):
+        raise UnsupportedLegacyFeature(
+            f"Linked image {operation.image_id!r} metadata precondition failed."
+        )
+
+    payload["source"] = operation.source
+    replacement = base64.b64encode(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    )
+    return result.source.patched(
+        [SourceReplacement(metadata_origin.start, metadata_origin.end, replacement)]
+    )
 
 
 def patch_text(result: LegacyReadResult, operation: ReplaceText) -> LegacySource:

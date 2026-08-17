@@ -5,12 +5,14 @@ import pytest
 
 from py_ai_illustrator.cli import main
 from py_ai_illustrator.legacy import (
+    ReplaceLinkedImageSource,
     ReplaceText,
     SetPathFill,
     SetPathStroke,
     TranslatePath,
     UnsupportedLegacyFeature,
     dumps_ai7,
+    patch_linked_image_source,
     patch_path_fill,
     patch_path_stroke,
     patch_path_translate,
@@ -19,7 +21,17 @@ from py_ai_illustrator.legacy import (
     reserialize_ai7,
 )
 from py_ai_illustrator.lossless import SourceReplacement
-from py_ai_illustrator.model import CmykColor, Color, Document, Layer, Point, TextFrame
+from py_ai_illustrator.model import (
+    CmykColor,
+    Color,
+    Document,
+    Group,
+    Layer,
+    LayerItemRef,
+    LinkedImage,
+    Point,
+    TextFrame,
+)
 from py_ai_illustrator.model import Path as AIPath
 
 
@@ -72,6 +84,31 @@ def stroked_document(*, path_id: str = "rule") -> Document:
                         closed=False,
                         stroke=Color(0.1, 0.2, 0.3),
                         stroke_width=2,
+                    )
+                ],
+            )
+        ],
+    )
+
+
+def linked_image_document(*, image_id: str = "hero") -> Document:
+    return Document(
+        width=100,
+        height=80,
+        layers=[
+            Layer(
+                id="artwork",
+                name="Artwork",
+                linked_images=[
+                    LinkedImage(
+                        id=image_id,
+                        name="Hero image",
+                        source="Links/hero.png",
+                        x=10,
+                        y=70,
+                        width=80,
+                        height=60,
+                        rotation=-5,
                     )
                 ],
             )
@@ -541,6 +578,164 @@ def test_zero_path_translation_is_byte_preserving() -> None:
     )
 
     assert patched.data == data
+
+
+def test_linked_image_source_patch_changes_only_the_metadata_payload() -> None:
+    data = dumps_ai7(linked_image_document()).replace(b"\n", b"\r\n").replace(
+        b"%%EndSetup\r\n",
+        b"%%EndSetup\r\n12 34 FutureOperator % opaque \xff\r\n",
+    )
+    result = reads_ai7(data)
+    origin = next(
+        origin
+        for origin in result.origins
+        if origin.node_type == "linked_image" and origin.node_id == "hero"
+    )
+    metadata_origin = origin.field("metadata")
+    assert metadata_origin is not None
+
+    patched = patch_linked_image_source(
+        result,
+        ReplaceLinkedImageSource(
+            image_id="hero",
+            expected_source="Links/hero.png",
+            source="Links/replacement image.png",
+        ),
+    )
+
+    replacement_length = len(patched.data) - (len(data) - len(metadata_origin.expected))
+    assert patched.data[: metadata_origin.start] == data[: metadata_origin.start]
+    assert patched.data[metadata_origin.start + replacement_length :] == data[metadata_origin.end :]
+    assert b"FutureOperator % opaque \xff" in patched.data
+    restored = reads_ai7(patched.data).document.layers[0].linked_images[0]
+    assert restored.source == "Links/replacement image.png"
+    assert restored.id == "hero"
+    assert restored.name == "Hero image"
+    assert (restored.x, restored.y, restored.width, restored.height, restored.rotation) == (
+        10,
+        70,
+        80,
+        60,
+        -5,
+    )
+
+
+def test_linked_image_source_patch_requires_matching_semantic_precondition() -> None:
+    result = reads_ai7(dumps_ai7(linked_image_document()))
+
+    with pytest.raises(UnsupportedLegacyFeature, match="source precondition failed"):
+        patch_linked_image_source(
+            result,
+            ReplaceLinkedImageSource(
+                image_id="hero",
+                expected_source="Links/stale.png",
+                source="Links/new.png",
+            ),
+        )
+
+
+@pytest.mark.parametrize("image_id", ["missing", "duplicate"])
+def test_linked_image_source_patch_stops_for_zero_or_multiple_matches(image_id: str) -> None:
+    document = linked_image_document(image_id="duplicate" if image_id == "duplicate" else "hero")
+    if image_id == "duplicate":
+        document.layers[0].linked_images.append(
+            LinkedImage(
+                id="duplicate",
+                source="Links/second.png",
+                x=10,
+                y=70,
+                width=40,
+                height=30,
+            )
+        )
+    result = reads_ai7(dumps_ai7(document))
+
+    with pytest.raises(UnsupportedLegacyFeature, match="matched"):
+        patch_linked_image_source(
+            result,
+            ReplaceLinkedImageSource(
+                image_id=image_id,
+                expected_source="Links/hero.png",
+                source="Links/new.png",
+            ),
+        )
+
+
+def test_linked_image_source_patch_rejects_changed_metadata_source() -> None:
+    result = reads_ai7(dumps_ai7(linked_image_document()))
+    origin = next(origin for origin in result.origins if origin.node_id == "hero")
+    metadata_origin = origin.field("metadata")
+    assert metadata_origin is not None
+    changed_source = result.source.patched(
+        [
+            SourceReplacement(
+                metadata_origin.start,
+                metadata_origin.end,
+                b"A" * len(metadata_origin.expected),
+            )
+        ]
+    )
+    stale_result = replace(result, source=changed_source)
+
+    with pytest.raises(UnsupportedLegacyFeature, match="source precondition failed"):
+        patch_linked_image_source(
+            stale_result,
+            ReplaceLinkedImageSource(
+                image_id="hero",
+                expected_source="Links/hero.png",
+                source="Links/new.png",
+            ),
+        )
+
+
+def test_linked_image_source_operation_rejects_an_invalid_new_path() -> None:
+    with pytest.raises(ValueError, match="non-empty path"):
+        ReplaceLinkedImageSource(
+            image_id="hero",
+            expected_source="Links/hero.png",
+            source="",
+        )
+
+
+def test_linked_image_source_patch_selects_images_in_nested_groups() -> None:
+    image = LinkedImage(
+        id="nested-image",
+        source="Links/nested.png",
+        x=10,
+        y=70,
+        width=40,
+        height=30,
+    )
+    group = Group(
+        id="nested-group",
+        linked_images=[image],
+        item_order=[LayerItemRef("image", image.id)],
+    )
+    document = Document(
+        width=100,
+        height=80,
+        layers=[
+            Layer(
+                id="artwork",
+                name="Artwork",
+                groups=[group],
+                item_order=[LayerItemRef("group", group.id)],
+            )
+        ],
+    )
+    result = reads_ai7(dumps_ai7(document))
+
+    patched = patch_linked_image_source(
+        result,
+        ReplaceLinkedImageSource(
+            image_id="nested-image",
+            expected_source="Links/nested.png",
+            source="Links/new.png",
+        ),
+    )
+
+    restored_group = reads_ai7(patched.data).document.layers[0].groups[0]
+    assert restored_group.linked_images[0].source == "Links/new.png"
 
 
 def test_text_origin_and_typed_patch_preserve_every_byte_outside_content() -> None:

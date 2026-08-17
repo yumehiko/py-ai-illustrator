@@ -127,7 +127,8 @@ output = reserialize_ai7(result)
 意味IRに含まれないfeatureの破棄を許す場合のみ、`--allow-partial`を指定します。
 
 既存のfill / stroke operatorを一つのpathだけが使用している場合、path geometryを既知statement
-として列挙できる場合、または`TextFrame`の本文が単一の`Tx` statementで表現されている場合は、
+として列挙できる場合、`TextFrame`の本文が単一の`Tx` statementで表現されている場合、または
+linked imageのprivate metadataを保持している場合は、
 typed operationから局所patchを生成できます。IDが0件・
 複数件、意味/source precondition不一致、または編集対象を排他的なspanに限定できない場合は停止します。
 
@@ -136,10 +137,12 @@ from pathlib import Path
 
 from py_ai_illustrator import (
     Color,
+    ReplaceLinkedImageSource,
     ReplaceText,
     SetPathFill,
     SetPathStroke,
     TranslatePath,
+    patch_linked_image_source,
     patch_path_fill,
     patch_path_stroke,
     patch_path_translate,
@@ -194,13 +197,23 @@ text_patched = patch_text(
     ),
 )
 Path("text-output.ai").write_bytes(text_patched.to_bytes())
+
+image_patched = patch_linked_image_source(
+    result,
+    ReplaceLinkedImageSource(
+        image_id="hero-photo",
+        expected_source="Links/hero.png",
+        source="Links/replacement.png",
+    ),
+)
+Path("image-output.ai").write_bytes(image_patched.to_bytes())
 ```
 
-これらのpatchはfill、stroke、geometryまたはtext field spanだけを差し替え、対象spanの前後にある改行、未知
+これらのpatchはfill、stroke、geometry、textまたはimage metadata field spanだけを差し替え、対象spanの前後にある改行、未知
 operator、非UTF-8 byteをそのまま保持します。textは既存fontのASCII / CP932 profileで再encode
-します。現時点ではfill / stroke追加、共有color stateの分離、複数`Tx` text、container一括移動は未実装です。
+します。画像source差し替えはリンク先の存在確認やassetコピーを行いません。現時点ではfill / stroke追加、共有color stateの分離、複数`Tx` text、container一括移動は未実装です。
 
-既定では入力64 MiB、1行8 MiB、200万行を上限とし、超過時は`SourceLimitExceeded`を返します。`patched()`は範囲外・重複spanを拒否しますが、operatorの意味検証を行わない低レベルprimitiveです。IR編集では`SetPathFill` / `SetPathStroke` / `TranslatePath` / `ReplaceText`の高レベルpatch APIを使用します。
+既定では入力64 MiB、1行8 MiB、200万行を上限とし、超過時は`SourceLimitExceeded`を返します。`patched()`は範囲外・重複spanを拒否しますが、operatorの意味検証を行わない低レベルprimitiveです。IR編集では`SetPathFill` / `SetPathStroke` / `TranslatePath` / `ReplaceText` / `ReplaceLinkedImageSource`の高レベルpatch APIを使用します。
 
 ## 最初の往復変換
 
