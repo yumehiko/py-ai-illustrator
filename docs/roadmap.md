@@ -20,9 +20,9 @@
 | --- | --- | --- | --- |
 | Conversion Core | Trusted legacy conversion成立（Illustrator 2026） | legacy AI7/AI8 subsetのIR/JSON往復、全node source span、atomic typed patch、semantic diff、Illustrator 30.7.0適合試験 | 次期Illustrator公開時のversion matrix拡張、modern AI semantic reader/writer |
 | Authoring | Create MVP成立 | Table、共通component境界、point/area text、linked image、group、Artboard、rigid transform、複数の実制作例 | image crop、link診断、semantic manifest、高度なlayout/resource共有 |
-| Safe Edit / Agent | 設計段階 | inspect/export/validateとIllustrator検証CLI | selector、typed edit、precondition、dry-run、diff、preview、skill/plugin |
+| Safe Edit / Agent | C1最小縦切り成立 | `type + id` selector、operation schema、plan/apply、precondition導出、semantic impact検証 | 高度selector、preview/visual diff、skill/plugin |
 
-2026-08-17時点のローカル基準は、`pytest` 165件成功、`ruff check`成功です。
+2026-08-17時点のローカル基準は、`pytest` 177件成功、`ruff check`成功です。
 
 現在の変換保証は、次のように区別します。
 
@@ -57,15 +57,17 @@
 
 エージェントを使わなくても、同じ安全性で編集できるPython API / CLIを成立させます。
 
-- [ ] stable selector (`id`, name, type, bounds, hierarchy)
-- [ ] selectorが0件または複数件の場合の明示的停止
-- [ ] `replace_text` / `set_fill` / `translate` / image差し替えのtyped operation
-- [ ] operation preconditionと入力上書き禁止
-- [ ] dry-runとimpact report
-- [ ] before/after semantic diff
-- [ ] compatibility report
+- [x] stable selectorの最初の保証境界 (`type + id`)
+- [ ] name、bounds、hierarchyによる高度なselector
+- [x] selectorが0件または複数件の場合の明示的停止
+- [x] `replace_text` / `set_fill` / `set_stroke` / path・container `translate` / image差し替えの公開operation
+- [x] IRからのoperation precondition導出、source SHA-256、入力上書き禁止
+- [x] dry-runとimpact report
+- [x] before/after semantic diffとoperation別semantic impact検証
+- [x] compatibility report
 - [ ] raster/PDF previewとvisual diff
-- [ ] `inspect -> plan -> apply -> validate -> preview`をCLIだけで完結させる
+- [x] `inspect -> plan -> apply -> validate -> semantic diff`をCLIだけで完結させる
+- [ ] 上記workflowへpreview / visual diffを接続する
 
 終了条件:
 
@@ -177,7 +179,7 @@ Gate Aを満たします。
 
 ### C1. Agent-independent editing API
 
-Gate Bを満たします。エージェント固有コードより先に、Python APIとCLIを安定させます。
+Gate Bを満たします。エージェント固有コードより先に、Python APIとCLIを安定させます。2026-08-17時点で、対応legacy AIに対するrequest schema、exact `type + id` resolver、precondition導出、atomic plan/apply、再読込、semantic impact検証までの最小縦切りが成立しています。
 
 想定コマンド:
 
@@ -185,10 +187,12 @@ Gate Bを満たします。エージェント固有コードより先に、Pytho
 py-ai inspect input.ai --json
 py-ai plan input.ai operations.json
 py-ai apply input.ai operations.json -o output.ai
-py-ai validate output.ai --profile illustrator
-py-ai diff input.ai output.ai --semantic --visual
+py-ai validate output.ai
+py-ai diff input.ai output.ai --semantic
 py-ai render output.ai -o preview.png
 ```
+
+`render`とvisual diff、高度selectorは未実装です。C1完了にはこれらを追加し、Gate B全体の終了条件を再監査します。
 
 ### C2. Codex skill / plugin
 
@@ -252,11 +256,10 @@ py-ai-core ----------------> 他の層へ依存しない
 
 ## 現在の推奨着手順
 
-1. Gate A / A1のsource spanを複数`Tx` textとcontainerへ拡張する
-2. typed patchをcontainer translateへ拡張する
-3. B1のimage crop・link診断を並行実装
-4. Gate B / C1のselector、dry-run、impact report
-5. A2のmodern AI reader縦切り
-6. CLIが安定してからC2のCodex skill/plugin
+1. Gate B / C1へraster/PDF previewとvisual diffを追加する
+2. 実利用fixtureをもとにname、bounds、hierarchy selectorを段階的に追加する
+3. B1のimage crop・link診断を並行実装する
+4. A2のmodern AI reader縦切りへ進む
+5. C1のAPI/CLI境界を固定できた後にC2のCodex skill/pluginへ進む
 
 Phase 0の詳細な実機試験記録は[Phase 0の実装状況](phase0-status.md)と[Illustrator適合試験](illustrator-testing.md)へ残します。

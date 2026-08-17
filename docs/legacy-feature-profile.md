@@ -45,6 +45,12 @@
 4. Discard: `loss_policy="discard"`だけが、診断済み/未対応source dataを捨てる明示policyです。既定では拒否します。
 5. Semantic diff: 安定IDでnodeを対応付け、field変更、追加、削除、stacking変更を別々に報告します。
 
+## Safe edit CLIとの境界
+
+`py-ai plan` / `apply`はこのprofileのtyped local patchだけを公開operationへ束ねます。対応operationはfill、stroke、単一`Tx` text、path/container translate、linked image sourceであり、profileのsemantic reader/writer subsetを拡張しません。selector保証も現時点では`type + id`だけです。
+
+plannerは現在IRからtyped operationのexpected valueとcontainer member集合を導出し、unsupported diagnosticが変更spanと交差する場合は停止します。交差しないunsupported dataはbyte-preservingで保持し、入力classificationを`convertible`へ格上げしません。apply後は出力を再読込し、replacement span外のbytesと、operationごとに許可されたsemantic fieldだけが変化したことを検証します。name / bounds / hierarchy selector、preview / visual diff、modern AI編集はこのprofileの保証対象外です。
+
 ## Illustrator適合範囲
 
 現時点の正式サポート対象はmacOS上のAdobe Illustrator 2026（30.7.0）です。AI7/AI8互換open/save、native materialization、PDF-compatible native AI再openについて、fixture、font、保存option、既知advisory lossを[Illustrator適合試験](illustrator-testing.md)に記録しています。

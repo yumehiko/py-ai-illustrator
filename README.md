@@ -2,7 +2,7 @@
 
 Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Python オブジェクトとして読み取り・編集・書き出すプロジェクトです。
 
-現在は Phase 0（技術スパイク）です。次の小さな縦切りが動作します。
+Gate AのTrusted Legacy Conversionと、Gate B / C1の安全編集CLI最小縦切りが動作します。
 
 - 内容に基づく legacy AI / PDF-compatible AI / PDF / EPS の形式判定
 - 基本的な document / named artboard / layer / path / Bézier handle / RGB・CMYK process color の Python IR
@@ -23,7 +23,8 @@ Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Pyth
 - `document + source + coverage + diagnostics`を返すlegacy reader resultとoperator/resource互換性レポート
 - 未対応source featureを含むIR再serializeを既定で拒否する明示的loss policy
 - 公開仕様に沿った Illustrator 7 互換サブセットと JSON IR の往復変換
-- `inspect` / `export` / `validate` / `test-illustrator` CLI
+- `inspect` / `plan` / `apply` / `validate` / semantic `diff` CLI
+- `type + id` selector、request schema、dry-run impact report、semantic impact検証
 - 対応範囲の意味的 round-trip テスト
 - Illustrator 30.7.0との双方向fixture実機適合試験
 - Python生成AIをIllustratorで再保存してPython IRへ戻す完全往復試験
@@ -91,6 +92,54 @@ uv run ruff check .
 ```
 
 コアパッケージの実行時依存は現在ゼロです。GPL-2.0-or-later の `inkai` は先行実装の比較・検証対象ですが、コア依存には含めていません。
+
+## 既存legacy AIの安全編集CLI
+
+公開operation schemaは [docs/operation-schema.json](docs/operation-schema.json) です。現在のselector保証は`type + id`だけで、0件・複数件、またはoperationとtarget typeが一致しない場合は停止します。Path全点、現在色、text本文、container member集合などの内部preconditionはJSONへ手書きせず、plannerが現在のIRから導出します。
+
+```json
+{
+  "schema_version": 1,
+  "operations": [
+    {
+      "op": "replace_text",
+      "selector": {"type": "text", "id": "headline"},
+      "text": "New heading"
+    },
+    {
+      "op": "set_fill",
+      "selector": {"type": "path", "id": "logo-mark"},
+      "color": {"red": 1.0, "green": 0.3, "blue": 0.0}
+    },
+    {
+      "op": "translate",
+      "selector": {"type": "group", "id": "cta"},
+      "dx": 12,
+      "dy": 0
+    },
+    {
+      "op": "replace_linked_image_source",
+      "selector": {"type": "linked_image", "id": "hero"},
+      "source": "Links/hero-new.png"
+    }
+  ]
+}
+```
+
+```bash
+# exact selector候補とcompatibilityを確認
+uv run py-ai inspect input.ai --json
+
+# sourceは変更せず、解決target、before/after、precondition、span、想定diffをJSON出力
+uv run py-ai plan input.ai operations.json
+
+# 入力と既存出力は上書きしない。全操作をatomicに適用して再読込・意味検証
+uv run py-ai apply input.ai operations.json -o output.ai
+uv run py-ai validate output.ai
+uv run py-ai diff input.ai output.ai --semantic
+```
+
+`operations.json`には任意byte replacementを指定できません。必要ならplanが返す`source_sha256`をmanifestの同名fieldへ入れ、後続applyでstale inputを拒否できます。applyはreplacement span外のbyte一致と、操作ごとに許可したfieldだけがsemantic diffへ現れることを検証してから成功を返します。preview / visual diffと、name・bounds・hierarchy selectorはGate Bの残項目です。
 
 未知operatorを保持する次段階の基盤として、元bytesと改行をそのまま持つ読み取り専用source mapを公開しています。
 

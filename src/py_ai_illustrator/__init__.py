@@ -28,6 +28,19 @@ from .compatibility import (
     LegacyParseCoverage,
     LegacyReadResult,
 )
+from .editing import (
+    LegacyEditPlan,
+    OperationManifest,
+    OperationRequest,
+    OperationRequestError,
+    Selector,
+    SelectorResolver,
+    apply_edit,
+    apply_edit_plan,
+    inspect_editable_legacy,
+    plan_edit,
+    unexpected_semantic_differences,
+)
 from .format import FileFormat, FormatReport, inspect_file
 from .legacy import (
     LegacyPatchPlan,
@@ -94,6 +107,7 @@ __all__ = [
     "LinkedImage",
     "LegacyLineToken",
     "LegacyDiagnostic",
+    "LegacyEditPlan",
     "LegacyFeatureOccurrence",
     "LegacyFieldOrigin",
     "LegacyNodeOrigin",
@@ -101,6 +115,9 @@ __all__ = [
     "LegacyParseCoverage",
     "LegacyReadResult",
     "LegacySource",
+    "OperationManifest",
+    "OperationRequest",
+    "OperationRequestError",
     "Path",
     "PackagedLink",
     "Point",
@@ -116,14 +133,19 @@ __all__ = [
     "SetPathStroke",
     "SemanticDiff",
     "SemanticDifference",
+    "Selector",
+    "SelectorResolver",
     "Table",
     "TableColumn",
     "TableStyle",
     "TranslateContainer",
     "TranslatePath",
+    "apply_edit",
+    "apply_edit_plan",
     "apply_legacy_patch",
     "ellipse_path",
     "inspect_file",
+    "inspect_editable_legacy",
     "iter_linked_images",
     "package_linked_images",
     "patch_container_translate",
@@ -134,6 +156,7 @@ __all__ = [
     "patch_legacy",
     "patch_text",
     "plan_legacy_patch",
+    "plan_edit",
     "polyline_path",
     "rectangle_path",
     "read_ai7",
@@ -144,6 +167,7 @@ __all__ = [
     "transform_path",
     "transform_text",
     "tokenize_legacy",
+    "unexpected_semantic_differences",
 ]
 
 __version__ = "0.1.0.dev0"

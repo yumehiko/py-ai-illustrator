@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
 from typing import Any
 
+from .editing import apply_edit_plan, inspect_editable_legacy, plan_edit
 from .format import FileFormat, inspect_file
 from .illustrator import (
     list_illustrator_fonts,
@@ -18,10 +20,11 @@ from .illustrator import (
 )
 from .legacy import UnsupportedLegacyFeature, dump_ai7, read_ai7
 from .model import Document
+from .semantic import semantic_diff
 
 
 def _write_json(data: Any, destination: Path | None) -> None:
-    payload = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+    payload = json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     if destination is None:
         sys.stdout.write(payload)
     else:
@@ -31,7 +34,10 @@ def _write_json(data: Any, destination: Path | None) -> None:
 def _inspect(args: argparse.Namespace) -> int:
     report = inspect_file(args.input)
     if args.json:
-        _write_json(report.to_dict(), None)
+        output = report.to_dict()
+        if report.format is FileFormat.LEGACY_AI:
+            output.update(inspect_editable_legacy(args.input))
+        _write_json(output, None)
     else:
         print(f"format: {report.format.value}")
         print(f"size: {report.size_bytes} bytes")
@@ -40,6 +46,58 @@ def _inspect(args: argparse.Namespace) -> int:
             print("markers: " + ", ".join(report.illustrator_markers))
         for note in report.notes:
             print(f"note: {note}")
+    return 0
+
+
+def _read_request(path: str) -> object:
+    with Path(path).open(encoding="utf-8") as stream:
+        return json.load(stream)
+
+
+def _plan(args: argparse.Namespace) -> int:
+    plan = plan_edit(args.input, _read_request(args.operations))
+    _write_json(plan.to_dict(), None)
+    return 0 if plan.applicable else 1
+
+
+def _apply(args: argparse.Namespace) -> int:
+    plan = plan_edit(args.input, _read_request(args.operations))
+    result = apply_edit_plan(plan, args.output)
+    result["plan"] = plan.to_dict()
+    _write_json(result, None)
+    return 0 if result["applied"] else 1
+
+
+def _diff(args: argparse.Namespace) -> int:
+    before_report = inspect_file(args.before)
+    after_report = inspect_file(args.after)
+    if before_report.format is not FileFormat.LEGACY_AI:
+        raise UnsupportedLegacyFeature(
+            f"Semantic diff supports legacy_ai only; before is {before_report.format.value}."
+        )
+    if after_report.format is not FileFormat.LEGACY_AI:
+        raise UnsupportedLegacyFeature(
+            f"Semantic diff supports legacy_ai only; after is {after_report.format.value}."
+        )
+    before = read_ai7(args.before)
+    after = read_ai7(args.after)
+    difference = semantic_diff(before.document, after.document)
+    _write_json(
+        {
+            "before": {
+                "path": args.before,
+                "format": before_report.format.value,
+                "source_sha256": hashlib.sha256(before.source.data).hexdigest(),
+            },
+            "after": {
+                "path": args.after,
+                "format": after_report.format.value,
+                "source_sha256": hashlib.sha256(after.source.data).hexdigest(),
+            },
+            "semantic_diff": difference.to_dict(),
+        },
+        None,
+    )
     return 0
 
 
@@ -192,6 +250,27 @@ def build_parser() -> argparse.ArgumentParser:
         help="allow JSON export that omits diagnosed unsupported source features",
     )
     export_parser.set_defaults(handler=_export)
+
+    plan_parser = subparsers.add_parser(
+        "plan", help="resolve and dry-run a safe legacy edit request"
+    )
+    plan_parser.add_argument("input")
+    plan_parser.add_argument("operations")
+    plan_parser.set_defaults(handler=_plan)
+
+    apply_parser = subparsers.add_parser(
+        "apply", help="atomically apply a safe legacy edit request to a new file"
+    )
+    apply_parser.add_argument("input")
+    apply_parser.add_argument("operations")
+    apply_parser.add_argument("-o", "--output", required=True)
+    apply_parser.set_defaults(handler=_apply)
+
+    diff_parser = subparsers.add_parser("diff", help="compare two supported AI documents")
+    diff_parser.add_argument("before")
+    diff_parser.add_argument("after")
+    diff_parser.add_argument("--semantic", action="store_true", required=True)
+    diff_parser.set_defaults(handler=_diff)
 
     validate_parser = subparsers.add_parser("validate", help="run available structural checks")
     validate_parser.add_argument("input")

@@ -1,0 +1,113 @@
+{
+  "$id": "https://py-ai-illustrator.local/schemas/legacy-edit-request-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "operations": {
+      "items": {
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "color": { "$ref": "#/$defs/processColor" },
+              "op": { "const": "set_fill" },
+              "selector": { "$ref": "#/$defs/selector" }
+            },
+            "required": ["op", "selector", "color"],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "color": { "$ref": "#/$defs/processColor" },
+              "op": { "const": "set_stroke" },
+              "selector": { "$ref": "#/$defs/selector" }
+            },
+            "required": ["op", "selector", "color"],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "op": { "const": "replace_text" },
+              "selector": { "$ref": "#/$defs/selector" },
+              "text": { "type": "string" }
+            },
+            "required": ["op", "selector", "text"],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "dx": { "type": "number" },
+              "dy": { "type": "number" },
+              "op": { "const": "translate" },
+              "selector": { "$ref": "#/$defs/selector" }
+            },
+            "required": ["op", "selector", "dx", "dy"],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "op": { "const": "replace_linked_image_source" },
+              "selector": { "$ref": "#/$defs/selector" },
+              "source": { "minLength": 1, "type": "string" }
+            },
+            "required": ["op", "selector", "source"],
+            "type": "object"
+          }
+        ]
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "schema_version": { "const": 1 },
+    "source_sha256": { "pattern": "^[0-9a-f]{64}$", "type": "string" }
+  },
+  "required": ["schema_version", "operations"],
+  "type": "object",
+  "$defs": {
+    "cmyk": {
+      "additionalProperties": false,
+      "properties": {
+        "black": { "maximum": 1, "minimum": 0, "type": "number" },
+        "cyan": { "maximum": 1, "minimum": 0, "type": "number" },
+        "magenta": { "maximum": 1, "minimum": 0, "type": "number" },
+        "yellow": { "maximum": 1, "minimum": 0, "type": "number" }
+      },
+      "required": ["cyan", "magenta", "yellow", "black"],
+      "type": "object"
+    },
+    "processColor": { "oneOf": [{ "$ref": "#/$defs/rgb" }, { "$ref": "#/$defs/cmyk" }] },
+    "rgb": {
+      "additionalProperties": false,
+      "properties": {
+        "blue": { "maximum": 1, "minimum": 0, "type": "number" },
+        "green": { "maximum": 1, "minimum": 0, "type": "number" },
+        "red": { "maximum": 1, "minimum": 0, "type": "number" }
+      },
+      "required": ["red", "green", "blue"],
+      "type": "object"
+    },
+    "selector": {
+      "additionalProperties": false,
+      "properties": {
+        "id": { "minLength": 1, "type": "string" },
+        "type": {
+          "enum": [
+            "path",
+            "text",
+            "linked_image",
+            "layer",
+            "group",
+            "compound_path",
+            "clipping_group"
+          ]
+        }
+      },
+      "required": ["type", "id"],
+      "type": "object"
+    }
+  }
+}

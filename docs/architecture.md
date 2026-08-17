@@ -133,17 +133,51 @@ py-ai render output.ai -o preview.png
 py-ai diff before.ai after.ai --semantic --visual
 ```
 
-`changes.json` は任意コードではなく、検証可能な操作列にします。
+operation JSONは任意コードやbyte replacementではなく、version付きの検証可能な操作列です。schemaは[`operation-schema.json`](operation-schema.json)を正とします。
 
 ```json
 {
+  "schema_version": 1,
   "operations": [
-    {"op": "set_fill", "target": {"id": "logo-mark"}, "color": "#FF4D00"},
-    {"op": "translate", "target": {"layer": "CTA"}, "dx": 12, "dy": 0},
-    {"op": "replace_text", "target": {"name": "headline"}, "text": "New title"}
+    {
+      "op": "set_fill",
+      "selector": {"type": "path", "id": "logo-mark"},
+      "color": {"red": 1.0, "green": 0.3, "blue": 0.0}
+    },
+    {
+      "op": "translate",
+      "selector": {"type": "group", "id": "cta"},
+      "dx": 12,
+      "dy": 0
+    },
+    {
+      "op": "replace_text",
+      "selector": {"type": "text", "id": "headline"},
+      "text": "New title"
+    }
   ]
 }
 ```
+
+### Safe editの責務境界
+
+```text
+operation request
+  -> schema validation
+  -> selector resolver (現在は exact type + stable id)
+  -> typed operation + IR由来precondition
+  -> LegacyPatchPlan (source SHA-256 + non-overlapping spans)
+  -> byte-preserving apply
+  -> output re-read / compatibility validation
+  -> actual semantic diff
+  -> operation別allowed impactとの照合
+```
+
+request層は利用者が指定したafter valueだけを扱い、Path全点、現在のfill / stroke / text / image source、container leaf member集合を受け取りません。resolver/plannerが一意な現在nodeからそれらを導出し、既存typed operationへ渡します。selectorが0件または複数件、target type不一致、unsupported diagnosticとのspan交差、source precondition不一致、operation間span競合のいずれかがあれば書き込み前に停止します。
+
+planはpatchをメモリ上で適用・再読込し、想定semantic diffまで生成します。applyは同じplanを正確なsource SHA-256に対して実行し、別名出力を再読込します。`set_fill`は対象pathのfill、`set_stroke`はstroke、`replace_text`はtext、path/containerの`translate`は対象leafのgeometry/position、linked image差し替えはsourceだけを許可します。ID、名前、stacking、未指定style等の差分は成功扱いにしません。
+
+高度なname / bounds / hierarchy selectorはresolverへ追加し、request parserやtyped patchへ探索fallbackを混在させません。preview / visual diffもsemantic検証後の独立validatorとして追加します。
 
 エージェント用プラグインは薄い adapter とし、次を担当します。
 
