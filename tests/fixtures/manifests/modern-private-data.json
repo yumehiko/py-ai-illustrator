@@ -1,9 +1,15 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "license": "MIT",
   "provenance": {
-    "kind": "project-authored-generated-fixture",
-    "generator": "tools/generate_modern_ai_fixture.py",
+    "generated_fixture": {
+      "kind": "project-authored-generated-fixture",
+      "generator": "tools/generate_modern_ai_fixture.py"
+    },
+    "real_profiles": {
+      "kind": "project-authored-fixtures-resaved-by-illustrator",
+      "illustrator_version": "30.7.0"
+    },
     "third_party_sample_bytes": false
   },
   "fixture": "tests/fixtures/generated/modern-private-data.ai",
@@ -36,13 +42,112 @@
       "section_names": ["NonPrinting"]
     }
   ],
-  "real_generated_profile": {
-    "fixture": "examples/styled-table.native.ai",
-    "illustrator_version": "30.7.0",
-    "source_sha256": "8a10250ed188e64b3abf27ad29c32d77b63ccdc2fb0716ba65ac6c8f466b3581",
-    "segment_count": 1,
-    "filter": "AI24_ZStandard",
-    "raw_sha256": "785501c2199eb519d6c5622c2ccd90f8fa41c3e597c365701b9ea201189468c4",
-    "decoded_sha256": "907b94cc154ca75bc8a8839f6b812b87f1e2117d37221407923aaa997fb4fd24"
+  "real_generated_profiles": {
+    "styled_table": {
+      "fixture": "examples/styled-table.native.ai",
+      "illustrator_version": "30.7.0",
+      "source_sha256": "8a10250ed188e64b3abf27ad29c32d77b63ccdc2fb0716ba65ac6c8f466b3581",
+      "source_size": 120108,
+      "segment_count": 1,
+      "filter": "AI24_ZStandard",
+      "raw_size": 45508,
+      "raw_sha256": "785501c2199eb519d6c5622c2ccd90f8fa41c3e597c365701b9ea201189468c4",
+      "decoded_size": 225929,
+      "decoded_sha256": "907b94cc154ca75bc8a8839f6b812b87f1e2117d37221407923aaa997fb4fd24",
+      "semantic": {
+        "layers": 1,
+        "paths": 16,
+        "groups": 0,
+        "compound_paths": 0,
+        "clipping_groups": 0,
+        "text_frames": 0,
+        "partial_text": 20
+      }
+    },
+    "campaign_banner": {
+      "fixture": "examples/campaign-variants.native.ai",
+      "illustrator_version": "30.7.0",
+      "source_sha256": "774690c54047138321c10b9813bc1de25854ebbd9931e665c7e3a0aa3abf6ae2",
+      "source_size": 121342,
+      "segment_count": 1,
+      "filter": "AI24_ZStandard",
+      "raw_size": 48938,
+      "raw_sha256": "9160f55635d0944e2bf7b73843e768d58ea582d1ef16e5b805a76366858a68b4",
+      "decoded_size": 228446,
+      "decoded_sha256": "db722fdcf7eaa3f746a9bf8d0b12a0dc0141752f7a6686efae14879e6c0647e9",
+      "semantic": {
+        "layers": 1,
+        "paths": 9,
+        "groups": 3,
+        "compound_paths": 0,
+        "clipping_groups": 0,
+        "text_frames": 0,
+        "partial_text": 19
+      }
+    },
+    "nested_packaging_groups": {
+      "fixture": "examples/packaging-labels.native.ai",
+      "illustrator_version": "30.7.0",
+      "source_sha256": "be6b1beb37af97ad1558d13fcc09752ac040f5edab97dabc1494fdaad0c4f25e",
+      "source_size": 132868,
+      "segment_count": 1,
+      "filter": "AI24_ZStandard",
+      "raw_size": 50098,
+      "raw_sha256": "153e94e2b61d97603450362a72c54f563facc913eb789991b6b80b9d1bd21a70",
+      "decoded_size": 232330,
+      "decoded_sha256": "4e305aeb54621e23b1dc8d578ffb1ac7f8aa9763a78aca3b55418fdae3004daf",
+      "semantic": {
+        "layers": 1,
+        "paths": 14,
+        "groups": 5,
+        "compound_paths": 0,
+        "clipping_groups": 0,
+        "text_frames": 0,
+        "partial_text": 20
+      }
+    },
+    "cmyk_curve": {
+      "fixture": "examples/cmyk-curve.native.ai",
+      "illustrator_version": "30.7.0",
+      "source_sha256": "61ca6022171f91827ec9d5e48884b663c89c6176451aa97a8d6bd91dc3ecf72f",
+      "source_size": 50737,
+      "segment_count": 1,
+      "filter": "AI24_ZStandard",
+      "raw_size": 31558,
+      "raw_sha256": "816f402ec9d2f82e611a45d73bc0e37977690e938b6ebb3c4462056424f69379",
+      "decoded_size": 174042,
+      "decoded_sha256": "fab74ca2cbd55dd7da067fc367eb4761e97d621234f73f0f25daf63fa03b5f3c",
+      "semantic": {
+        "layers": 1,
+        "paths": 1,
+        "groups": 0,
+        "compound_paths": 0,
+        "clipping_groups": 0,
+        "text_frames": 0,
+        "partial_text": 0
+      }
+    },
+    "mixed_stack": {
+      "fixture": "examples/mixed-stack.native.ai",
+      "illustrator_version": "30.7.0",
+      "source_sha256": "848a94044588e7794a202a43f0d960ef29dbb09cb321f6945e96c751f3392562",
+      "source_size": 53482,
+      "segment_count": 1,
+      "filter": "AI24_ZStandard",
+      "raw_size": 31989,
+      "raw_sha256": "ab0421353d69c7d8741f4eb89f6e43b483541dfd443e87d86f11e304427f65ed",
+      "decoded_size": 175141,
+      "decoded_sha256": "cddf478fe2e1d91e8f1cd2f131e3fb60cad451ccd690e7da7742e8934d53528a",
+      "semantic": {
+        "layers": 1,
+        "paths": 5,
+        "groups": 0,
+        "compound_paths": 1,
+        "clipping_groups": 1,
+        "text_frames": 0,
+        "partial_text": 0,
+        "layer_item_order": ["clipping_group", "path", "compound_path"]
+      }
+    }
   }
 }

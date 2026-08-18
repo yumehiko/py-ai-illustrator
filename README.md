@@ -2,13 +2,13 @@
 
 Adobe Illustrator の起動を前提にせず、Illustrator ファイルを Python オブジェクトとして読み取り・編集・書き出すプロジェクトです。
 
-Gate AのTrusted Legacy Conversion、Gate B / C1の安全編集CLI最小縦切り、A2のmodern AI read-only semantic縦切りが動作します。
+Gate AのTrusted Legacy Conversion、Gate B / C1の安全編集CLI最小縦切り、A2のmodern AI read-only semantic profile v2が動作します。
 
 - 内容に基づく legacy AI / PDF-compatible AI / PDF / EPS の形式判定
 - bounded PDF object readerによる`PieceInfo / Illustrator / PrivateData`参照解決
 - modern AI PrivateDataのsegment順序・raw span・filter・raw/decoded SHA-256保持
 - Flate / Illustrator zstd streamの上限制御付き展開とlossless token/section索引
-- modern decoded bytesのexact-span lexer / CST、layer / path / RGB paint投影、partial AI11 text保持
+- modern decoded bytesのexact-span lexer / CST、layer / group / compound / clipping、CMYK/RGB、Bézier/closepath投影、証拠付きpartial AI11 text保持
 - 基本的な document / named artboard / layer / path / Bézier handle / RGB・CMYK process color の Python IR
 - dash pattern・offset・cap・join・miter limitを持つnative stroke style
 - 複数subpathとpolarityを保持するcompound path IR
@@ -99,7 +99,7 @@ modern AIのzstd展開にはBSDライセンスの`zstandard` packageを使用し
 
 ## Modern AIのread-only診断
 
-PDF-compatible modern AIでは、PDF表示内容とIllustratorの編集用PrivateDataを別物として扱います。`inspect`と`validate`は、container読取、PrivateData抽出、semantic対応を独立したJSON fieldで返します。
+PDF-compatible modern AIでは、PDF表示内容とIllustratorの編集用PrivateDataを別物として扱います。profile v2の`inspect`と`validate`は、container読取、PrivateData抽出、semantic対応を独立したJSON fieldで返し、recursive path / group / compound / clipping / text / partial数も報告します。
 
 ```bash
 uv run py-ai inspect input.ai --json
@@ -122,7 +122,7 @@ for segment in result.segments:
     print(segment.decoded_sha256, len(segment.tokens), len(segment.sections))
 ```
 
-抽出成功時も`safe_to_reserialize`は`false`です。通常PDFは`ordinary_pdf`、semantic最小縦切りを適用したAIは`read_only_semantic_partial`、PrivateData抽出だけのAIは`read_only_private_data`、参照・filter・展開の失敗は`unconvertible`として区別します。未終端pathはEndLayer、新しいmoveto、segment終端でpartial nodeとして保持し、AI11 text documentの深すぎる入れ子や構文エラーはsource span付きdiagnosticにします。対応PDF構造、filter、resource limit、fixture manifestの詳細は[Modern AI read-only feature profile](docs/modern-ai-read-profile.md)を参照してください。
+抽出成功時も`safe_to_reserialize`は`false`です。通常PDFは`ordinary_pdf`、semantic readerを適用したAIは`read_only_semantic_partial`、PrivateData抽出だけのAIは`read_only_private_data`、参照・filter・展開の失敗は`unconvertible`として区別します。未終端path/containerは境界でpartial nodeとして保持し、AI11 text documentの深すぎる入れ子や構文エラーはsource span付きdiagnosticにします。実機AI11の内部placement matrixはstoryとのsource-local対応と座標基準を証明できないため推測せず、本文・identity・親stack位置をpartialとして返します。source内の`py-ai-text` noteがdocument座標・font・fillを完全に明示する場合だけ`TextFrame`化します。対応PDF構造、operator、resource limit、fixture manifestの詳細は[Modern AI read-only feature profile](docs/modern-ai-read-profile.md)を参照してください。
 
 ## 既存legacy AIの安全編集CLI
 

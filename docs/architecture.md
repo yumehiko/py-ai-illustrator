@@ -80,7 +80,7 @@ PlacedImage
 
 ### modern AI
 
-最初のread-only縦切りは実装済みです。
+read-only profile v2は次のpipelineで実装済みです。
 
 1. bounded PDF readerで通常indirect objectの必要subsetを読む
 2. direct / indirect referenceをたどり`PieceInfo / Illustrator / Private`を解決する
@@ -89,13 +89,16 @@ PlacedImage
 5. raw / decoded bytesとSHA-256、filter chain、diagnosticを`ModernAIReadResult`へ保持する
 6. decoded bytes全体を物理行tokenとbegin/end section spanでlosslessに索引化する
 7. project-owned lexer / CSTで全lexemeとoperator / operandのexact decoded-byte spanを保持する
-8. layer、直線path、RGB fill / strokeを共通`Document` IRへ投影する
+8. layerと通常pathの基本geometry / paintを共通`Document` IRへ投影する
 9. AI11 textのstory本文とidentityをbounded nestingで読み、未証明の配置fieldと構文エラーをtyped partial / diagnosticにする
 10. EndLayer、新しいmoveto、segment終端に残るpathをpartial nodeとして退避する
-11. source由来を含むsemantic node IDの衝突を決定的に解消する
-12. coverage、unknown operator / statement span、semantic diagnosticを返す
+11. `u/U`、`*u/*U`、`q/Q + h/H + W + n`を再帰containerへ投影し、異種stackと`q/Q`のpaint state scopeを保持する
+12. `k/K`と7成分`Xa/XA`をCMYKへ、`C/c/v/y`とclose情報をBézier pathへ投影する
+13. textはsource-localな配置・font・fillが揃う場合だけ`TextFrame`化し、それ以外は親ID/item index付きpartialにする
+14. source由来を含む全階層semantic node IDの衝突を決定的に解消する
+15. recursive coverage、unknown operator / statement span、semantic diagnosticを返す
 
-この結果は`container_status`、`private_data_status`、`semantic_status`を分離します。Illustrator 30.7.0実機fixtureは未知operatorと配置未対応textを含むため`semantic_status=partial`です。元decoded bytesはsemantic結果と独立して保持されます。object/xref stream等を含む汎用PDF全体、曲線・CMYK・複合object等へのsemantic拡張、PDF preview/fallback、不一致診断は後続作業です。正確な保証境界は[Modern AI read-only feature profile](modern-ai-read-profile.md)に定義します。
+この結果は`container_status`、`private_data_status`、`semantic_status`を分離します。Illustrator 30.7.0実機fixtureでbanner group、CMYK Bézier、compound / clipping混在stackを検証済みです。未知operatorと配置未証明textを含むfixtureは`semantic_status=partial`ですが、元decoded bytes、unknown statement、partial nodeはsemantic結果と独立して保持されます。object/xref stream等を含む汎用PDF全体、PDF preview/fallback、writer、Layer 2/3は対象外です。正確な保証境界は[Modern AI read-only feature profile](modern-ai-read-profile.md)に定義します。
 
 Decision Gate Lでは、現行のbounded / source-preserving readerをauthoritative layerとして維持し、そのdecoded PrivateDataを読むlexer / CST / semantic reducerをproject-owned実装とする方針を決めました。operator / operandのexact spanを保持し、証明可能にsourceへ対応できないfieldはpatch対象にしません。`inkai`は任意の隔離comparison oracleに限定し、runtime architectureへ含めません。詳細は[ADR 0001](adr/0001-modern-semantic-reader-strategy.md)を参照してください。
 

@@ -52,6 +52,22 @@ def _inspect(args: argparse.Namespace) -> int:
             print(f"container-read: {modern.container_status}")
             print(f"private-data: {modern.private_data_status}")
             print(f"semantic: {modern.semantic_status}")
+            if modern.semantic is not None:
+                coverage = modern.semantic.coverage
+                print("semantic-profile: modern-ai-semantic-read-only-v2")
+                print(
+                    "artwork: "
+                    f"layers={coverage.projected_layer_count} "
+                    f"paths={coverage.projected_path_count} "
+                    f"groups={coverage.projected_group_count} "
+                    f"compound-paths={coverage.projected_compound_path_count} "
+                    f"clipping-groups={coverage.projected_clipping_group_count} "
+                    f"text={coverage.projected_text_count}"
+                )
+                print(
+                    f"partial-nodes: {coverage.partial_node_count} "
+                    f"(text={coverage.partial_text_count})"
+                )
         for note in report.notes:
             print(f"note: {note}")
     return 0

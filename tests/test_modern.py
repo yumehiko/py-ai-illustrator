@@ -127,7 +127,7 @@ def test_modern_lexer_and_cst_keep_exact_operator_and_operand_spans() -> None:
 
 
 def test_real_illustrator_generated_zstd_fixture_matches_profile() -> None:
-    manifest = json.loads(MANIFEST.read_text())["real_generated_profile"]
+    manifest = json.loads(MANIFEST.read_text())["real_generated_profiles"]["styled_table"]
     result = read_modern_ai(ROOT / manifest["fixture"])
 
     assert result.source_sha256 == manifest["source_sha256"]
@@ -158,21 +158,311 @@ def test_real_illustrator_generated_zstd_fixture_matches_profile() -> None:
         (48.0, 262.0),
     ]
     assert header.fill is not None
-    assert (header.fill.red, header.fill.green, header.fill.blue) == (
+    assert (
+        header.fill.cyan,
+        header.fill.magenta,
+        header.fill.yellow,
+        header.fill.black,
+    ) == (
+        0.988311588764191,
+        0.941435873508453,
+        0.599298059940338,
+        0.422369718551636,
+    )
+    assert layer.paths[5].stroke_width == 0.9
+    fill_evidence = header.unknown["modern_style_spans"]["fill"]
+    assert fill_evidence["alternate_rgb"] == [
         0.058823529411765,
         0.12156862745098,
         0.231372549019608,
+    ]
+    assert segment.decoded_bytes[fill_evidence["start"] : fill_evidence["end"]].endswith(
+        b"Xa"
     )
-    assert layer.paths[5].stroke_width == 0.9
     first_text = semantic.partial_nodes[0]
     assert first_text.kind == "text"
     assert first_text.id == "subscription-comparison.header.plan"
     assert first_text.known_fields == {"story_index": 19, "text": "Plan"}
-    assert first_text.missing_fields == ("x", "y")
+    assert first_text.missing_fields == (
+        "coordinate_space",
+        "x",
+        "y",
+        "font_size",
+        "font_name",
+        "fill",
+    )
+    assert (first_text.parent_kind, first_text.parent_id, first_text.item_index) == (
+        "layer",
+        "Subscription_table",
+        16,
+    )
     assert {diagnostic.code for diagnostic in result.diagnostics} >= {
         "unknown_modern_operators",
         "partial_modern_text",
     }
+
+
+def test_all_real_v2_fixtures_match_hash_and_semantic_manifest() -> None:
+    profiles = json.loads(MANIFEST.read_text())["real_generated_profiles"]
+    for profile in profiles.values():
+        result = read_modern_ai(ROOT / profile["fixture"])
+        assert result.source_sha256 == profile["source_sha256"]
+        assert len(result.source_bytes or b"") == profile["source_size"]
+        assert len(result.segments) == profile["segment_count"]
+        segment = result.segments[0]
+        assert segment.filters == (profile["filter"],)
+        assert len(segment.raw_bytes) == profile["raw_size"]
+        assert segment.raw_sha256 == profile["raw_sha256"]
+        assert len(segment.decoded_bytes or b"") == profile["decoded_size"]
+        assert segment.decoded_sha256 == profile["decoded_sha256"]
+        assert result.semantic is not None
+        coverage = result.semantic.coverage
+        expected = profile["semantic"]
+        assert coverage.projected_layer_count == expected["layers"]
+        assert coverage.projected_path_count == expected["paths"]
+        assert coverage.projected_group_count == expected["groups"]
+        assert coverage.projected_compound_path_count == expected["compound_paths"]
+        assert coverage.projected_clipping_group_count == expected["clipping_groups"]
+        assert coverage.projected_text_count == expected["text_frames"]
+        assert coverage.partial_text_count == expected["partial_text"]
+
+
+def test_real_cmyk_curve_has_exact_color_and_bezier_source_evidence() -> None:
+    profile = json.loads(MANIFEST.read_text())["real_generated_profiles"]["cmyk_curve"]
+    result = read_modern_ai(ROOT / profile["fixture"])
+    assert result.semantic is not None and result.semantic.document is not None
+    segment = result.segments[0]
+    assert segment.decoded_bytes is not None
+    path = result.semantic.document.layers[0].paths[0]
+
+    assert path.id == "cmyk-curve"
+    assert path.closed is False
+    assert (path.points[0].x, path.points[0].y) == (20.0, 20.0)
+    assert path.points[0].out_handle is not None
+    assert (path.points[0].out_handle.x, path.points[0].out_handle.y) == (20.0, 150.0)
+    assert path.points[1].in_handle is not None
+    assert (path.points[1].in_handle.x, path.points[1].in_handle.y) == (180.0, 50.0)
+    assert path.stroke is not None
+    assert (
+        path.stroke.cyan,
+        path.stroke.magenta,
+        path.stroke.yellow,
+        path.stroke.black,
+    ) == (1.0, 0.25, 0.0, 0.1)
+    stroke_span = path.unknown["modern_style_spans"]["stroke"]
+    assert segment.decoded_bytes[stroke_span["start"] : stroke_span["end"]] == b"1 0.25 0 0.1 K"
+
+
+def test_real_compound_and_clipping_structure_preserves_order_and_exact_spans() -> None:
+    profile = json.loads(MANIFEST.read_text())["real_generated_profiles"]["mixed_stack"]
+    first = read_modern_ai(ROOT / profile["fixture"])
+    second = read_modern_ai(ROOT / profile["fixture"])
+    assert first.to_dict() == second.to_dict()
+    assert first.semantic is not None and first.semantic.document is not None
+    segment = first.segments[0]
+    assert segment.decoded_bytes is not None
+    layer = first.semantic.document.layers[0]
+
+    assert [reference.kind for reference in layer.item_order] == [
+        "clipping_group",
+        "path",
+        "compound_path",
+    ]
+    compound = layer.compound_paths[0]
+    assert [(path.id, path.polarity) for path in compound.paths] == [
+        ("frame-outer", "positive"),
+        ("frame-inner", "negative"),
+    ]
+    clipping = layer.clipping_groups[0]
+    assert clipping.clipping_path.id == "clip-mask"
+    assert clipping.clipping_path.closed is True
+    assert [path.id for path in clipping.paths] == ["clip-content"]
+    clip_span = clipping.unknown["modern_source"]["span"]
+    assert segment.decoded_bytes[clip_span["start"] : clip_span["end"]].startswith(b"q")
+    assert segment.decoded_bytes[clip_span["start"] : clip_span["end"]].endswith(b"Q")
+    mask_span = clipping.clipping_path.unknown["modern_source"]["span"]
+    mask_source = segment.decoded_bytes[mask_span["start"] : mask_span["end"]]
+    assert b"h\rW\rn" in mask_source
+    compound_span = compound.unknown["modern_source"]["span"]
+    compound_source = segment.decoded_bytes[compound_span["start"] : compound_span["end"]]
+    assert compound_source.startswith(b"*u")
+    assert compound_source.endswith(b"*U")
+
+
+def test_real_banner_groups_and_partial_text_are_deterministically_located() -> None:
+    profile = json.loads(MANIFEST.read_text())["real_generated_profiles"]["campaign_banner"]
+    result = read_modern_ai(ROOT / profile["fixture"])
+    assert result.semantic is not None and result.semantic.document is not None
+    layer = result.semantic.document.layers[0]
+
+    assert [reference.kind for reference in layer.item_order] == ["group", "group", "group"]
+    assert [[reference.kind for reference in group.item_order] for group in layer.groups] == [
+        ["path", "path", "path"],
+        ["path", "path", "path"],
+        ["path", "path", "path"],
+    ]
+    first_text = result.semantic.partial_nodes[0]
+    assert first_text.known_fields["text"] == "DESIGN SYSTEMS / WORKSHOP"
+    assert (first_text.parent_kind, first_text.parent_id, first_text.item_index) == (
+        "group",
+        layer.groups[0].id,
+        2,
+    )
+    assert "identity_note_span" in first_text.evidence
+    assert "text_document_span" in first_text.evidence
+    segment = result.segments[0]
+    assert segment.decoded_bytes is not None
+    group_span = layer.groups[0].unknown["modern_source"]["span"]
+    assert segment.decoded_bytes[group_span["start"] : group_span["end"]].startswith(b"u")
+    assert segment.decoded_bytes[group_span["start"] : group_span["end"]].endswith(b"U")
+
+
+def test_real_nested_groups_are_counted_recursively() -> None:
+    profile = json.loads(MANIFEST.read_text())["real_generated_profiles"][
+        "nested_packaging_groups"
+    ]
+    result = read_modern_ai(ROOT / profile["fixture"])
+    assert result.semantic is not None and result.semantic.document is not None
+    layer = result.semantic.document.layers[0]
+
+    assert len(layer.groups) == 3
+    assert [len(group.groups) for group in layer.groups] == [1, 0, 1]
+    assert result.semantic.coverage.projected_group_count == 5
+    assert result.semantic.coverage.projected_path_count == 14
+    assert layer.groups[0].groups[0].paths[0].id == "label-1.badge.background"
+
+
+def test_partial_parent_id_follows_a_source_renamed_group() -> None:
+    note_value = base64.b64encode(json.dumps({"id": "renamed-group"}).encode())
+    payload = (
+        b"%AI5_BeginLayer\n"
+        b"u\n"
+        b"0 0 m\n10 0 L\n"
+        b"U\n"
+        b"%_(py-ai:"
+        + note_value
+        + b") /UnicodeString (AdobeNoteAttribute)\n"
+        b"u\n"
+        b"20 0 m\n30 0 L\n"
+        b"U\n"
+        b"%_(py-ai:"
+        + note_value
+        + b") /UnicodeString (AdobeNoteAttribute)\n"
+        b"%AI5_EndLayer\n"
+    )
+
+    result = read_modern_ai(_single_segment_pdf(payload))
+
+    assert result.semantic is not None and result.semantic.document is not None
+    groups = result.semantic.document.layers[0].groups
+    partials = [item for item in result.semantic.partial_nodes if item.kind == "path"]
+    assert [group.id for group in groups] == ["renamed-group", "renamed-group~2"]
+    assert [partial.parent_id for partial in partials] == [group.id for group in groups]
+
+
+def test_q_and_Q_restore_paint_state_after_a_clipping_group() -> None:
+    payload = (
+        b"%AI5_BeginLayer\n"
+        b"1 0 0 Xa\n"
+        b"q\n"
+        b"0 1 0 Xa\n"
+        b"0 0 m\n10 0 L\n10 10 L\nf\n"
+        b"0 0 m\n10 0 L\n10 10 L\nh\nW\nn\n"
+        b"Q\n"
+        b"20 20 m\n30 20 L\n30 30 L\nf\n"
+        b"%AI5_EndLayer\n"
+    )
+
+    result = read_modern_ai(_single_segment_pdf(payload))
+
+    assert result.semantic is not None and result.semantic.document is not None
+    layer = result.semantic.document.layers[0]
+    clipped = layer.clipping_groups[0].paths[0]
+    outside = layer.paths[0]
+    assert clipped.fill is not None
+    assert (clipped.fill.red, clipped.fill.green, clipped.fill.blue) == (0.0, 1.0, 0.0)
+    assert outside.fill is not None
+    assert (outside.fill.red, outside.fill.green, outside.fill.blue) == (1.0, 0.0, 0.0)
+
+
+def test_text_frame_requires_complete_source_local_placement_and_style_evidence() -> None:
+    text_document = b"/1 << /1 [ << /0 << /0 (Hello\\r) >> >> ] >>"
+    metadata = json.dumps(
+        {
+            "id": "proven-text",
+            "name": "Proven text",
+            "coordinate_space": "document",
+            "x": 12,
+            "y": 34,
+            "font_size": 10,
+            "font_name": "Helvetica",
+            "fill": {"cyan": 0, "magenta": 0, "yellow": 0, "black": 1},
+        },
+        separators=(",", ":"),
+    ).encode()
+    payload = (
+        b"/AI11TextDocument : /ASCII85Decode ,\n%"
+        + base64.a85encode(text_document)
+        + b"~>\n%AI11_EndTextDocument\n%AI5_BeginLayer\n"
+        + b"/AI11Text :\n0 /FreeUndo ,\n0 /FrameIndex ,\n0 /StoryIndex ,\n;\n"
+        + b"%_(py-ai-text:"
+        + metadata
+        + b") /UnicodeString (AdobeNoteAttribute) ,\n%AI5_EndLayer\n"
+    )
+
+    result = read_modern_ai(_single_segment_pdf(payload))
+
+    assert result.semantic is not None and result.semantic.document is not None
+    assert result.semantic.coverage.projected_text_count == 1
+    assert result.semantic.coverage.partial_text_count == 0
+    text = result.semantic.document.layers[0].text_frames[0]
+    assert (text.id, text.text, text.x, text.y, text.font_size) == (
+        "proven-text",
+        "Hello",
+        12.0,
+        34.0,
+        10.0,
+    )
+    assert text.fill.black == 1.0
+    assert text.unknown["modern_source"]["identity_and_placement_note_span"]
+
+
+def test_incomplete_clipping_structure_is_retained_as_an_exact_partial() -> None:
+    payload = (
+        b"%AI5_BeginLayer\nq\n1 0 0 Xa\n"
+        b"0 0 m\n10 0 L\n10 10 L\nf\nQ\n%AI5_EndLayer\n"
+    )
+
+    result = read_modern_ai(_single_segment_pdf(payload))
+
+    assert result.semantic is not None
+    partial = next(
+        item for item in result.semantic.partial_nodes if item.kind == "clipping_group"
+    )
+    assert partial.missing_fields == ("clipping_path",)
+    assert len(partial.known_fields["content_path_ids"]) == 1
+    assert payload[partial.start : partial.end].startswith(b"q")
+    assert payload[partial.start : partial.end].endswith(b"Q")
+    assert "partial_modern_structure" in {
+        diagnostic.code for diagnostic in result.semantic.diagnostics
+    }
+
+
+def test_semantic_hierarchy_nesting_limit_preserves_source_and_reports_error() -> None:
+    payload = b"%AI5_BeginLayer\nu\nu\nU\nU\n%AI5_EndLayer\n"
+
+    result = read_modern_ai(
+        _single_segment_pdf(payload),
+        limits=ModernReadLimits(max_semantic_nesting=2),
+    )
+
+    assert result.segments[0].decoded_bytes == payload
+    diagnostic = next(
+        item for item in result.diagnostics if item.code == "modern_semantic_limit_exceeded"
+    )
+    assert diagnostic.severity == "error"
+    assert diagnostic.segment == "AIPrivateData1"
+    assert "hierarchy nesting exceeds 2" in diagnostic.message
 
 
 def test_ai11_text_document_nesting_limit_becomes_partial_diagnostic() -> None:
@@ -250,6 +540,7 @@ def test_duplicate_projected_node_ids_are_disambiguated_and_order_refs_follow() 
     )
     payload = (
         b"%AI5_BeginLayer\n"
+        b"0 0 0 XA\n"
         b"0 0 m\n10 0 L\nS\n"
         + note
         + b"20 0 m\n30 0 L\nS\n"
@@ -371,8 +662,18 @@ def test_cli_inspect_and_validate_report_three_distinct_support_states(
     assert modern["container"]["status"] == "parsed"
     assert modern["private_data"]["status"] == "extracted"
     assert modern["semantic"]["status"] == "partial"
-    assert modern["semantic"]["profile"] == "modern-ai-semantic-read-only-v1"
+    assert modern["reader_profile"] == "modern-ai-read-only-v2"
+    assert modern["read_only"] is True
+    assert modern["safe_to_reserialize"] is False
+    assert modern["semantic"]["profile"] == "modern-ai-semantic-read-only-v2"
+    assert modern["semantic"]["read_only"] is True
     assert modern["semantic"]["coverage"]["projected_layer_count"] == 1
+
+    assert main(["inspect", str(FIXTURE)]) == 0
+    plain = capsys.readouterr().out
+    assert "semantic-profile: modern-ai-semantic-read-only-v2" in plain
+    assert "artwork: layers=1 paths=0 groups=0" in plain
+    assert "partial-nodes:" in plain
 
     assert main(["validate", str(FIXTURE)]) == 0
     validated = json.loads(capsys.readouterr().out)

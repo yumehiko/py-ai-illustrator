@@ -1,10 +1,10 @@
 # Modern AI read-only feature profile
 
-更新日: 2026-08-17
+更新日: 2026-08-18
 
 ## 保証境界
 
-このprofileは、PDF-compatible modern AIの最初の読み取り専用semantic境界です。入力を変更せず、PDF containerから`/PieceInfo/Illustrator/Private`をたどり、`AIPrivateData*` streamを決定的な順序で抽出・展開・索引化し、証明できるlayer / path / paintだけを共通`Document` IRへ投影します。
+このprofile v2は、PDF-compatible modern AIの実用デザイン向け読み取り専用semantic境界です。入力を変更せず、PDF containerから`/PieceInfo/Illustrator/Private`をたどり、`AIPrivateData*` streamを決定的な順序で抽出・展開・索引化します。その上で、source spanから証明できるlayer、group、通常/compound/clipping path、CMYK/RGB paint、曲線、textだけを共通`Document` IRへ投影します。
 
 次の三状態を混同しません。
 
@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | container読取 | `modern_ai.container.status` | bounded PDF readerが対象containerを構造的に読めた |
 | PrivateData抽出 | `modern_ai.private_data.status` | `absent` / `extracted` / `partial` / `failed` |
-| semantic対応 | `modern_ai.semantic.status` | `unsupported` / `partial` / `supported`。実機profileは未知要素とpartial textを含むため`partial` |
+| semantic対応 | `modern_ai.semantic.status` | `unsupported` / `partial` / `supported`。実機profileはPrivateDataの未知operator、または配置を証明できないtextを含むため`partial` |
 
 `extracted`はmodern AIを編集・再保存できるという意味ではありません。semantic結果が得られても読み取り専用です。writer、patch、PDF表示表現との同期は保証対象外です。
 
@@ -54,20 +54,38 @@ Decision Gate Lの隔離比較では、現行readerが評価modern fixture 2/2�
 
 展開済みbytesを元PDFから独立した入力としてproject-owned lexerへ渡します。lexerのlexeme spanはdecoded bytesを隙間なく覆い、whitespace、comment、literal string、name、number、delimiter、operator、opaque byteを正規化しません。CST statementは各operator tokenと、そのoperatorが消費するoperand tokenのexact `start / end`を保持します。
 
-最小縦切りの対応範囲は次のとおりです。
+profile v2の対応範囲は次のとおりです。
 
 | 項目 | 投影 | 制約 |
 | --- | --- | --- |
 | layer | `Document.layers` | `%AI5_BeginLayer`、`Lb`、`Ln`、`LB`、XMLUIDを認識 |
-| path geometry | `Layer.paths` | `m` / `L` / `C`とpaint終端を認識。2点未満はpartial。paintされないpathも新しい`m`、`%AI5_EndLayer`、segment終端で捨てずにpartial化 |
-| RGB fill / stroke | `Path.fill` / `Path.stroke` | `Xa` / `XA`の明示RGB成分と`w`のみ。未対応paintは推測しない |
-| AI11 text | `semantic.partial_nodes` | ASCII85 text documentを入れ子上限付きで読み、story indexと本文、AdobeNoteAttributeからidentity/nameを保持。absolute placementを証明できないため`TextFrame`を捏造しない |
+| group | `Layer.groups` / `Group.groups` | 実機の`u` / `U`を再帰構造として投影。異種item順は`item_order`、各nodeの親とsource内indexは`unknown.modern_source`に保持 |
+| path geometry | 各containerの`paths` | `m` / `L` / `C` / `c` / `v` / `y`、`h` / `H`、paint終端を認識。Bézier handleを保持し、明示closeまたはpaint operatorのcaseから`closed`を決める |
+| CMYK / RGB paint | `Path.fill` / `Path.stroke` | `k` / `K`、3成分`Xa` / `XA`はRGB、実機の7成分`Xa` / `XA`は先頭4成分をCMYKとして投影し、末尾RGB alternateもsource evidenceに保持。必要色が未証明ならpathをpartial化 |
+| compound path | `CompoundPath` | 実機の`*u` / `*U`とsubpath直前の`D`を読み、component順とpositive / negative polarityを保持 |
+| clipping | `ClippingGroup` | 実機の`q` / `Q`内で、`h` / `H`後の`W` / `W*`と`n`で終わるmaskをcontent pathから分離。実機ではcontentがmaskより先でも順序に依存せず分類し、`q`開始時のfill / stroke / width / polarityを対応する`Q`で復元 |
+| AI11 text | `TextFrame`または`semantic.partial_nodes` | ASCII85 text documentを入れ子上限付きで読み、story indexと本文、AdobeNoteAttributeのidentity/nameを保持。下記の配置証拠を満たす場合だけ`TextFrame`化 |
 
-各投影pathの`unknown.modern_source`はsegment名、object span、各operator spanを持ちます。partial nodeもknown / missing fieldとdecoded spanを持ちます。source metadataまたは生成規則から同じIDが複数nodeへ割り当てられた場合、最初のIDを維持し、後続を`~2`、`~3`のsuffixで一意化して`modern_duplicate_node_id`を返します。`Layer.item_order`も一意化後のpath IDへ同期します。unknown operatorは名前、件数、first spanを、unknown statementはspanとSHA-256を返します。元decoded bytesは引き続き`PrivateDataSegment.decoded_bytes`が唯一の正であり、semantic resultがbytesを置換・破棄することはありません。
+各投影pathの`unknown.modern_source`はsegment名、object span、各geometry operator span、親containerとitem indexを持ちます。`modern_style_spans`はfill、stroke、stroke width、polarityを設定したstatementのexact spanを指します。group / compound / clippingにもopeningからclosingまでのspanとoperator spanがあります。partial nodeはknown / missing field、decoded span、親ID、元stack index、追加のevidence spanを持ちます。
+
+source metadataまたは生成規則から同じIDが複数nodeへ割り当てられた場合、全階層をpreorderで走査し、最初のIDを維持して後続を`~2`、`~3`のsuffixで一意化します。各containerの`item_order`とpartialの親参照は最終node identityから同期し、source noteによる改名と重複suffixの両方を追従して`modern_duplicate_node_id`を返します。unknown operatorは名前、件数、first spanを、unknown statementはspanとSHA-256を返します。元decoded bytesは引き続き`PrivateDataSegment.decoded_bytes`が唯一の正であり、semantic resultがbytesを置換・破棄することはありません。
+
+## Text配置の証拠境界
+
+Illustrator 30.7.0実機fixtureでは、AI11 text document内にstory本文、font/paint resource、glyph geometry、6成分のplacementらしきmatrixが存在することを確認しました。しかし、そのmatrixとlayer streamの`StoryIndex`を結ぶsource-localなindex、およびdocument座標への変換基準をprofile v2で証明できませんでした。このため実機fixtureのtextは、本文を読めても`x / y / font_size / font_name / fill`を推測せずpartialのままです。reasonは未証明fieldを列挙し、text object span、AI11 text document span、identity note span、親group/layerとitem indexを返します。
+
+`py-ai-text:` AdobeNoteAttributeに次の全fieldがsource内へ明示されている場合だけ`TextFrame`へ昇格します。
+
+- `coordinate_space: "document"`
+- `x`, `y`, `font_size`, `font_name`
+- RGBまたはCMYKの`fill`
+- 任意の`tracking`, `rotation`, `alignment`, `area_width / area_height`, `leading`
+
+本文は同じ`StoryIndex`のAI11 storyから得られる必要があります。必須fieldの欠落、値不正、座標空間不明ではpartialを維持します。これはIllustrator内部matrixを解釈できたと主張するものではなく、source-local metadataで証明できる限定profileです。
 
 AI11 text documentはPDF direct-object parserの限定subsetを再利用しますが、専用の入れ子上限を適用します。ASCII85、構文、文字コード、深さ超過を含む解析例外はsemantic boundaryから流出させず、decoded span付き`modern_text_document_partial` warningへ変換します。これは壊れたtextを修復または推測する保証ではなく、元bytesを保持したまま部分解析として報告する保証です。
 
-coverageはdecoded byte数、全operator数、対応 / 未知operator数、projected layer / path数、partial text数、unknown statement byte数を分離して返します。`operator_ratio`は文書全体の意味対応率ではなく、lexerがoperatorとして認識したtokenに対する現在のoperator tableの割合です。
+coverageはdecoded byte数、全operator数、対応 / 未知operator数、projected layer / recursive leaf path / group / compound / clipping / text数、全partial node数、partial text数、unknown statement byte数を分離して返します。`operator_ratio`は文書全体の意味対応率ではなく、lexerがoperatorとして認識したtokenに対する現在のoperator tableの割合です。
 
 ## Resource limits
 
@@ -80,6 +98,7 @@ coverageはdecoded byte数、全operator数、対応 / 未知operator数、proje
 | 1 object | 16 MiB |
 | reference / direct-object depth | 64 |
 | AI11 text document nesting | 64 |
+| semantic group / compound / clipping nesting | 64 |
 | 1 raw PrivateData segment | 64 MiB |
 | 1 decoded segment | 128 MiB |
 | decoded segment合計 | 256 MiB |
@@ -93,7 +112,15 @@ coverageはdecoded byte数、全operator数、対応 / 未知operator数、proje
 
 `tools/generate_modern_ai_fixture.py`は第三者sample bytesを使わず、classic xrefを含む最小PDF-compatible AIを決定的に生成します。期待するsegment順序、filter、size、raw/decoded SHA-256は`tests/fixtures/manifests/modern-private-data.json`に固定しています。generatorの再実行結果がfixture bytesと一致することもテストします。
 
-同manifestには、このプロジェクトが生成しIllustrator 30.7.0でnative保存した`examples/styled-table.native.ai`のzstd profileも記録しています。この実fixtureでsource、raw、decoded hashが固定され、Illustratorなしで同じPrivateDataを抽出できることをテストします。
+同manifest schema v2には、このプロジェクトが生成しIllustrator 30.7.0でnative保存した次の実機zstd fixtureを記録しています。source/raw/decoded sizeとSHA-256、semantic node countを固定し、Illustratorなしで同じ結果を回帰テストします。
+
+- `examples/styled-table.native.ai`: 平坦なtable、16 paths、配置未証明text 20件
+- `examples/campaign-variants.native.ai`: 典型的なbannerを含む3 groups、曲線、CMYK、配置未証明text 19件
+- `examples/packaging-labels.native.ai`: 3 top-level groupsと2 nested groups、配置未証明text 20件
+- `examples/cmyk-curve.native.ai`: `K`によるCMYK strokeとcubic Bézier
+- `examples/mixed-stack.native.ai`: clipping / path / compoundの異種stack、mask/content、polarity
+
+追加したnative fixtureも第三者sampleではなく、リポジトリ内のproject-authored sourceをIllustrator実機保存したものです。
 
 ## Python API
 
@@ -108,7 +135,8 @@ print(result.semantic.coverage.to_dict())
 print(result.semantic.document.to_dict())
 
 for node in result.semantic.partial_nodes:
-    print(node.kind, node.known_fields, node.missing_fields)
+    print(node.kind, node.parent_id, node.item_index)
+    print(node.known_fields, node.missing_fields, node.reason)
 
 for segment in result.segments:
     print(segment.index, segment.key, segment.filters)
@@ -123,4 +151,6 @@ uv run py-ai inspect input.ai --json
 uv run py-ai validate input.ai
 ```
 
-`validate`はsemantic最小縦切りが成立した実機profileを`classification: read_only_semantic_partial`として返します。semantic parserを適用できない抽出結果は`read_only_private_data`です。`safe_to_reserialize`は常に`false`です。通常PDFは`ordinary_pdf`、抽出失敗は`unconvertible`として区別されます。
+`validate`はsemantic profile v2を適用できた実機profileを`classification: read_only_semantic_partial`として返します。semantic parserを適用できない抽出結果は`read_only_private_data`です。`safe_to_reserialize`は常に`false`です。通常PDFは`ordinary_pdf`、抽出失敗は`unconvertible`として区別されます。
+
+非JSONの`inspect`はprofile名に加え、layer / recursive path / group / compound / clipping / projected text / partial node数を1行で表示します。JSONでは`reader_profile: modern-ai-read-only-v2`、`semantic.profile: modern-ai-semantic-read-only-v2`、`read_only: true`、`safe_to_reserialize: false`を明示します。
