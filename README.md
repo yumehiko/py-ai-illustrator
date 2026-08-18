@@ -8,7 +8,7 @@ Adobe Illustratorの起動を前提にせず、`.ai`とPythonの間でデザイ�
 2. **デザインモデル層**: 意図、規則、再利用可能な体裁を持つPythonモデルを作る
 3. **エージェント層**: 自然言語と素材から第二層のモデルを生成・改訂する
 
-現在は第一層のlegacy相互変換とmodern read-only semantic profile v2、第二層のcomponent authoring MVPが動作します。第三層は未着手です。現在地と次の作業は[ロードマップ](docs/roadmap.md)を参照してください。
+第一層v1（legacy相互変換、modern semantic reader v2、modern synchronized patch v1、安全編集、preview / visual diff）はIllustrator 30.7.0の最終matrixを含めて完了しています。第二層はcomponent authoring MVPまで動作し、第三層は未着手です。現在地と次の作業は[ロードマップ](docs/roadmap.md)を参照してください。
 
 ## 現在の主な機能
 
@@ -17,11 +17,13 @@ Adobe Illustratorの起動を前提にせず、`.ai`とPythonの間でデザイ�
 - path / text / image / containerのtyped local patch
 - `inspect` / `plan` / `apply` / `validate` / semantic `diff` CLI
 - modern AI PrivateDataのbounded抽出、exact-span CST、read-only IR投影
+- modern AIの証拠付きfill / stroke / rectangle移動 / 一意text同期patch
+- PDF表示証拠、PDF preview、legacy IR reference preview、pixel visual diff
 - layer / group / path / compound / clipping、RGB / CMYK、Bézier、partial AI11 text
 - Table、text、group、Artboard、linked image等のPython component authoring
 - Illustrator 30.7.0によるfixture適合試験とnative materialization
 
-modern AIの書き戻し、PDF表示との同期、共通preview / visual diffは未実装です。読めたことを安全に再保存できることとして扱いません。
+modern AI writerはsource-localに証明できるprofile v1だけを扱います。任意のmodern AI再保存やnative editabilityを保証せず、読めたことを安全に再保存できることとして扱いません。
 
 ## セットアップ
 
@@ -50,9 +52,16 @@ uv run py-ai export document.json --to ai7 -o output.ai
 uv run py-ai plan input.ai operations.json
 uv run py-ai apply input.ai operations.json -o output.ai
 uv run py-ai diff input.ai output.ai --semantic
+
+# PDF-compatible AIのpreviewとvisual diff
+uv run py-ai preview input.ai -o preview.png
+uv run py-ai diff before.ai after.ai --visual -o visual-diff.png
+
+# modern patch成果物をIllustratorで再保存・再openして検証
+uv run py-ai test-illustrator-modern-roundtrip patched.ai
 ```
 
-operationは任意byte replacementではなく、`type + id` selectorを持つ検証可能なschemaです。入力と既存出力を既定で上書きせず、曖昧なselector、stale source、未対応領域との交差、想定外diffでは停止します。schemaの正本は[operation-schema.json](docs/operation-schema.json)です。
+operationは任意byte replacementではなく、typeとid / name / bounds / hierarchyを組み合わせた検証可能なselectorを使います。入力と既存出力を既定で上書きせず、曖昧なselector、stale source、未対応領域との交差、想定外diffでは停止します。schemaの正本は[operation-schema.json](docs/operation-schema.json)です。
 
 Pythonでの新規制作例は`examples/`にあります。
 
@@ -76,7 +85,7 @@ print(result.semantic_status)
 print(result.semantic.coverage.to_dict() if result.semantic else None)
 ```
 
-正確な対応範囲とresource limitは[modern read profile](docs/modern-ai-read-profile.md)を参照してください。
+正確な対応範囲とresource limitは[modern read profile](docs/modern-ai-read-profile.md)、書き込み保証は[modern synchronized patch profile](docs/modern-ai-write-profile.md)を参照してください。
 
 ## ドキュメント
 
@@ -88,6 +97,7 @@ print(result.semantic.coverage.to_dict() if result.semantic else None)
 - [デザインモデル層](docs/authoring-model.md)
 - [legacy feature profile](docs/legacy-feature-profile.md)
 - [modern read profile](docs/modern-ai-read-profile.md)
+- [modern synchronized patch profile](docs/modern-ai-write-profile.md)
 - [Illustrator適合試験](docs/illustrator-testing.md)
 - [ライセンス方針](docs/license-policy.md)
 - [ADR 0001: modern semantic reader](docs/adr/0001-modern-semantic-reader-strategy.md)

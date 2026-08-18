@@ -1,5 +1,5 @@
 {
-  "$id": "https://py-ai-illustrator.local/schemas/legacy-edit-request-v1.json",
+  "$id": "https://py-ai-illustrator.local/schemas/safe-edit-request-v1.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -92,8 +92,27 @@
     },
     "selector": {
       "additionalProperties": false,
+      "anyOf": [
+        { "required": ["id"] },
+        { "required": ["name"] },
+        { "required": ["bounds"] },
+        { "required": ["ancestors"] }
+      ],
       "properties": {
+        "ancestors": {
+          "items": { "$ref": "#/$defs/ancestor" },
+          "minItems": 1,
+          "type": "array"
+        },
+        "bounds": {
+          "items": { "type": "number" },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array"
+        },
         "id": { "minLength": 1, "type": "string" },
+        "name": { "minLength": 1, "type": "string" },
+        "tolerance": { "minimum": 0, "type": "number" },
         "type": {
           "enum": [
             "path",
@@ -104,6 +123,17 @@
             "compound_path",
             "clipping_group"
           ]
+        }
+      },
+      "required": ["type"],
+      "type": "object"
+    },
+    "ancestor": {
+      "additionalProperties": false,
+      "properties": {
+        "id": { "minLength": 1, "type": "string" },
+        "type": {
+          "enum": ["layer", "group", "compound_path", "clipping_group"]
         }
       },
       "required": ["type", "id"],

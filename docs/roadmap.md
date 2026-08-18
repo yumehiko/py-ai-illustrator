@@ -8,13 +8,13 @@
 
 | 層 | 役割 | 現在地 |
 | --- | --- | --- |
-| 1. 変換層 | `.ai`と低水準Python IRの相互変換・編集・検証 | legacy相互変換とmodern read profile v2が成立 |
+| 1. 変換層 | `.ai`と低水準Python IRの相互変換・編集・検証 | v1完了 |
 | 2. デザインモデル層 | 意図・規則・再利用可能な体裁を持つPythonモデル | component authoring MVPが成立 |
 | 3. エージェント層 | 自然言語と素材から第二層のモデルを作り、第一層で検証・出力 | 未着手 |
 
 依存方向は `エージェント層 -> デザインモデル層 -> 変換層` とします。エージェント層は検証のため変換層の公開APIも利用できますが、下位層は上位層へ依存しません。
 
-ローカル基準は`pytest` 204件成功、`ruff check .`成功です。
+ローカル基準は`pytest`全件成功、`ruff check .`成功です。件数は機能追加で変わるため固定しません。
 
 ## 1. 変換層
 
@@ -27,26 +27,29 @@
 - selector、precondition、plan / apply、semantic diffを持つ安全編集API / CLI
 - modern AIのbounded PrivateData抽出、exact-span CST、read-only semantic profile v2
 - modern layer / group / path / compound / clipping、RGB / CMYK、Bézier、partial textの投影
+- PDF表示証拠、normalized raster preview、pixel visual diff、timestamp不一致診断
+- modern synchronized patch v1のfill / stroke / rectangle移動 / 一意text
+- modern patchのPrivateData / PDF content / XMP / timestamp / xref / compression同期
+- id / name / bounds / hierarchy selectorとmodern operation impact visual検証
+- legacy IR reference previewとsafe editのvisual impact検証
+- modern同一node順序付きatomic batch、証明済みpath-only container展開
+- 証明可能なpaint / geometry / textのPrivateData / PDF cross-representation診断
+- modern成果物のIllustrator current-format再保存・再open試験runnerと最終matrix
 - Illustrator 30.7.0によるlegacy / native fixture適合試験
 
 正確な保証境界は[legacy profile](legacy-feature-profile.md)と[modern read profile](modern-ai-read-profile.md)を参照してください。
 
-### 未完了
+### v1完了判定
 
-1. **Preview & Verification**
-   - modern AI内のPDF表示表現を抽出する
-   - deterministicなraster previewとvisual diffを提供する
-   - PrivateDataとPDF表示表現の不一致を診断する
-   - `inspect -> plan -> apply -> validate -> preview`をCLIで完結させる
-2. **Modern AI writer**
-   - source spanベースでPrivateDataを局所更新する
-   - PDF表示表現、metadata、xref、compressionを同期する
-   - 未知sectionを保持し、Illustratorでの再編集性を検証する
-3. **安全編集APIの完成**
-   - name / bounds / hierarchy selector
-   - visual diffをoperation impact検証へ接続する
-4. **交換形式**
-   - 必要性に応じてSVG / PDF writerとflatten policyを追加する
+2026-08-18に`scripts/test_layer1_illustrator.py`をIllustrator 30.7.0で実行し、3/3ケースが合格しました。legacy paint/translate batchと、modern fill/translate/text atomic batch、modern Bézier strokeについて、open、再保存、再open、DOM構造、text identity、PrivateData/PDF再parse、timestamp、bounded visual normalizationを確認済みです。
+
+### v1の明示的な非対応（後続profile候補）
+
+- modern linked image patch。現行semantic projectionに配置・link・PDF XObjectを同一対象と証明するfixture/evidenceがないため推測更新しない。legacy typed patchとnative materializationのlinked image経路は対応済み。
+- partial textや非矩形pathを含むmodern container。全descendantを同期できるcontainerだけをcapabilityとして許可する。
+- gradient、pattern、spot color、effect、artboard等、source-localに両表現を証明できないmodern operation。
+- 任意のPrivateData / PDF全体が意味一致するという一般保証。v1は証明可能なpaint / geometry / textとtimestampを診断する。
+- SVG / standalone PDF writer。第一層v1の`.ai`往復・安全編集・previewに必須のconsumer要件がないため、flatten policyを決める具体案件が出た時点で追加する。
 
 Modern writerはbyte、graphic semantics、visual、native editabilityの四つを別々に検証します。PDF側だけ、またはPrivateData側だけを更新して成功扱いにしません。
 
@@ -83,13 +86,10 @@ pluginは薄いadapterとし、parser、writer、renderer、validationを再実�
 
 ## 次の着手順
 
-1. 第一層のPreview & Verification
-2. 第一層のmodern AI patch writer
-3. 第一層のselector / safe edit API完成
-4. 第二層のimage workflowとsemantic identity
-5. 第三層のskill / plugin
+1. 第二層のimage workflowとsemantic identity
+2. 第三層のskill / plugin
 
-Previewはmodern reader、writer、安全編集の共通検証基盤なので先に実装します。第三層を先行させて未完成の変換処理をskill内へ埋め込みません。
+第三層を先行させて未完成の変換処理をskill内へ埋め込みません。
 
 ## リポジトリ方針
 

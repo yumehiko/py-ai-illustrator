@@ -683,7 +683,14 @@ def test_cli_inspect_and_validate_report_three_distinct_support_states(
     assert validated["modern_ai"]["private_data"]["segment_count"] == 2
 
     ordinary_pdf = tmp_path / "ordinary.pdf"
-    ordinary_pdf.write_bytes(_pdf(b"<< /Type /Catalog >>"))
+    ordinary_pdf.write_bytes(
+        _pdf(
+            b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] /Contents 4 0 R >>",
+            _stream(b""),
+        )
+    )
     assert main(["validate", str(ordinary_pdf)]) == 0
     ordinary = json.loads(capsys.readouterr().out)
     assert ordinary["classification"] == "ordinary_pdf"

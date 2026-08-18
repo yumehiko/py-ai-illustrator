@@ -9,19 +9,27 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .editing import apply_edit_plan, inspect_editable_legacy, plan_edit
+from .editing import (
+    apply_edit_plan,
+    inspect_editable_legacy,
+    inspect_editable_modern,
+    plan_edit,
+)
 from .format import FileFormat, inspect_file
 from .illustrator import (
     list_illustrator_fonts,
     materialize_native_ai,
     run_illustrator_export_test,
+    run_illustrator_modern_roundtrip_test,
     run_illustrator_roundtrip_test,
     run_illustrator_test,
 )
 from .legacy import UnsupportedLegacyFeature, dump_ai7, read_ai7
 from .model import Document
 from .modern import read_modern_ai
+from .modern_writing import inspect_modern_representation_consistency
 from .semantic import semantic_diff
+from .verification import extract_pdf_display, render_preview, visual_diff
 
 
 def _write_json(data: Any, destination: Path | None) -> None:
@@ -40,6 +48,11 @@ def _inspect(args: argparse.Namespace) -> int:
             output.update(inspect_editable_legacy(args.input))
         elif report.format in {FileFormat.PDF_COMPATIBLE_AI, FileFormat.PDF}:
             output["modern_ai"] = read_modern_ai(args.input).to_dict()
+            output["pdf_display"] = extract_pdf_display(args.input).to_dict()
+            if report.format is FileFormat.PDF_COMPATIBLE_AI:
+                editing = inspect_editable_modern(args.input)
+                output["modern_editing"] = editing
+                output["selectors"] = editing["selectors"]
         _write_json(output, None)
     else:
         print(f"format: {report.format.value}")
@@ -49,9 +62,12 @@ def _inspect(args: argparse.Namespace) -> int:
             print("markers: " + ", ".join(report.illustrator_markers))
         if report.format in {FileFormat.PDF_COMPATIBLE_AI, FileFormat.PDF}:
             modern = read_modern_ai(args.input)
+            display = extract_pdf_display(args.input)
             print(f"container-read: {modern.container_status}")
             print(f"private-data: {modern.private_data_status}")
             print(f"semantic: {modern.semantic_status}")
+            print(f"pdf-display: {display.status} ({len(display.pages)} pages)")
+            print(f"private-data-freshness: {display.private_data_freshness}")
             if modern.semantic is not None:
                 coverage = modern.semantic.coverage
                 print("semantic-profile: modern-ai-semantic-read-only-v2")
@@ -92,7 +108,7 @@ def _apply(args: argparse.Namespace) -> int:
     return 0 if result["applied"] else 1
 
 
-def _diff(args: argparse.Namespace) -> int:
+def _semantic_diff(args: argparse.Namespace) -> int:
     before_report = inspect_file(args.before)
     after_report = inspect_file(args.after)
     if before_report.format is not FileFormat.LEGACY_AI:
@@ -122,6 +138,39 @@ def _diff(args: argparse.Namespace) -> int:
         },
         None,
     )
+    return 0
+
+
+def _diff(args: argparse.Namespace) -> int:
+    if args.visual:
+        if not args.output:
+            raise ValueError("--output is required with --visual")
+        difference = visual_diff(
+            args.before,
+            args.after,
+            args.output,
+            dpi=args.dpi,
+            threshold=args.threshold,
+            renderer=args.renderer,
+            timeout=args.timeout,
+            overwrite=args.force,
+        )
+        _write_json(difference.to_dict(), None)
+        return 0
+    return _semantic_diff(args)
+
+
+def _preview(args: argparse.Namespace) -> int:
+    result = render_preview(
+        args.input,
+        args.output,
+        dpi=args.dpi,
+        page=args.page,
+        renderer=args.renderer,
+        timeout=args.timeout,
+        overwrite=args.force,
+    )
+    _write_json(result.to_dict(), None)
     return 0
 
 
@@ -161,7 +210,9 @@ def _validate(args: argparse.Namespace) -> int:
     warnings = list(report.notes)
     compatibility: dict[str, object] | None = None
     modern_read: dict[str, object] | None = None
+    pdf_display: dict[str, object] | None = None
     modern_valid: bool | None = None
+    representation_consistency: dict[str, object] | None = None
     classification = "unconvertible"
     if report.format is FileFormat.LEGACY_AI:
         try:
@@ -175,7 +226,13 @@ def _validate(args: argparse.Namespace) -> int:
             errors.append(str(error))
     elif report.format in {FileFormat.PDF_COMPATIBLE_AI, FileFormat.PDF}:
         modern = read_modern_ai(args.input)
+        display = extract_pdf_display(args.input)
         modern_read = modern.to_dict()
+        pdf_display = display.to_dict()
+        if report.format is FileFormat.PDF_COMPATIBLE_AI:
+            representation_consistency = inspect_modern_representation_consistency(
+                args.input
+            )
         errors.extend(
             diagnostic.message
             for diagnostic in modern.diagnostics
@@ -186,6 +243,29 @@ def _validate(args: argparse.Namespace) -> int:
             for diagnostic in modern.diagnostics
             if diagnostic.severity in {"warning", "info"}
         )
+        errors.extend(
+            diagnostic.message
+            for diagnostic in display.diagnostics
+            if diagnostic.severity == "error"
+        )
+        warnings.extend(
+            diagnostic.message
+            for diagnostic in display.diagnostics
+            if diagnostic.severity in {"warning", "info"}
+        )
+        if display.private_data_freshness == "timestamp_mismatch":
+            errors.append(
+                "PDF display and Illustrator PrivateData timestamps disagree; "
+                "the two representations may be stale."
+            )
+        if (
+            representation_consistency is not None
+            and representation_consistency["status"] == "inconsistent"
+        ):
+            errors.append(
+                "PDF display and Illustrator PrivateData disagree for one or more "
+                "source-local paint targets."
+            )
         if modern.private_data_status == "extracted":
             classification = (
                 f"read_only_semantic_{modern.semantic_status}"
@@ -224,6 +304,8 @@ def _validate(args: argparse.Namespace) -> int:
         "warnings": warnings,
         "compatibility": compatibility,
         "modern_ai": modern_read,
+        "pdf_display": pdf_display,
+        "representation_consistency": representation_consistency,
     }
     _write_json(result, None)
     if modern_valid is not None:
@@ -289,6 +371,18 @@ def _test_illustrator_roundtrip(args: argparse.Namespace) -> int:
     return 0 if result["status"] == "passed" else 1
 
 
+def _test_illustrator_modern_roundtrip(args: argparse.Namespace) -> int:
+    result = run_illustrator_modern_roundtrip_test(
+        args.input,
+        output=args.ai_output,
+        timeout=args.timeout,
+        application_name=args.application,
+    )
+    destination = Path(args.output) if args.output else None
+    _write_json(result, destination)
+    return 0 if result["status"] == "passed" else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="py-ai", description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -310,7 +404,7 @@ def build_parser() -> argparse.ArgumentParser:
     export_parser.set_defaults(handler=_export)
 
     plan_parser = subparsers.add_parser(
-        "plan", help="resolve and dry-run a safe legacy edit request"
+        "plan", help="resolve and dry-run a supported safe edit request"
     )
     plan_parser.add_argument("input")
     plan_parser.add_argument("operations")
@@ -327,8 +421,28 @@ def build_parser() -> argparse.ArgumentParser:
     diff_parser = subparsers.add_parser("diff", help="compare two supported AI documents")
     diff_parser.add_argument("before")
     diff_parser.add_argument("after")
-    diff_parser.add_argument("--semantic", action="store_true", required=True)
+    diff_mode = diff_parser.add_mutually_exclusive_group(required=True)
+    diff_mode.add_argument("--semantic", action="store_true")
+    diff_mode.add_argument("--visual", action="store_true")
+    diff_parser.add_argument("-o", "--output")
+    diff_parser.add_argument("--dpi", type=int, default=144)
+    diff_parser.add_argument("--threshold", type=int, default=0)
+    diff_parser.add_argument("--renderer", default="pdftocairo")
+    diff_parser.add_argument("--timeout", type=float, default=60.0)
+    diff_parser.add_argument("--force", action="store_true")
     diff_parser.set_defaults(handler=_diff)
+
+    preview_parser = subparsers.add_parser(
+        "preview", help="render a normalized PDF or legacy reference PNG preview"
+    )
+    preview_parser.add_argument("input")
+    preview_parser.add_argument("-o", "--output", required=True)
+    preview_parser.add_argument("--dpi", type=int, default=144)
+    preview_parser.add_argument("--page", type=int)
+    preview_parser.add_argument("--renderer", default="pdftocairo")
+    preview_parser.add_argument("--timeout", type=float, default=60.0)
+    preview_parser.add_argument("--force", action="store_true")
+    preview_parser.set_defaults(handler=_preview)
 
     validate_parser = subparsers.add_parser("validate", help="run available structural checks")
     validate_parser.add_argument("input")
@@ -399,6 +513,17 @@ def build_parser() -> argparse.ArgumentParser:
     illustrator_roundtrip_parser.add_argument("--ai-output")
     illustrator_roundtrip_parser.add_argument("-o", "--output")
     illustrator_roundtrip_parser.set_defaults(handler=_test_illustrator_roundtrip)
+
+    modern_roundtrip_parser = subparsers.add_parser(
+        "test-illustrator-modern-roundtrip",
+        help="resave a PDF-compatible AI and verify native reopen/editability",
+    )
+    modern_roundtrip_parser.add_argument("input")
+    modern_roundtrip_parser.add_argument("--timeout", type=float, default=90.0)
+    modern_roundtrip_parser.add_argument("--application", default="Adobe Illustrator")
+    modern_roundtrip_parser.add_argument("--ai-output")
+    modern_roundtrip_parser.add_argument("-o", "--output")
+    modern_roundtrip_parser.set_defaults(handler=_test_illustrator_modern_roundtrip)
     return parser
 
 
