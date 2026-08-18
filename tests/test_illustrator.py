@@ -6,6 +6,7 @@ from py_ai_illustrator.illustrator import (
     _build_export_javascript,
     _build_font_catalog_javascript,
     _build_javascript,
+    _build_modern_roundtrip_javascript,
     _build_native_materialization_javascript,
     _build_roundtrip_javascript,
     _compare_roundtrip_semantics,
@@ -50,6 +51,22 @@ def test_roundtrip_javascript_resaves_and_closes_only_its_document(tmp_path: Pat
     assert "documentRef.close(SaveOptions.DONOTSAVECHANGES)" in javascript
     assert "current document" not in javascript
     assert "\\" not in javascript
+
+
+def test_modern_roundtrip_javascript_preserves_pdf_compatible_current_format(
+    tmp_path: Path,
+) -> None:
+    javascript = _build_modern_roundtrip_javascript(
+        tmp_path / 'source "quoted".ai',
+        tmp_path / 'resaved "quoted".ai',
+    )
+
+    assert "options.pdfCompatible = true" in javascript
+    assert "options.compressed = true" in javascript
+    assert "Compatibility.ILLUSTRATOR8" not in javascript
+    assert "documentRef.saveAs(destination, options)" in javascript
+    assert "documentRef.close(SaveOptions.DONOTSAVECHANGES)" in javascript
+    assert str(tmp_path) not in javascript
 
 
 def test_native_materialization_converts_legacy_text_and_closes_its_copy(
@@ -285,6 +302,16 @@ def test_runner_distinguishes_an_unready_environment(monkeypatch) -> None:
     result = illustrator.run_illustrator_test(source, timeout=5)
     assert result["status"] == "environment-unavailable"
     assert "sign in" in result["next_action"]
+
+
+def test_modern_roundtrip_runner_rejects_legacy_input_before_launch(monkeypatch) -> None:
+    source = Path(__file__).parents[1] / "examples" / "rectangle.ai"
+    monkeypatch.setattr(illustrator.platform, "system", lambda: "Darwin")
+
+    result = illustrator.run_illustrator_modern_roundtrip_test(source)
+
+    assert result["status"] == "invalid-input"
+    assert "PDF-compatible AI" in result["error"]
 
 
 def test_export_runner_refuses_to_overwrite_existing_output(monkeypatch, tmp_path: Path) -> None:

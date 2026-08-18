@@ -183,7 +183,9 @@ def test_cli_plan_apply_validate_and_semantic_diff_complete_the_vertical_slice(
         "output_reparsed": True,
         "semantic_diff_matches_plan": True,
         "semantic_impact_allowed": True,
+        "visual_impact_within_target_bounds": True,
     }
+    assert apply_json["visual_diff"]["equal"] is False
     assert apply_json["compatibility"]["after"]["profile"]["id"] == (
         "legacy-ai7-trusted-v1"
     )
@@ -299,6 +301,122 @@ def test_selector_multiple_matches_stops_before_output(tmp_path: Path) -> None:
 
     assert plan.applicable is False
     assert "matched 2 nodes" in plan.report["stop_reasons"][0]["message"]
+
+
+def test_name_and_bounds_selectors_resolve_conjunctively(tmp_path: Path) -> None:
+    source = tmp_path / "input.ai"
+    write_fixture(source)
+
+    by_name = plan_edit(
+        source,
+        request(
+            {
+                "op": "set_fill",
+                "selector": {"type": "path", "name": "Logo"},
+                "color": {"red": 0, "green": 1, "blue": 0},
+            }
+        ),
+    )
+    by_bounds = plan_edit(
+        source,
+        request(
+            {
+                "op": "set_fill",
+                "selector": {
+                    "type": "path",
+                    "bounds": [9.99, 9.99, 30.01, 30.01],
+                    "tolerance": 0.02,
+                },
+                "color": {"red": 0, "green": 1, "blue": 0},
+            }
+        ),
+    )
+
+    assert by_name.applicable is True
+    assert by_bounds.applicable is True
+    assert by_name.report["operations"][0]["resolved_target"]["id"] == "logo"
+    assert by_bounds.report["operations"][0]["resolved_target"]["id"] == "logo"
+
+
+def test_exact_root_to_parent_hierarchy_disambiguates_duplicate_ids(tmp_path: Path) -> None:
+    source = tmp_path / "input.ai"
+    document = Document(
+        width=100,
+        height=100,
+        layers=[
+            Layer(
+                id="artwork",
+                name="Artwork",
+                groups=[
+                    Group(
+                        id="left",
+                        paths=[
+                            AIPath(
+                                id="shape",
+                                points=[Point(0, 0), Point(10, 0), Point(10, 10)],
+                                fill=Color(1, 0, 0),
+                            )
+                        ],
+                    ),
+                    Group(
+                        id="right",
+                        paths=[
+                            AIPath(
+                                id="shape",
+                                points=[Point(20, 0), Point(30, 0), Point(30, 10)],
+                                fill=Color(0, 0, 1),
+                            )
+                        ],
+                    ),
+                ],
+            )
+        ],
+    )
+    source.write_bytes(dumps_ai7(document))
+    selector = {
+        "type": "path",
+        "id": "shape",
+        "ancestors": [
+            {"type": "layer", "id": "artwork"},
+            {"type": "group", "id": "right"},
+        ],
+    }
+
+    plan = plan_edit(
+        source,
+        request(
+            {
+                "op": "set_fill",
+                "selector": selector,
+                "color": {"red": 0, "green": 1, "blue": 0},
+            }
+        ),
+    )
+
+    assert plan.applicable is True
+    assert plan.report["operations"][0]["resolved_target"]["id"] == "shape"
+    assert plan.report["operations"][0]["resolved_target"]["source_span"] is not None
+
+
+def test_selector_requires_a_discriminator_beyond_type(tmp_path: Path) -> None:
+    source = tmp_path / "input.ai"
+    write_fixture(source)
+
+    plan = plan_edit(
+        source,
+        request(
+            {
+                "op": "set_fill",
+                "selector": {"type": "path"},
+                "color": {"red": 0, "green": 1, "blue": 0},
+            }
+        ),
+    )
+
+    assert plan.applicable is False
+    assert "must include id, name, bounds, or ancestors" in plan.report["stop_reasons"][0][
+        "message"
+    ]
 
 
 def test_operation_target_type_mismatch_stops_without_fallback(tmp_path: Path) -> None:
