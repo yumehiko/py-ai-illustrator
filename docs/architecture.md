@@ -19,7 +19,7 @@
 
 ## 第一層: 変換
 
-第一層は`.ai`と低水準Python IRを安全に相互変換します。
+第一層は`.ai`と低水準Python IRを安全に相互変換し、新規IRを選択したbackendで成果物へcompileします。
 
 ```text
 .ai bytes
@@ -36,6 +36,7 @@
 - 元bytes、source span、未知operatorを保持する
 - 対応部分だけをIRへ投影し、未対応部分を成功扱いで捨てない
 - 新規IRをserializeし、既存sourceは可能な限り局所patchする
+- 新規制作ではIllustrator 2026 DOMをdirect native compilerとして利用する
 - selector、precondition、dry-run、別名保存、再読込検証を提供する
 - byte、graphic semantics、visual、native editabilityを別々に検証する
 
@@ -75,6 +76,6 @@ skill / pluginは薄いadapterです。ファイルparser、writer、renderer、
 
 ## 実行時と検証環境
 
-変換とauthoringはIllustratorなしで動作させます。Illustrator bridgeはnative materializationと実機適合試験に限定します。確認済み環境と手順は[Illustrator適合試験](illustrator-testing.md)へ記録します。
+componentからIRを生成するauthoring、IR validation、JSON交換、legacy変換・編集はIllustratorなしで動作させます。新規制作のproduction向けnative `.ai` compileはIllustrator 2026を必須backendとし、暗黙のactive documentへ依存しない明示的な実行境界に置きます。既存modern `.ai`のsource-preserving編集と新規native compileは別の責務です。決定理由と昇格条件は[ADR 0002](adr/0002-direct-native-authoring-backend.md)、確認済み環境と手順は[Illustrator適合試験](illustrator-testing.md)へ記録します。
 
-当面はmono-repoを維持します。将来分割する場合も、変換core、design model、Illustrator bridge、agent adapterの依存方向を変えません。
+当面はmono-repoを維持します。将来分割する場合も、変換core、design model、Illustrator backend、agent adapterの依存方向を変えません。

@@ -57,9 +57,10 @@ PythonのグラフィックIRとIllustrator sourceを相互変換します。
 - `.ai` source、lossless CST/source map、グラフィックIRを分離する
 - 対応範囲と未対応featureを診断する
 - 既存ファイルでは、局所patchと未知データ保持を優先する
-- 新規作成では、IRを対応形式へ決定的にserializeする
+- 新規作成では、IRを選択したbackendへ決定的にcompileする
 - pure conversionはIllustratorの起動を前提にしない
-- Illustratorはnative materializationと適合試験のbridgeとして扱う
+- production向けnative `.ai`生成ではIllustrator 2026をdirect compilerとして扱う
+- legacy reader / writer / patchは既存legacy編集、回帰fixture、明示的なheadless AI7 exportへ限定する
 
 この層は三つすべてのユースケースの安全性を支えます。ファイルを読めることと、安全に再保存できることを混同しません。
 
@@ -163,6 +164,6 @@ public APIを壊してよいことは、入力ファイルや未知データを�
 3. byte、graphic semantics、visual、native editability、design semanticsのどこまで保証するか。
 4. 未対応feature、曖昧なselector、missing resourceにどう失敗するか。
 5. 成果物は次回改訂しやすい構造とidentityを保つか。
-6. Illustratorなしで行うpure処理と、Illustrator bridgeの責務が分離されているか。
+6. Illustratorなしで行うpure処理と、Illustrator 2026 native compilerの責務が分離されているか。
 7. 使われていない後方互換コードで設計を複雑にしていないか。
 8. 新しい複雑さが利用者のUX改善として説明できるか。

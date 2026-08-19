@@ -1,6 +1,6 @@
 # py-ai-illustrator
 
-Adobe Illustratorの起動を前提にせず、`.ai`とPythonの間でデザインデータを扱うためのプロジェクトです。
+Illustratorなしで動作するPython coreと、Illustrator 2026を利用するnative backendを分離し、`.ai`とPythonの間でデザインデータを安全に扱うためのプロジェクトです。
 
 ## 三つの層
 
@@ -22,6 +22,8 @@ Adobe Illustratorの起動を前提にせず、`.ai`とPythonの間でデザイ�
 - Illustrator 30.7.0によるfixture適合試験とnative materialization
 
 modern AIの書き戻し、PDF表示との同期、共通preview / visual diffは未実装です。読めたことを安全に再保存できることとして扱いません。
+
+新規制作のproduction向け成果物は、`Document` IRからIllustrator 2026 DOMを直接構築するnative compilerを主backendとする方針です。現在のlegacy bridgeはdirect backendのproduction昇格まで維持します。判断理由と3 fixtureの昇格条件は[ADR 0002](docs/adr/0002-direct-native-authoring-backend.md)を参照してください。
 
 ## セットアップ
 
@@ -91,6 +93,7 @@ print(result.semantic.coverage.to_dict() if result.semantic else None)
 - [Illustrator適合試験](docs/illustrator-testing.md)
 - [ライセンス方針](docs/license-policy.md)
 - [ADR 0001: modern semantic reader](docs/adr/0001-modern-semantic-reader-strategy.md)
+- [ADR 0002: direct native authoring backend](docs/adr/0002-direct-native-authoring-backend.md)
 
 調査出典は[Sources](docs/sources.md)へ集約しています。過去の進捗は別文書へ複製せずGit履歴を参照します。
 

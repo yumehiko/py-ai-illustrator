@@ -1,6 +1,6 @@
 # 開発ロードマップ
 
-更新日: 2026-08-18
+更新日: 2026-08-19
 
 優先順位は[開発原則と想定ユースケース](development-principles.md)を基準にします。この文書は現在地と次の作業だけを扱い、対応operatorや実機試験の詳細はfeature profileとtesting文書へ置きます。
 
@@ -33,22 +33,27 @@
 
 ### 未完了
 
-1. **Preview & Verification**
+1. **Direct native authoring backend**
+   - `Document` IRからIllustrator 2026 DOMを直接構築する
+   - 一時保存、再open、semantic / visual / native editability検証後に成果物を確定する
+   - `quarterly-kpi-report`、`editorial-brochure`、`product-catalog`をproduction昇格gateにする
+   - 詳細な契約と判断理由は[ADR 0002](adr/0002-direct-native-authoring-backend.md)を正とする
+2. **Preview & Verification**
    - modern AI内のPDF表示表現を抽出する
    - deterministicなraster previewとvisual diffを提供する
    - PrivateDataとPDF表示表現の不一致を診断する
    - `inspect -> plan -> apply -> validate -> preview`をCLIで完結させる
-2. **Modern AI writer**
+3. **Modern AI writer**
    - source spanベースでPrivateDataを局所更新する
    - PDF表示表現、metadata、xref、compressionを同期する
    - 未知sectionを保持し、Illustratorでの再編集性を検証する
-3. **安全編集APIの完成**
+4. **安全編集APIの完成**
    - name / bounds / hierarchy selector
    - visual diffをoperation impact検証へ接続する
-4. **交換形式**
+5. **交換形式**
    - 必要性に応じてSVG / PDF writerとflatten policyを追加する
 
-Modern writerはbyte、graphic semantics、visual、native editabilityの四つを別々に検証します。PDF側だけ、またはPrivateData側だけを更新して成功扱いにしません。
+Direct native backendは新規制作を対象とし、既存modern `.ai`の安全編集を代替しません。Modern writerはbyte、graphic semantics、visual、native editabilityの四つを別々に検証し、PDF側だけ、またはPrivateData側だけを更新して成功扱いにしません。
 
 ## 2. デザインモデル層
 
@@ -83,13 +88,15 @@ pluginは薄いadapterとし、parser、writer、renderer、validationを再実�
 
 ## 次の着手順
 
-1. 第一層のPreview & Verification
-2. 第一層のmodern AI patch writer
-3. 第一層のselector / safe edit API完成
-4. 第二層のimage workflowとsemantic identity
-5. 第三層のskill / plugin
+1. `quarterly-kpi-report`によるdirect native backendの最小縦切り
+2. `editorial-brochure`と`product-catalog`を含むproduction昇格gate
+3. 第一層のPreview & Verification
+4. 第一層のselector / safe edit API完成
+5. 第一層のmodern AI patch writer
+6. 第二層のimage workflowとsemantic identity
+7. 第三層のskill / plugin
 
-Previewはmodern reader、writer、安全編集の共通検証基盤なので先に実装します。第三層を先行させて未完成の変換処理をskill内へ埋め込みません。
+Direct native backendは新規制作の主経路として先に縦切りし、semantic、visual、native editabilityを分けて検証します。Previewはdirect backend、modern reader / writer、安全編集の共通検証基盤として続けて完成させます。第三層を先行させて未完成の変換処理をskill内へ埋め込みません。
 
 ## リポジトリ方針
 
