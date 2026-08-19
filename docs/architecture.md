@@ -38,6 +38,8 @@ reader、IR validation、JSON交換、legacy変換・編集、modern patch、pre
 
 direct native compilerは既存modern `.ai`のsource-preserving編集を代替しません。またlegacy AIを内部実装や必須pre-passに使わず、自ら作成したdocument参照だけを操作します。決定理由は[ADR 0002](adr/0002-direct-native-authoring-backend.md)、実機環境と手順は[Illustrator適合試験](illustrator-testing.md)を正とします。
 
+Python coreとIllustrator runtimeの入力・出力境界は、version 1のUTF-8 JSON contractとして固定しています。PythonはIR/spec、schema、validation、serialization、結果分類、昇格を担当し、`runtime/direct_native.jsx`はDOM materializationと再open後のDOM検証だけを担当します。requestの配置・runtimeの配置・AppleScript実行は`NativeRuntimeBridge`に集約しています。フィールドと失敗分類の正本は[direct native runtime contract](native-runtime-contract.md)です。
+
 ## 保証の分離
 
 - byte-preserving

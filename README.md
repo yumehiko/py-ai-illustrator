@@ -73,6 +73,7 @@ operationはtypeとid / name / bounds / hierarchyを組み合わせた検証可�
 - [ライセンス方針](docs/license-policy.md)
 - [ADR 0001: modern semantic reader](docs/adr/0001-modern-semantic-reader-strategy.md)
 - [ADR 0002: direct native authoring backend](docs/adr/0002-direct-native-authoring-backend.md)
+- [direct native runtime contract](docs/native-runtime-contract.md)
 
 ## ライセンス
 

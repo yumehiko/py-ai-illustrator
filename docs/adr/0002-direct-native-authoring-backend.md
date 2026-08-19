@@ -39,6 +39,14 @@ Python component / template + input data
 
 direct compilerは暗黙のactive documentを操作せず、入力IR、compile profile、asset、font、Illustrator versionから結果と検証reportを再現できなければならない。
 
+## Python core / Illustrator runtime boundary
+
+実装上の言語境界は、Python f-stringへExtendScript本体を埋め込む方式から、独立した[`runtime/direct_native.jsx`](../../src/py_ai_illustrator/runtime/direct_native.jsx)と[`NativeRuntimeBridge`](../../src/py_ai_illustrator/native_bridge.py)へ分離する。Python側は`Document` IRの検証、DOM用specの生成、strict JSON serialization、AppleScript orchestration、結果のcontract検証・失敗分類・最終昇格を所有する。ExtendScript側はIllustrator DOMの作成、保存、reopen、DOM意味照合、結果JSONの生成を所有する。
+
+Pythonからruntimeへの入力とruntimeからPythonへの結果は、`py-ai-illustrator.native-compile` / `py-ai-illustrator.native-compile-result`のversion 1 contractである。JSON境界はUnicode、number、null、array、objectを保持し、JS sourceへ値を埋め込まない。詳細は[direct native runtime contract](../native-runtime-contract.md)に記録する。contract versionの変更は、Python serializer、ExtendScript parser/emitter、bridge tests、fixture gateを同時に更新する変更として扱う。
+
+AppleScript bridgeのtimeout・非0終了は`environment-unavailable`、JSON/contract不正は`failed`、runtimeが返した`checks`付きのDOM不一致は`mismatch`として既存のfail-closed分類を維持する。runtimeが成功を返しても、Pythonはtemporary outputのPDF-compatible形式を再検証してから指定出力へ昇格する。既存出力の上書き拒否と失敗時の未生成条件も変更しない。
+
 - document color space等の新規document作成条件をIRまたは明示的なcompile profileで受け取る
 - Artboard、Layer、nested Group、異種item orderを再帰的に構築する
 - straight / Bézier Path、fill / stroke / dash / cap / joinを設定する

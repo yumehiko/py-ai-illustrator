@@ -109,6 +109,14 @@ from .modern_writing import (
     patch_modern_text,
 )
 from .native import NativeCompileProfile, compile_native_ai
+from .native_bridge import (
+    NATIVE_REQUIRED_CHECKS,
+    NativeCompileRequest,
+    NativeContractError,
+    NativeRuntimeBridge,
+    parse_native_compile_result,
+    serialize_native_compile_request,
+)
 from .semantic import SemanticDiff, SemanticDifference, semantic_diff
 from .verification import (
     PdfDisplayPage,
@@ -162,6 +170,10 @@ __all__ = [
     "ModernUnknownOperator",
     "ModernUnknownSpan",
     "NativeCompileProfile",
+    "NATIVE_REQUIRED_CHECKS",
+    "NativeCompileRequest",
+    "NativeContractError",
+    "NativeRuntimeBridge",
     "ModernWriteError",
     "ModernWriteResult",
     "OperationManifest",
@@ -197,6 +209,8 @@ __all__ = [
     "apply_edit_plan",
     "apply_legacy_patch",
     "compile_native_ai",
+    "parse_native_compile_result",
+    "serialize_native_compile_request",
     "extract_pdf_display",
     "inspect_file",
     "inspect_editable_legacy",

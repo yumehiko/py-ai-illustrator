@@ -1279,8 +1279,9 @@ def _execute_javascript(
     *,
     timeout: float,
     application_name: str,
+    script_name: str = "illustrator-test.jsx",
 ) -> subprocess.CompletedProcess[str]:
-    script_path = directory / "illustrator-test.jsx"
+    script_path = directory / script_name
     script_path.write_text(javascript, encoding="utf-8")
     escaped_app = application_name.replace("\\", "\\\\").replace('"', '\\"')
     escaped_script = str(script_path).replace("\\", "\\\\").replace('"', '\\"')
