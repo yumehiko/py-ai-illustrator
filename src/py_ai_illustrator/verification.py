@@ -14,6 +14,14 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from ._modern_container import (
+    ModernDiagnostic,
+    ModernReadLimits,
+    PdfName,
+    PdfRef,
+    PdfValue,
+    _parse_objects,
+)
 from .format import FileFormat, inspect_file
 from .legacy import read_ai7
 from .model import (
@@ -28,14 +36,6 @@ from .model import (
     TextFrame,
 )
 from .model import Path as ArtworkPath
-from .modern import (
-    ModernDiagnostic,
-    ModernReadLimits,
-    PdfName,
-    PdfRef,
-    PdfValue,
-    _parse_objects,
-)
 
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 _DISPLAY_EXCLUDED_KEYS = frozenset(
