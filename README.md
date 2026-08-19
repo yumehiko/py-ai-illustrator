@@ -19,11 +19,12 @@ Illustratorなしで動作するPython coreと、Illustrator 2026を利用する
 - modern AI PrivateDataのbounded抽出、exact-span CST、read-only IR投影
 - layer / group / path / compound / clipping、RGB / CMYK、Bézier、partial AI11 text
 - Table、text、group、Artboard、linked image等のPython component authoring
+- `Document` IRからIllustrator 2026 DOMを直接構築するnative compiler
 - Illustrator 30.7.0によるfixture適合試験とnative materialization
 
 modern AIの書き戻し、PDF表示との同期、共通preview / visual diffは未実装です。読めたことを安全に再保存できることとして扱いません。
 
-新規制作のproduction向け成果物は、`Document` IRからIllustrator 2026 DOMを直接構築するnative compilerを主backendとする方針です。現在のlegacy bridgeはdirect backendのproduction昇格まで維持します。判断理由と3 fixtureの昇格条件は[ADR 0002](docs/adr/0002-direct-native-authoring-backend.md)を参照してください。
+新規制作のproduction向け成果物は、`Document` IRからIllustrator 2026 DOMを直接構築するnative compilerを主backendとします。`quarterly-kpi-report`、`editorial-brochure`、`product-catalog`の昇格gateはIllustrator 30.7.0で合格済みです。legacy bridgeは比較対象と明示的なlegacy出力として維持します。判断理由と検証結果は[ADR 0002](docs/adr/0002-direct-native-authoring-backend.md)を参照してください。
 
 ## セットアップ
 
@@ -47,6 +48,9 @@ uv run py-ai export input.ai --to json -o document.json
 
 # JSON IRからAI7 subsetを生成
 uv run py-ai export document.json --to ai7 -o output.ai
+
+# JSON IRからIllustrator 2026 native AIを直接生成・再open検証
+uv run py-ai compile-native document.json -o output.native.ai
 
 # 既存legacy AIの安全編集
 uv run py-ai plan input.ai operations.json

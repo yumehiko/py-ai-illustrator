@@ -21,6 +21,7 @@ from .illustrator import (
 from .legacy import UnsupportedLegacyFeature, dump_ai7, read_ai7
 from .model import Document
 from .modern import read_modern_ai
+from .native import NativeCompileProfile, compile_native_ai
 from .semantic import semantic_diff
 
 
@@ -253,6 +254,18 @@ def _materialize_native(args: argparse.Namespace) -> int:
     return 0 if result["status"] == "passed" else 1
 
 
+def _compile_native(args: argparse.Namespace) -> int:
+    result = compile_native_ai(
+        args.input,
+        args.output,
+        profile=NativeCompileProfile(color_space=args.color_space),
+        timeout=args.timeout,
+        application_name=args.application,
+    )
+    _write_json(result, None)
+    return 0 if result["status"] == "passed" else 1
+
+
 def _illustrator_fonts(args: argparse.Namespace) -> int:
     result = list_illustrator_fonts(
         query=args.query,
@@ -353,6 +366,17 @@ def build_parser() -> argparse.ArgumentParser:
     native_parser.add_argument("--timeout", type=float, default=90.0)
     native_parser.add_argument("--application", default="Adobe Illustrator")
     native_parser.set_defaults(handler=_materialize_native)
+
+    compile_native_parser = subparsers.add_parser(
+        "compile-native",
+        help="compile a Document IR JSON directly to a verified native AI",
+    )
+    compile_native_parser.add_argument("input")
+    compile_native_parser.add_argument("-o", "--output", required=True)
+    compile_native_parser.add_argument("--color-space", choices=("rgb", "cmyk"), default="rgb")
+    compile_native_parser.add_argument("--timeout", type=float, default=120.0)
+    compile_native_parser.add_argument("--application", default="Adobe Illustrator")
+    compile_native_parser.set_defaults(handler=_compile_native)
 
     fonts_parser = subparsers.add_parser(
         "illustrator-fonts",

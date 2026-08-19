@@ -71,6 +71,18 @@ direct compilerは暗黙のactive documentを操作せず、入力IR、compile p
 6. missing resource、unsupported feature、属性不一致を明示的に失敗させる。
 7. 暗黙のactive documentへ依存せず、連続実行と失敗後の再実行が安全である。
 
+## Promotion record
+
+2026-08-19、Illustrator 30.7.0で3 fixtureすべてが昇格条件を満たしたため、direct compilerを新規制作のproduction defaultへ昇格した。
+
+| fixture | semantic / native editability | visual acceptance |
+| --- | --- | --- |
+| `quarterly-kpi-report` | 1 layer / 4 groups / 17 paths / 24 native texts、hierarchy・item order・geometry・paint・stroke・identity一致 | passed |
+| `editorial-brochure` | 1 layer / 4 paths / 7 native texts（4 AreaText）、frame・font・leading・alignment・identity一致 | passed |
+| `product-catalog` | 1 layer / 3 paths / 5 native texts / 1 linked image、link・placement・size・mixed stacking・identity一致 | passed |
+
+compilerは検証済み一時ファイルだけを最終出力へ昇格し、missing resource、unsupported IR、再open後のDOM不一致ではfail closedする。実行手順と環境記録は[Illustrator適合試験](../illustrator-testing.md)を正とする。
+
 ## Consequences
 
 - 新規制作APIからlegacy font名、AI7 encoding、placeholder等を段階的に除去できる。

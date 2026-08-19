@@ -83,6 +83,21 @@ uv run py-ai test-illustrator examples/packaging-labels.native.ai
 
 `materialize-native`はAI7の`Ta`段落属性を含むlegacy textを`convertToNative()`で現代TextFrameへ変換します。変換後は再帰的なIllustrator DOM順に基づき、各TextFrameの`note`へ`py-ai-text:` identity（安定ID・役割名）を設定し、`FontSpec.postscript_name`のfont、`TextStyle.tracking`、rotationを割り当てます。linked image placeholderは同じ親・描画順の`PlacedItem`へ置換し、成果物横の`Links/`を参照したまま保存します。指定fontやlinkが見つからない場合、割り当て後の属性が一致しない場合は成功扱いにしません。出力はPDF-compatible AIで、既存出力の上書きを拒否します。
 
+## Direct native compile
+
+新規制作では、legacy AIを中間生成せず、JSON化した`Document` IRからIllustrator 2026 DOMを直接構築します。
+
+```bash
+uv run py-ai compile-native document.json -o output.native.ai
+
+# production昇格gateの3 fixtureをまとめて実行
+PYTHONPATH=src uv run python tools/run_direct_native_gate.py /tmp/py-ai-direct-gate
+```
+
+compilerはArtboard、Layer、Group、Path、CompoundPath、ClippingGroup、point/area TextFrame、LinkedImageを再帰的に構築します。page itemのstable IDは`note`へ保存し、Layerはname・順序・visibility・lock、Artboardはname・順序・矩形で照合します。保存後のnative AIを再度開き、hierarchy、item order、geometry、paint、stroke、text、link、native editabilityを入力IRへ照合します。PDF-compatible containerであることまで確認した後にだけ、既存でない指定出力へ確定します。
+
+missing font/link、未対応IR、保存・再open後の属性不一致、非PDF-compatible出力は失敗です。失敗時は指定出力を残しません。Illustrator 2026がインストール・認証済みで応答可能であることがproduction compileのruntime要件です。
+
 rotationを含むlegacy AIをIllustratorでAI8互換再保存する経路では、一部textがoutlineへ変換され、text/path/group数の完全往復は成立しませんでした。回転textの保証対象はnative materialization経路です。`packaging-labels.native.ai`では保存・再オープン後も全20 TextFramesがnativeのまま残り、5件の回転角を保持します。
 
 調査用にIllustrator生成AIを残す場合は、既存ファイルではない出力先を指定します。上書きは拒否されます。
@@ -108,6 +123,8 @@ uv run py-ai test-illustrator examples/rectangle.ai \
 - 検査対象は`DONOTSAVECHANGES`で閉じる。
 - 逆方向試験は新規ドキュメントを作り、指定した一時出力だけへ保存する。
 - native化は入力の一時コピーだけを開き、明示した新規出力へ保存する。
+- direct native compileは自ら作成したdocument参照だけを保存・再open・検証し、暗黙のactive documentを操作しない。
+- direct native compileは一時出力の全検証後にだけ最終出力へ昇格し、既存出力を上書きしない。
 - linked assetは`Links/`へcopy/reuseし、同名別内容の既存ファイルを上書きしない。
 - `--ai-output`が既存ファイルを指す場合は上書きしない。
 - Illustratorが応答しない場合はタイムアウトし、互換性失敗ではなく`environment-unavailable`を返す。
@@ -148,6 +165,16 @@ AI8互換のlegacy再保存ではfont名の置換やparagraph alignmentの正規
 ## 確認済み環境
 
 現時点の正式サポート対象はIllustrator 2026です。新しい正式版が公開された場合は、この文書のfixture一式をそのversionで検証し、合格後にのみ対応versionへ追加します。
+
+2026-08-19にIllustrator 30.7.0でdirect native production昇格gateを実行し、3 fixtureすべてが`passed`になりました。いずれも一時保存、current-format再open、DOM意味照合、native editability、PDF-compatible container判定を通過し、PDF previewにも欠落・越境・意図しない重なりはありませんでした。
+
+| direct fixture | 再open後の主な構造 | 主な昇格境界 |
+| --- | --- | --- |
+| `quarterly-kpi-report` | 1 layer / 4 groups / 17 paths / 24 native texts | nested hierarchy、異種item order、path/stroke、point text |
+| `editorial-brochure` | 1 layer / 4 paths / 7 native texts（4 AreaText） | frame geometry、font/size/fill、leading、alignment |
+| `product-catalog` | 1 layer / 3 paths / 5 native texts / 1 linked image | link存在、配置・寸法、text/image/vector stacking |
+
+追加smokeとして`packaging-labels`の回転text、`campaign-variants`の3 Artboards、複数Layerの順序、compound path、clipping group、mixed stackも同じ環境で再open照合に合格しています。
 
 2026-08-15にIllustrator 30.7.0で次のfixtureが`passed`になりました。
 

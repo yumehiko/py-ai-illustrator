@@ -110,6 +110,7 @@ from .modern_semantic import (
     parse_modern_private_data,
     project_modern_semantics,
 )
+from .native import NativeCompileProfile, compile_native_ai
 from .semantic import SemanticDiff, SemanticDifference, semantic_diff
 
 __all__ = [
@@ -152,6 +153,7 @@ __all__ = [
     "ModernSemanticResult",
     "ModernUnknownOperator",
     "ModernUnknownSpan",
+    "NativeCompileProfile",
     "OperationManifest",
     "OperationRequest",
     "OperationRequestError",
@@ -184,6 +186,7 @@ __all__ = [
     "apply_edit",
     "apply_edit_plan",
     "apply_legacy_patch",
+    "compile_native_ai",
     "ellipse_path",
     "inspect_file",
     "inspect_editable_legacy",
