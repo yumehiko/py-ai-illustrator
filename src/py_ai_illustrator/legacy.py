@@ -2062,6 +2062,7 @@ class SetPathFill:
     path_id: str
     fill: ProcessColor
     expected_fill: ProcessColor
+    origin_start: int | None = None
 
     def __post_init__(self) -> None:
         if not self.path_id:
@@ -2075,6 +2076,7 @@ class SetPathStroke:
     path_id: str
     stroke: ProcessColor
     expected_stroke: ProcessColor
+    origin_start: int | None = None
 
     def __post_init__(self) -> None:
         if not self.path_id:
@@ -2089,6 +2091,7 @@ class TranslatePath:
     dx: float
     dy: float
     expected_points: tuple[Point, ...]
+    origin_start: int | None = None
 
     def __post_init__(self) -> None:
         if not self.path_id:
@@ -2136,6 +2139,7 @@ class ReplaceLinkedImageSource:
     image_id: str
     source: str
     expected_source: str
+    origin_start: int | None = None
 
     def __post_init__(self) -> None:
         if not self.image_id:
@@ -2153,6 +2157,7 @@ class ReplaceText:
     text_id: str
     text: str
     expected_text: str
+    origin_start: int | None = None
 
     def __post_init__(self) -> None:
         if not self.text_id:
@@ -2280,12 +2285,17 @@ def _translation_members(container: LegacyContainer) -> list[TranslationMember]:
 
 
 def _unique_origin(
-    result: LegacyReadResult, *, node_type: str, node_id: str
+    result: LegacyReadResult,
+    *,
+    node_type: str,
+    node_id: str,
+    origin_start: int | None = None,
 ) -> LegacyNodeOrigin:
     matching_origins = [
         origin
         for origin in result.origins
         if origin.node_type == node_type and origin.node_id == node_id
+        and (origin_start is None or origin.start == origin_start)
     ]
     if len(matching_origins) != 1:
         raise UnsupportedLegacyFeature(
@@ -2342,19 +2352,23 @@ def _path_fill_replacements(
     result: LegacyReadResult, operation: SetPathFill
 ) -> list[SourceReplacement]:
     matching_paths = _matching_paths(result, operation.path_id)
-    if len(matching_paths) != 1:
+    if operation.origin_start is None and len(matching_paths) != 1:
         raise UnsupportedLegacyFeature(
             f"Path selector id={operation.path_id!r} matched {len(matching_paths)} nodes; "
             "exactly one is required."
         )
-    path = matching_paths[0]
-    if path.fill != operation.expected_fill:
+    if not any(path.fill == operation.expected_fill for path in matching_paths):
         raise UnsupportedLegacyFeature(
             f"Path {operation.path_id!r} fill precondition failed: "
-            f"expected {operation.expected_fill!r}, found {path.fill!r}."
+            f"expected {operation.expected_fill!r}."
         )
 
-    origin = _unique_origin(result, node_type="path", node_id=operation.path_id)
+    origin = _unique_origin(
+        result,
+        node_type="path",
+        node_id=operation.path_id,
+        origin_start=operation.origin_start,
+    )
     fill_origin = _validate_patch_field(
         result,
         origin=origin,
@@ -2370,19 +2384,23 @@ def _path_stroke_replacements(
     result: LegacyReadResult, operation: SetPathStroke
 ) -> list[SourceReplacement]:
     matching_paths = _matching_paths(result, operation.path_id)
-    if len(matching_paths) != 1:
+    if operation.origin_start is None and len(matching_paths) != 1:
         raise UnsupportedLegacyFeature(
             f"Path selector id={operation.path_id!r} matched {len(matching_paths)} nodes; "
             "exactly one is required."
         )
-    path = matching_paths[0]
-    if path.stroke != operation.expected_stroke:
+    if not any(path.stroke == operation.expected_stroke for path in matching_paths):
         raise UnsupportedLegacyFeature(
             f"Path {operation.path_id!r} stroke precondition failed: "
-            f"expected {operation.expected_stroke!r}, found {path.stroke!r}."
+            f"expected {operation.expected_stroke!r}."
         )
 
-    origin = _unique_origin(result, node_type="path", node_id=operation.path_id)
+    origin = _unique_origin(
+        result,
+        node_type="path",
+        node_id=operation.path_id,
+        origin_start=operation.origin_start,
+    )
     stroke_origin = _validate_patch_field(
         result,
         origin=origin,
@@ -2432,19 +2450,23 @@ def _path_translation_replacements(
     result: LegacyReadResult, operation: TranslatePath
 ) -> list[SourceReplacement]:
     matching_paths = _matching_paths(result, operation.path_id)
-    if len(matching_paths) != 1:
+    if operation.origin_start is None and len(matching_paths) != 1:
         raise UnsupportedLegacyFeature(
             f"Path selector id={operation.path_id!r} matched {len(matching_paths)} nodes; "
             "exactly one is required."
         )
-    path = matching_paths[0]
-    if tuple(path.points) != operation.expected_points:
+    if not any(tuple(path.points) == operation.expected_points for path in matching_paths):
         raise UnsupportedLegacyFeature(
             f"Path {operation.path_id!r} geometry precondition failed: expected points do not "
             "match the parsed path."
         )
 
-    origin = _unique_origin(result, node_type="path", node_id=operation.path_id)
+    origin = _unique_origin(
+        result,
+        node_type="path",
+        node_id=operation.path_id,
+        origin_start=operation.origin_start,
+    )
     _validate_patch_origin(result, origin=origin, node_label=f"Path {operation.path_id!r}")
     return _geometry_translation_replacements(
         result,

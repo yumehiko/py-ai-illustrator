@@ -4,29 +4,25 @@ from __future__ import annotations
 
 import argparse
 import json
-import runpy
 from pathlib import Path
 from typing import Any
 
+from py_ai_illustrator.legacy import read_ai7
 from py_ai_illustrator.model import Document
 from py_ai_illustrator.native import compile_native_ai
 
 ROOT = Path(__file__).parents[1]
 FIXTURES = (
-    ("quarterly-kpi-report", ROOT / "examples" / "quarterly_kpi_report.py"),
-    ("editorial-brochure", ROOT / "examples" / "editorial_brochure.py"),
-    ("product-catalog", ROOT / "examples" / "product_catalog.py"),
+    ("quarterly-kpi-report", ROOT / "examples" / "quarterly-kpi-report.ai"),
+    ("editorial-brochure", ROOT / "examples" / "editorial-brochure.ai"),
+    ("product-catalog", ROOT / "examples" / "product-catalog.ai"),
 )
 
 
-def _build_document(script: Path) -> Document:
-    namespace = runpy.run_path(str(script))
-    builder = namespace.get("build_document")
-    if not callable(builder):
-        raise ValueError(f"Fixture script has no build_document(): {script}")
-    document = builder()
-    if not isinstance(document, Document):
-        raise TypeError(f"Fixture script returned {type(document).__name__}, not Document")
+def _load_fixture_document(source: Path) -> Document:
+    document = read_ai7(source).document
+    if not isinstance(document, Document):  # pragma: no cover - defensive API guard
+        raise TypeError(f"Fixture reader returned {type(document).__name__}, not Document")
     return document
 
 
@@ -39,12 +35,12 @@ def run_gate(
     output_root = Path(output_directory).resolve()
     output_root.mkdir(parents=True, exist_ok=True)
     fixture_results: dict[str, dict[str, Any]] = {}
-    for name, script in FIXTURES:
+    for name, source in FIXTURES:
         output = output_root / f"{name}.direct.ai"
         fixture_results[name] = compile_native_ai(
-            _build_document(script),
+            _load_fixture_document(source),
             output,
-            source_base=ROOT,
+            source_base=source.parent,
             timeout=timeout,
             application_name=application_name,
         )

@@ -2,6 +2,22 @@
 
 `py-ai test-illustrator` は、生成したAIファイルが実際のIllustratorで編集可能な構造として開けるかを検査します。通常のPythonテストとは分離し、Illustratorを利用できるmacOS環境で明示的に実行します。
 
+modern synchronized patch成果物は、openだけでなくcurrent-format再保存と再openまで行います。
+
+```bash
+uv run py-ai test-illustrator-modern-roundtrip patched.ai
+```
+
+第一層の最終確認は、legacy patch、modern fill/translate/text atomic batch、modern Bézier strokeを一度に生成して実機試験します。
+
+```bash
+uv run python scripts/test_layer1_illustrator.py
+```
+
+このmatrixは一時出力だけを使い、入力や既存成果物を上書きしません。
+
+2026-08-18にIllustrator 30.7.0で最終matrix 3/3件が`passed`になりました。modern fill/translate/text batchの変更pixel比は約0.064%、Bézier strokeは約0.049%で、DOM・PrivateData/PDF・timestampの必須checkはすべて一致しました。legacy paint/translate batchはgeometry・visible paint・path identityを保持し、矩形描画に影響しないmiter limit 4→10の正規化だけをadvisoryとして記録しました。
+
 実機結果を対応versionとして扱う条件とPython側のreader/writer/patch範囲は[Trusted Legacy Conversion feature profile](legacy-feature-profile.md)に定義します。
 
 ## 初回準備
@@ -94,6 +110,8 @@ uv run py-ai compile-native document.json -o output.native.ai
 PYTHONPATH=src uv run python tools/run_direct_native_gate.py /tmp/py-ai-direct-gate
 ```
 
+昇格gateは、リポジトリに残す生成済みlegacy AI fixtureをreaderで低水準`Document` IRへ復元し、そのIRをdirect compilerへ渡します。これは第2層のPython authoring実装を第1層へ戻さずfixtureを再現するためのtest setupです。compiler本体はlegacy AIやlegacy writerをpre-passとして使用しません。
+
 compilerはArtboard、Layer、Group、Path、CompoundPath、ClippingGroup、point/area TextFrame、LinkedImageを再帰的に構築します。page itemのstable IDは`note`へ保存し、Layerはname・順序・visibility・lock、Artboardはname・順序・矩形で照合します。保存後のnative AIを再度開き、hierarchy、item order、geometry、paint、stroke、text、link、native editabilityを入力IRへ照合します。PDF-compatible containerであることまで確認した後にだけ、既存でない指定出力へ確定します。
 
 missing font/link、未対応IR、保存・再open後の属性不一致、非PDF-compatible出力は失敗です。失敗時は指定出力を残しません。Illustrator 2026がインストール・認証済みで応答可能であることがproduction compileのruntime要件です。
@@ -140,7 +158,7 @@ uv run py-ai test-illustrator examples/rectangle.ai \
 - 各pathのanchor数
 - closed / filled / strokedの個数
 
-レポートにはartboard、anchor座標、Bézier方向点、stroke幅、RGB/CMYK colorも含めます。今後fixtureが増えたとき、数の一致だけでなく属性ごとの許容差比較へ拡張します。
+レポートにはartboard、anchor座標、Bézier方向点、stroke幅、RGB/CMYK colorも含めます。modern current-format再保存ではページ寸法一致を必須とし、IllustratorによるPDF再生成に限って1ページあたり変更pixel比0.1%以下をbounded normalizationとして許容します。exact pixel一致もadvisoryとして別に報告します。
 
 完全往復では次を意味属性として比較します。
 
@@ -160,7 +178,7 @@ pathの安定IDと名前はAI7仕様の`%AI3_Note` path属性へ`py-ai:`接頭�
 
 現在、独自DSCコメントだけで保持しているdocument metadata、layer ID、compound/clipping containerのID・名前はIllustratorのAI8再保存で除去されます。また、document titleとboundsは保存先名とartwork boundsに変わります。これらは既知のlossとしてレポートの意味合格判定から除外しています。
 
-AI8互換のlegacy再保存ではfont名の置換やparagraph alignmentの正規化が起こり得るため、この経路では2項目を`advisory_checks`へ分離します。一方、native materialization経路ではAI7 `Ta`をnative paragraph justificationへ変換し、現代AIを再度開いた後もLEFT/CENTER/RIGHTと全TextFrameのidentity noteが保持されることを必須の実機確認にしています。
+AI8互換のlegacy再保存ではfont名、paragraph属性、描画結果に影響しない既定miter limitの正規化が起こり得るため、この経路では`advisory_checks`へ分離します。geometry、stroke width、cap/join、dash、visible paintは必須です。一方、native materialization経路ではAI7 `Ta`をnative paragraph justificationへ変換し、現代AIを再度開いた後もLEFT/CENTER/RIGHTと全TextFrameのidentity noteが保持されることを必須の実機確認にしています。
 
 ## 確認済み環境
 

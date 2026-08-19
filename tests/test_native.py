@@ -1,5 +1,4 @@
 import json
-import runpy
 from pathlib import Path
 from subprocess import CompletedProcess
 from types import SimpleNamespace
@@ -8,6 +7,7 @@ import pytest
 
 from py_ai_illustrator import native
 from py_ai_illustrator.cli import build_parser
+from py_ai_illustrator.legacy import read_ai7
 from py_ai_illustrator.model import Color, Document, Group, Layer, Point, TextFrame
 from py_ai_illustrator.model import Path as AIPath
 from py_ai_illustrator.native import (
@@ -245,29 +245,28 @@ def test_compile_keeps_destination_absent_on_dom_mismatch(
 
 
 @pytest.mark.parametrize(
-    ("script_name", "expected"),
+    ("fixture_name", "expected"),
     (
         (
-            "quarterly_kpi_report.py",
+            "quarterly-kpi-report.ai",
             {"paths": 17, "texts": 24, "groups": 4, "area_texts": 0, "images": 0},
         ),
         (
-            "editorial_brochure.py",
+            "editorial-brochure.ai",
             {"paths": 4, "texts": 7, "groups": 0, "area_texts": 4, "images": 0},
         ),
         (
-            "product_catalog.py",
+            "product-catalog.ai",
             {"paths": 3, "texts": 5, "groups": 0, "area_texts": 1, "images": 1},
         ),
     ),
 )
 def test_promotion_fixture_specs_cover_the_direct_backend(
-    script_name: str,
+    fixture_name: str,
     expected: dict[str, int],
     tmp_path: Path,
 ) -> None:
-    namespace = runpy.run_path(str(ROOT / "examples" / script_name))
-    document = namespace["build_document"]()
+    document = read_ai7(ROOT / "examples" / fixture_name).document
     spec = _document_spec(document, tmp_path, NativeCompileProfile())
 
     def flatten(items: list[dict[str, object]]) -> list[dict[str, object]]:
