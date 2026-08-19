@@ -64,6 +64,22 @@ flowchart LR
 | `_illustrator_legacy` / `_illustrator_modern` | legacy AI8 / modern PDF-compatible AIのroundtrip adapter | bridge + scripts + inspection + semantic readers |
 | `_illustrator_native_materialization` | legacy text/linkをnative TextFrame/PlacedItemへ変換するadapter | bridge + scripts + DOM + assets |
 
+### modern / safe-edit内部module
+
+`modern.py`、`modern_semantic.py`、`modern_writing.py`、`editing.py`は互換facadeです。実装の依存方向はcontainer → CST → projection → target discovery → synchronized patch → verification、またoperation manifest → selector / plan → apply orchestrationです。
+
+| module | 責務 | 直接知るもの |
+| --- | --- | --- |
+| `_modern_container` | PDF構文、object resolution、bounded stream codec、PrivateData section | PDF bytes、limits |
+| `_modern_cst` | decoded PrivateDataのlexemeとexact-span CST契約 | decoded segment |
+| `_modern_projection` | read-only semantic projectionとunknown / partial evidence | CST、`model` |
+| `_modern_discovery` | editable target inventory、representation evidence、停止理由 | projection、source evidence |
+| `_modern_patch` | PDF / PrivateData synchronized patch | discovery evidence、container codec、verification |
+| `_operation_schema` | version 1 manifest / selector 契約 | JSON schema |
+| `_operation_plan` / `_operation_orchestration` | read-only plan、apply、post-apply validation | schema、profile backend |
+
+内部moduleは公開facadeを逆向きにimportしません。これにより、既存のimport pathを保ったまま、reader、projection、patch、verificationの保証を個別にテストできます。
+
 bridgeは`Document` parsingやsemantic policyを所有せず、DOM/comparison層はIllustrator processを直接起動しません。実機なしのbridge・script contract・comparisonのテストと、macOS上のIllustrator適合matrixは別の検証境界として維持します。
 
 ## 入出力契約

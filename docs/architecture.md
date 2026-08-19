@@ -22,6 +22,35 @@ low-level Document IR
 
 主な責務は、形式判定、未知情報を保持する読取、対応部分のIR投影、局所patch、限定profileのserialize、再読込・意味・表示・実機検証です。共通IRはDocument、Artboard、Layer、Group、Path、CompoundPath、ClippingGroup、TextFrame、LinkedImageと、geometry / paint / stacking / stable IDを表現します。
 
+## modern / operation の内部境界
+
+公開モジュールは既存のPython APIとCLIの互換入口として残し、実装は次の依存方向に固定しています。
+
+```text
+modern facade
+  -> _modern_container (PDF syntax / object resolution / bounded codecs)
+  -> _modern_cst (decoded PrivateData lexeme / exact-span CST)
+  -> _modern_projection (read-only semantic IR projection)
+  -> _modern_discovery (editable target inventory and evidence)
+  -> _modern_patch (synchronized PDF + PrivateData patch backend)
+  -> verification (representation / timestamp / visual evidence)
+
+operation manifest schema
+  -> selector resolution + read-only plan
+  -> apply orchestration
+  -> profile-specific backend + post-apply verification
+```
+
+| 公開入口 | 内部責務 | 保証境界 |
+| --- | --- | --- |
+| `modern` | PDF-compatible AIのbounded readとPrivateData section discovery | `modern-ai-read-only-v2` |
+| `modern_semantic` | exact-span CST、unknown span、partial node、semantic projection | fixture coverage / diagnostics / classification |
+| `modern_writing` | facadeのみ。mutationは `_modern_patch` へ委譲 | `modern-ai-synchronized-patch-v1` |
+| `editing` | facadeのみ。manifest、selector、plan、apply orchestrationは `_operation_orchestration` | source precondition / fail-closed apply |
+| `verification` | PDF display、timestamp freshness、representation consistency、visual diff | semantic / representation / visual evidence |
+
+container層はsemantic policyやoperation selectorを知りません。CST層はPDFを再解析せず、decoded PrivateDataのspanを所有します。projection層はCSTとmodelだけから読み取り専用IRを構築し、未対応syntaxをeditableとは分類しません。discoveryはpatchを実行せず、対象・根拠・停止理由を返します。patchはdiscovery結果とsource preconditionを受け、PDF表示表現とPrivateDataを同じoperationで更新できない場合は成功扱いにしません。
+
 ## 上位層との境界
 
 デザインcomponentとエージェントworkflowは兄弟リポジトリ`illustrator-agent`が所有し、このパッケージの公開Python API / CLIへ依存します。依存方向は常に次の向きです。
