@@ -110,6 +110,7 @@ from .modern_writing import (
 )
 from .native import NativeCompileProfile, compile_native_ai
 from .native_bridge import (
+    NATIVE_REQUIRED_CHECKS,
     NativeCompileRequest,
     NativeContractError,
     NativeRuntimeBridge,
@@ -169,6 +170,7 @@ __all__ = [
     "ModernUnknownOperator",
     "ModernUnknownSpan",
     "NativeCompileProfile",
+    "NATIVE_REQUIRED_CHECKS",
     "NativeCompileRequest",
     "NativeContractError",
     "NativeRuntimeBridge",

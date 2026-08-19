@@ -18,6 +18,7 @@ from py_ai_illustrator.native import (
     _validate_document,
 )
 from py_ai_illustrator.native_bridge import (
+    NATIVE_REQUIRED_CHECKS,
     NativeCompileRequest,
     NativeContractError,
     NativeRuntimeBridge,
@@ -133,6 +134,30 @@ def test_native_result_contract_rejects_unversioned_or_non_json_responses() -> N
         parse_native_compile_result("error from Illustrator")
     with pytest.raises(NativeContractError, match="unsupported result contract"):
         parse_native_compile_result(json.dumps({"ok": False}))
+
+
+def test_native_result_contract_requires_all_success_checks() -> None:
+    valid_checks = {name: True for name in NATIVE_REQUIRED_CHECKS}
+    invalid_checks = (
+        {},
+        {**valid_checks, "native_editability": False},
+        {**valid_checks, "native_editability": "true"},
+        {name: True for name in NATIVE_REQUIRED_CHECKS[:-1]},
+    )
+
+    for checks in invalid_checks:
+        with pytest.raises(NativeContractError):
+            parse_native_compile_result(
+                json.dumps(
+                    {
+                        "contract": "py-ai-illustrator.native-compile-result",
+                        "version": 1,
+                        "operation": "compile",
+                        "ok": True,
+                        "checks": checks,
+                    }
+                )
+            )
 
 
 def test_native_runtime_bridge_places_request_and_runtime_independently(
@@ -277,7 +302,7 @@ def test_compile_promotes_only_a_verified_pdf_compatible_ai(
                     "operation": "compile",
                     "ok": True,
                     "illustrator_version": "30.7.0",
-                    "checks": {"native_editability": True},
+                    "checks": {name: True for name in NATIVE_REQUIRED_CHECKS},
                 }
             ),
             stderr="",
@@ -331,6 +356,40 @@ def test_compile_keeps_destination_absent_on_dom_mismatch(
     result = native.compile_native_ai(sample_document(), destination)
 
     assert result["status"] == "mismatch"
+    assert not destination.exists()
+
+
+def test_compile_rejects_success_with_a_failed_required_check(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    destination = tmp_path / "result.ai"
+    checks = {name: True for name in NATIVE_REQUIRED_CHECKS}
+    checks["native_editability"] = False
+
+    monkeypatch.setattr(native.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(
+        native,
+        "_execute_javascript",
+        lambda *args, **kwargs: CompletedProcess(
+            [],
+            0,
+            stdout=json.dumps(
+                {
+                    "contract": "py-ai-illustrator.native-compile-result",
+                    "version": 1,
+                    "operation": "compile",
+                    "ok": True,
+                    "checks": checks,
+                }
+            ),
+            stderr="",
+        ),
+    )
+
+    result = native.compile_native_ai(sample_document(), destination)
+
+    assert result["status"] == "failed"
     assert not destination.exists()
 
 

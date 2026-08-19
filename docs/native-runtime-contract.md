@@ -31,11 +31,20 @@ stdout相当の戻り値は次のenvelopeを持ちます。
   "operation": "compile",
   "ok": true,
   "illustrator_version": "30.7.0",
-  "checks": {"structure_and_order": true}
+  "checks": {
+    "structure_and_order": true,
+    "stable_identity": true,
+    "geometry_and_style": true,
+    "linked_resources": true,
+    "native_editability": true,
+    "pdf_compatible_ai": true
+  }
 }
 ```
 
-`ok: true`では`checks`も返します。`ok: false`は次の2種類です。
+version 1の`ok: true`は、上記6 checkが全て存在し、boolean型で、全て`true`の場合だけ受理されます。欠落、空dict、`false`、boolean以外はcontract errorとして`failed`に分類し、temporary outputを最終出力へ昇格しません。
+
+`ok: false`は次の2種類です。
 
 - `checks`を含む: DOM・geometry・style・link・native editabilityなどの意味照合不一致。Pythonは`mismatch`とする。
 - `checks`を含まない: Illustrator例外、request contractエラーなどruntime実行失敗。Pythonは`failed`とする。

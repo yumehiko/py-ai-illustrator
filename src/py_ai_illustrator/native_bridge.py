@@ -17,6 +17,14 @@ NATIVE_COMPILE_OPERATION = "compile"
 NATIVE_REQUEST_FILENAME = "py-ai-native-request.json"
 NATIVE_RUNTIME_FILENAME = "py-ai-native-runtime.jsx"
 NATIVE_RUNTIME_RESOURCE = "runtime/direct_native.jsx"
+NATIVE_REQUIRED_CHECKS = (
+    "structure_and_order",
+    "stable_identity",
+    "geometry_and_style",
+    "linked_resources",
+    "native_editability",
+    "pdf_compatible_ai",
+)
 
 
 class NativeContractError(ValueError):
@@ -80,8 +88,28 @@ def parse_native_compile_result(stdout: str) -> dict[str, Any]:
         raise NativeContractError("Illustrator returned an unsupported result operation")
     if type(result.get("ok")) is not bool:
         raise NativeContractError("Illustrator result contract must contain a boolean 'ok'")
-    if result["ok"] and not isinstance(result.get("checks"), dict):
-        raise NativeContractError("Successful Illustrator result must contain checks")
+    if result["ok"]:
+        checks = result.get("checks")
+        if not isinstance(checks, dict):
+            raise NativeContractError("Successful Illustrator result must contain checks")
+        missing = [name for name in NATIVE_REQUIRED_CHECKS if name not in checks]
+        if missing:
+            raise NativeContractError(
+                "Successful Illustrator result is missing required checks: "
+                + ", ".join(missing)
+            )
+        non_boolean = [name for name in NATIVE_REQUIRED_CHECKS if type(checks[name]) is not bool]
+        if non_boolean:
+            raise NativeContractError(
+                "Successful Illustrator result checks must be boolean: "
+                + ", ".join(non_boolean)
+            )
+        failed = [name for name in NATIVE_REQUIRED_CHECKS if checks[name] is not True]
+        if failed:
+            raise NativeContractError(
+                "Successful Illustrator result contains failed checks: "
+                + ", ".join(failed)
+            )
     return result
 
 
