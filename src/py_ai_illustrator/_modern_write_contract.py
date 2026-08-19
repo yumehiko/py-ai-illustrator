@@ -8,4 +8,3 @@ class ModernWriteError(ValueError):
 
 
 __all__ = ["ModernWriteError"]
-
