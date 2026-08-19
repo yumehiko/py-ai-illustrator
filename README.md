@@ -2,6 +2,8 @@
 
 Adobe Illustratorの起動を前提にしないPython coreと、Illustrator 2026を利用する任意のnative backendを持ち、`.ai`と低水準Python IRの間を安全に変換・編集・検証する第1層のリポジトリです。
 
+初見向けの入出力契約と3つの主経路は、[System overview](docs/system-overview.md)に集約しています。
+
 デザインcomponentとエージェントworkflowは、兄弟リポジトリ`illustrator-agent`が所有します。このリポジトリへの機能追加は、上位層の具体的な要求、再現fixture、保証条件が揃った場合に行います。
 
 ## 責務
@@ -36,15 +38,15 @@ uv run ruff check .
 
 ```bash
 # 形式・互換性・semantic coverageを確認
-uv run py-ai inspect input.ai --json
-uv run py-ai validate input.ai
+uv run py-ai inspect examples/rectangle.ai --json
+uv run py-ai validate examples/rectangle.ai
 
 # legacy AIとJSON IRを相互変換
-uv run py-ai export input.ai --to json -o document.json
-uv run py-ai export document.json --to ai7 -o output.ai
+uv run py-ai export examples/rectangle.ai --to json -o /tmp/document.json
+uv run py-ai export /tmp/document.json --to ai7 -o /tmp/output.ai
 
 # JSON IRからIllustrator 2026 native AIを直接生成・再open検証
-uv run py-ai compile-native document.json -o output.native.ai
+uv run py-ai compile-native examples/minimal-document.json -o /tmp/output.native.ai
 
 # 既存AIの安全編集
 uv run py-ai plan input.ai operations.json
@@ -61,6 +63,7 @@ operationはtypeとid / name / bounds / hierarchyを組み合わせた検証可�
 ## ドキュメント
 
 - [開発原則](docs/development-principles.md)
+- [System overview](docs/system-overview.md)
 - [ロードマップ](docs/roadmap.md)
 - [アーキテクチャ](docs/architecture.md)
 - [legacy feature profile](docs/legacy-feature-profile.md)

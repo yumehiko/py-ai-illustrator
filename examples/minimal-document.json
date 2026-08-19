@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "title": "Minimal native compile",
+  "width": 100,
+  "height": 100,
+  "layers": [
+    {
+      "id": "artwork",
+      "name": "Artwork",
+      "paths": [
+        {
+          "id": "square",
+          "points": [
+            {"x": 10, "y": 90},
+            {"x": 90, "y": 90},
+            {"x": 90, "y": 10},
+            {"x": 10, "y": 10}
+          ],
+          "closed": true,
+          "fill": {"red": 0.15, "green": 0.45, "blue": 0.9}
+        }
+      ]
+    }
+  ]
+}

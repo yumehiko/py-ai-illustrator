@@ -1,4 +1,4 @@
-"""Command-line boundary shared by humans and future agent adapters."""
+"""Inspect, safely edit, verify supported AI files, and compile Document IR via Illustrator 2026."""
 
 from __future__ import annotations
 
@@ -400,12 +400,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="py-ai", description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    inspect_parser = subparsers.add_parser("inspect", help="detect the file container")
+    inspect_parser = subparsers.add_parser(
+        "inspect", help="detect the container and read bounded format evidence"
+    )
     inspect_parser.add_argument("input")
     inspect_parser.add_argument("--json", action="store_true")
     inspect_parser.set_defaults(handler=_inspect)
 
-    export_parser = subparsers.add_parser("export", help="translate between AI and the JSON IR")
+    export_parser = subparsers.add_parser(
+        "export", help="convert the supported legacy AI subset and Document IR JSON"
+    )
     export_parser.add_argument("input")
     export_parser.add_argument("--to", choices=("json", "ai7"), required=True)
     export_parser.add_argument("-o", "--output")
@@ -417,21 +421,23 @@ def build_parser() -> argparse.ArgumentParser:
     export_parser.set_defaults(handler=_export)
 
     plan_parser = subparsers.add_parser(
-        "plan", help="resolve and dry-run a supported safe edit request"
+        "plan", help="resolve and dry-run a safe edit without writing a file"
     )
     plan_parser.add_argument("input")
     plan_parser.add_argument("operations")
     plan_parser.set_defaults(handler=_plan)
 
     apply_parser = subparsers.add_parser(
-        "apply", help="atomically apply a safe legacy edit request to a new file"
+        "apply", help="apply a verified safe edit to a new output file"
     )
     apply_parser.add_argument("input")
     apply_parser.add_argument("operations")
     apply_parser.add_argument("-o", "--output", required=True)
     apply_parser.set_defaults(handler=_apply)
 
-    diff_parser = subparsers.add_parser("diff", help="compare two supported AI documents")
+    diff_parser = subparsers.add_parser(
+        "diff", help="compare two supported AI documents semantically or visually"
+    )
     diff_parser.add_argument("before")
     diff_parser.add_argument("after")
     diff_mode = diff_parser.add_mutually_exclusive_group(required=True)
@@ -446,7 +452,7 @@ def build_parser() -> argparse.ArgumentParser:
     diff_parser.set_defaults(handler=_diff)
 
     preview_parser = subparsers.add_parser(
-        "preview", help="render a normalized PDF or legacy reference PNG preview"
+        "preview", help="render a PDF display or legacy IR reference PNG preview"
     )
     preview_parser.add_argument("input")
     preview_parser.add_argument("-o", "--output", required=True)
@@ -457,13 +463,15 @@ def build_parser() -> argparse.ArgumentParser:
     preview_parser.add_argument("--force", action="store_true")
     preview_parser.set_defaults(handler=_preview)
 
-    validate_parser = subparsers.add_parser("validate", help="run available structural checks")
+    validate_parser = subparsers.add_parser(
+        "validate", help="run available container, compatibility, and structural checks"
+    )
     validate_parser.add_argument("input")
     validate_parser.set_defaults(handler=_validate)
 
     illustrator_parser = subparsers.add_parser(
         "test-illustrator",
-        help="open a temporary copy in Illustrator and inspect the imported structure",
+        help="use Illustrator to inspect a temporary copy without saving the input",
     )
     illustrator_parser.add_argument("input")
     illustrator_parser.add_argument("--timeout", type=float, default=90.0)
@@ -473,7 +481,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     native_parser = subparsers.add_parser(
         "materialize-native",
-        help="convert legacy AI text to native editable text and save a modern AI",
+        help="use Illustrator to convert legacy AI text to a new native editable AI",
     )
     native_parser.add_argument("input")
     native_parser.add_argument("-o", "--output", required=True)
@@ -483,7 +491,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     compile_native_parser = subparsers.add_parser(
         "compile-native",
-        help="compile a Document IR JSON directly to a verified native AI",
+        help="use Illustrator to compile Document IR JSON to a verified native AI",
     )
     compile_native_parser.add_argument("input")
     compile_native_parser.add_argument("-o", "--output", required=True)
@@ -494,7 +502,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     fonts_parser = subparsers.add_parser(
         "illustrator-fonts",
-        help="list installed Illustrator fonts and validate PostScript names",
+        help="use Illustrator to list fonts and validate PostScript names",
     )
     fonts_parser.add_argument("--query")
     fonts_parser.add_argument("--require", action="append", default=[])
@@ -540,7 +548,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     modern_roundtrip_parser = subparsers.add_parser(
         "test-illustrator-modern-roundtrip",
-        help="resave a PDF-compatible AI and verify native reopen/editability",
+        help="resave a PDF-compatible AI in Illustrator and verify native reopen/editability",
     )
     modern_roundtrip_parser.add_argument("input")
     modern_roundtrip_parser.add_argument("--timeout", type=float, default=90.0)
