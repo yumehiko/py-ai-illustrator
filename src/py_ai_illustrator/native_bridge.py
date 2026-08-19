@@ -156,9 +156,9 @@ class NativeRuntimeBridge:
         )
         runtime_source = self.runtime_loader() if runtime_source is None else runtime_source
         if script_executor is None:
-            from .illustrator import _execute_javascript
+            from ._illustrator_bridge import execute_javascript
 
-            script_executor = _execute_javascript
+            script_executor = execute_javascript
         return script_executor(
             runtime_source,
             runtime_directory,

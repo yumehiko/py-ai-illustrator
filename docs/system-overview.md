@@ -49,6 +49,23 @@ flowchart LR
 
 `illustrator-agent`などの上位層は、データを業務上のcomponentやlayoutへ解釈して`Document` IRを作ります。このリポジトリはその意味を生成せず、受け取ったIRを検証可能な低水準の図形・文字・画像・階層へ変換します。
 
+### Illustrator適合層の内部module
+
+公開互換facadeの`py_ai_illustrator.illustrator`は、既存のPython APIとCLIの入口だけを保持します。実装は責務ごとに次の内部moduleへ分離しています。
+
+| module | 責務 | 依存方向 |
+| --- | --- | --- |
+| `_illustrator_bridge` | AppleScript、`osascript`、timeout、`CompletedProcess`の境界 | adapterからのみ呼ぶ。IRを知らない |
+| `_illustrator_dom` | Python IRの再帰走査、期待構造、DOM snapshot比較、roundtrip semantic比較 | `format` / `legacy` / `model`だけ。subprocessを起動しない |
+| `_illustrator_scripts` | ExtendScriptの生成、path/JSON escape、fixture・保存・materialization script | 値のserializationだけ。ファイルを開かない |
+| `_illustrator_inspection` | 一時コピーのopen、DOM snapshotのresult組み立て | bridge + scripts + DOM |
+| `_illustrator_fonts` | Illustrator font catalogの取得、query、PostScript名検証 | bridge + scripts |
+| `_illustrator_fixtures` | Illustratorでfixtureを作成し、legacy readerで検証 | bridge + scripts + DOM + legacy reader |
+| `_illustrator_legacy` / `_illustrator_modern` | legacy AI8 / modern PDF-compatible AIのroundtrip adapter | bridge + scripts + inspection + semantic readers |
+| `_illustrator_native_materialization` | legacy text/linkをnative TextFrame/PlacedItemへ変換するadapter | bridge + scripts + DOM + assets |
+
+bridgeは`Document` parsingやsemantic policyを所有せず、DOM/comparison層はIllustrator processを直接起動しません。実機なしのbridge・script contract・comparisonのテストと、macOS上のIllustrator適合matrixは別の検証境界として維持します。
+
 ## 入出力契約
 
 ### 入力
