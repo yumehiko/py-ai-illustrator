@@ -14,27 +14,29 @@ flowchart LR
 
   subgraph CORE[py-ai-illustrator]
     IR[Document IR]
-    MANIFEST[operation manifest]
     READ[inspect / validate]
     PATCH[safe patch]
-    VERIFY[verification report]
+    PATCH_VERIFY[reparse / semantic / visual verification]
     PREVIEW[preview / diff]
     COMPILE[native AI compile]
+    NATIVE_VERIFY[reopen / native verification]
   end
 
   subgraph AI[成果物]
+    TEMP[temporary native .ai]
     NATIVE[verified native .ai]
     EDITED[verified edited .ai]
     EVIDENCE[JSON report / PNG evidence]
   end
 
-  DESIGN --> IR --> COMPILE --> NATIVE
-  EXISTING[existing .ai] --> MANIFEST --> PATCH --> EDITED
-  EXISTING --> READ --> VERIFY
+  DESIGN --> IR --> COMPILE --> TEMP --> NATIVE_VERIFY --> NATIVE
+  EXISTING[existing .ai] --> PATCH
+  MANIFEST[operation manifest] --> PATCH
+  PATCH --> PATCH_VERIFY --> EDITED
+  EXISTING --> READ --> EVIDENCE
   EXISTING --> PREVIEW --> EVIDENCE
-  EDITED --> VERIFY
-  NATIVE --> VERIFY
-  VERIFY --> EVIDENCE
+  PATCH_VERIFY --> EVIDENCE
+  NATIVE_VERIFY --> EVIDENCE
 ```
 
 ## 3つの主経路
