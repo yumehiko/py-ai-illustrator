@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from subprocess import CompletedProcess
+from subprocess import CompletedProcess, TimeoutExpired
 from types import SimpleNamespace
 
 import pytest
@@ -14,9 +14,15 @@ from py_ai_illustrator.native import (
     NativeCompileProfile,
     _build_direct_native_javascript,
     _document_spec,
-    _javascript_literal,
     _load_document,
     _validate_document,
+)
+from py_ai_illustrator.native_bridge import (
+    NativeCompileRequest,
+    NativeContractError,
+    NativeRuntimeBridge,
+    parse_native_compile_result,
+    serialize_native_compile_request,
 )
 
 ROOT = Path(__file__).parents[1]
@@ -98,11 +104,64 @@ def test_load_document_json_uses_its_directory_as_the_asset_base(
     assert source_base == tmp_path
 
 
-def test_javascript_literal_uses_character_codes_for_strings() -> None:
-    literal = _javascript_literal({"value": "日本語"})
+def test_native_request_contract_preserves_json_boundary_types() -> None:
+    request = NativeCompileRequest(
+        document={
+            "unicode": "日本語\\\"\\\\",
+            "number": 12.5,
+            "null": None,
+            "array": [True, 0, {"nested": "値"}],
+            "object": {"key": "value"},
+        },
+        destination="/tmp/出力.ai",
+    )
 
-    assert "日本語" not in literal
-    assert "String.fromCharCode(26085,26412,35486)" in literal
+    payload = json.loads(serialize_native_compile_request(request))
+
+    assert payload["contract"] == "py-ai-illustrator.native-compile"
+    assert payload["version"] == 1
+    assert payload["operation"] == "compile"
+    assert payload["destination"] == "/tmp/出力.ai"
+    assert payload["document"]["unicode"] == "日本語\\\"\\\\"
+    assert payload["document"]["number"] == 12.5
+    assert payload["document"]["null"] is None
+    assert payload["document"]["array"] == [True, 0, {"nested": "値"}]
+
+
+def test_native_result_contract_rejects_unversioned_or_non_json_responses() -> None:
+    with pytest.raises(NativeContractError, match="non-JSON"):
+        parse_native_compile_result("error from Illustrator")
+    with pytest.raises(NativeContractError, match="unsupported result contract"):
+        parse_native_compile_result(json.dumps({"ok": False}))
+
+
+def test_native_runtime_bridge_places_request_and_runtime_independently(
+    tmp_path: Path,
+) -> None:
+    request = NativeCompileRequest(
+        document={"title": "日本語", "items": [None, 1.25]},
+        destination=str(tmp_path / "temporary.ai"),
+    )
+    calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+    def fake_executor(*args: object, **kwargs: object) -> CompletedProcess[str]:
+        calls.append((args, kwargs))
+        return CompletedProcess([], 0, stdout="{}", stderr="")
+
+    NativeRuntimeBridge(runtime_loader=lambda: "#target illustrator\\n// runtime").execute(
+        request,
+        tmp_path,
+        timeout=30,
+        application_name="Illustrator Test",
+        script_executor=fake_executor,
+    )
+
+    request_payload = json.loads(
+        (tmp_path / "py-ai-native-request.json").read_text(encoding="utf-8")
+    )
+    assert request_payload["document"]["title"] == "日本語"
+    assert calls[0][0][0] == "#target illustrator\\n// runtime"
+    assert calls[0][1]["script_name"] == "py-ai-native-runtime.jsx"
 
 
 def test_document_spec_preserves_ir_order_and_native_identity(tmp_path: Path) -> None:
@@ -132,6 +191,8 @@ def test_direct_javascript_owns_and_reopens_only_its_document(tmp_path: Path) ->
     assert "previousCoordinateSystem" in javascript
     assert "options.pdfCompatible = spec.pdf_compatible" in javascript
     assert "layerIndex = spec.layers.length - 1; layerIndex >= 0; layerIndex--" in javascript
+    assert "日本語" not in javascript
+    assert "py-ai-native-request.json" in javascript
     assert str(tmp_path) not in javascript
 
 
@@ -168,6 +229,29 @@ def test_compile_profile_rejects_non_native_output_modes() -> None:
         NativeCompileProfile(embed_linked_files=True)
 
 
+def test_compile_refuses_to_overwrite_existing_output(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    destination = tmp_path / "result.ai"
+    destination.write_bytes(b"existing")
+    execute_called = False
+
+    def unexpected_execute(*args: object, **kwargs: object) -> CompletedProcess[str]:
+        nonlocal execute_called
+        execute_called = True
+        raise AssertionError("Illustrator must not run for an existing destination")
+
+    monkeypatch.setattr(native.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(native, "_execute_javascript", unexpected_execute)
+
+    result = native.compile_native_ai(sample_document(), destination)
+
+    assert result["status"] == "invalid-input"
+    assert not execute_called
+    assert destination.read_bytes() == b"existing"
+
+
 def test_compile_promotes_only_a_verified_pdf_compatible_ai(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -188,6 +272,9 @@ def test_compile_promotes_only_a_verified_pdf_compatible_ai(
             0,
             stdout=json.dumps(
                 {
+                    "contract": "py-ai-illustrator.native-compile-result",
+                    "version": 1,
+                    "operation": "compile",
                     "ok": True,
                     "illustrator_version": "30.7.0",
                     "checks": {"native_editability": True},
@@ -229,6 +316,9 @@ def test_compile_keeps_destination_absent_on_dom_mismatch(
             0,
             stdout=json.dumps(
                 {
+                    "contract": "py-ai-illustrator.native-compile-result",
+                    "version": 1,
+                    "operation": "compile",
                     "ok": False,
                     "checks": {"structure_and_order": False},
                     "errors": ["item order mismatch"],
@@ -241,6 +331,64 @@ def test_compile_keeps_destination_absent_on_dom_mismatch(
     result = native.compile_native_ai(sample_document(), destination)
 
     assert result["status"] == "mismatch"
+    assert not destination.exists()
+
+
+@pytest.mark.parametrize(
+    ("stdout", "expected_status"),
+    (
+        ("not json", "failed"),
+        (
+            json.dumps(
+                {
+                    "contract": "py-ai-illustrator.native-compile-result",
+                    "version": 1,
+                    "operation": "compile",
+                    "ok": False,
+                    "error": "Illustrator exception",
+                }
+            ),
+            "failed",
+        ),
+    ),
+)
+def test_compile_classifies_invalid_and_illustrator_error_responses(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    stdout: str,
+    expected_status: str,
+) -> None:
+    destination = tmp_path / "result.ai"
+
+    monkeypatch.setattr(native.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(
+        native,
+        "_execute_javascript",
+        lambda *args, **kwargs: CompletedProcess([], 0, stdout=stdout, stderr=""),
+    )
+
+    result = native.compile_native_ai(sample_document(), destination)
+
+    assert result["status"] == expected_status
+    assert not destination.exists()
+
+
+def test_compile_classifies_runtime_timeout_as_environment_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    destination = tmp_path / "result.ai"
+
+    monkeypatch.setattr(native.platform, "system", lambda: "Darwin")
+    monkeypatch.setattr(
+        native,
+        "_execute_javascript",
+        lambda *args, **kwargs: (_ for _ in ()).throw(TimeoutExpired("osascript", 1)),
+    )
+
+    result = native.compile_native_ai(sample_document(), destination)
+
+    assert result["status"] == "environment-unavailable"
     assert not destination.exists()
 
 

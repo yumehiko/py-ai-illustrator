@@ -103,6 +103,8 @@ uv run py-ai test-illustrator examples/packaging-labels.native.ai
 
 新規制作では、legacy AIを中間生成せず、JSON化した`Document` IRからIllustrator 2026 DOMを直接構築します。
 
+Python coreとExtendScriptのversion 1 JSON境界、runtime bridge、失敗分類は[direct native runtime contract](native-runtime-contract.md)に記録しています。fixture gateはこのbridge経由で同じtemporary-output、reopen、DOM照合、PDF-compatible昇格を検証します。
+
 ```bash
 uv run py-ai compile-native document.json -o output.native.ai
 
