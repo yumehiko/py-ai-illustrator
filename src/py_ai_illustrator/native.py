@@ -11,9 +11,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from ._illustrator_bridge import execute_javascript as _execute_javascript
 from .assets import PackagedLink, package_linked_images
 from .format import FileFormat, inspect_file
-from .illustrator import _execute_javascript
 from .model import (
     ClippingGroup,
     CmykColor,
