@@ -1,8 +1,9 @@
 """Public facade for modern PrivateData CST and semantic projection APIs.
 
-The implementation is kept in :mod:`._modern_semantic_projection`.  The
-facade preserves the public import path while internal code can depend on the
-container, CST, projection, discovery, and patch layers explicitly.
+The implementation is split between :mod:`._modern_cst` and
+:mod:`._modern_projection`. The facade preserves the public import path while
+internal code can depend on the container, CST, projection, discovery, and
+patch layers explicitly.
 """
 
 from ._modern_cst import (

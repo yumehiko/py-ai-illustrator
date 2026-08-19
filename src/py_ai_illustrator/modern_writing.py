@@ -5,9 +5,7 @@ contains no PDF or PrivateData mutation logic so the historical API remains a
 stable entry point while the internal write boundary is explicit.
 """
 
-from ._modern_patch import (
-    ModernWriteError,
-    ModernWriteResult,
+from ._modern_discovery import (
     _pdf_paint_matches,  # noqa: F401
     inspect_modern_container_translate_targets,
     inspect_modern_fill_targets,
@@ -15,11 +13,15 @@ from ._modern_patch import (
     inspect_modern_stroke_targets,
     inspect_modern_text_targets,
     inspect_modern_translate_targets,
+)
+from ._modern_patch import (
+    ModernWriteResult,
     patch_modern_path_fill,
     patch_modern_path_stroke,
     patch_modern_path_translate,
     patch_modern_text,
 )
+from ._modern_write_contract import ModernWriteError
 
 __all__ = [
     "ModernWriteError",

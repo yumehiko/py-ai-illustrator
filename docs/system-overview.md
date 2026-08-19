@@ -66,7 +66,7 @@ flowchart LR
 
 ### modern / safe-edit内部module
 
-`modern.py`、`modern_semantic.py`、`modern_writing.py`、`editing.py`は互換facadeです。実装の依存方向はcontainer → CST → projection → target discovery → synchronized patch → verification、またoperation manifest → selector / plan → apply orchestrationです。
+`modern.py`、`modern_semantic.py`、`modern_writing.py`、`editing.py`は互換facadeです。readerの実装はcontainer → projection → CST、writerの実装はsynchronized patch → target discovery → container / CST、operationの実装はschema → read-only plan → apply orchestrationという依存境界を持ちます。
 
 | module | 責務 | 直接知るもの |
 | --- | --- | --- |
@@ -75,8 +75,9 @@ flowchart LR
 | `_modern_projection` | read-only semantic projectionとunknown / partial evidence | CST、`model` |
 | `_modern_discovery` | editable target inventory、representation evidence、停止理由 | projection、source evidence |
 | `_modern_patch` | PDF / PrivateData synchronized patch | discovery evidence、container codec、verification |
-| `_operation_schema` | version 1 manifest / selector 契約 | JSON schema |
-| `_operation_plan` / `_operation_orchestration` | read-only plan、apply、post-apply validation | schema、profile backend |
+| `_operation_schema` | version 1 manifest / selector 契約 | JSON schema。plan / orchestrationをimportしない |
+| `_operation_plan` | selector resolution、capability evidence、read-only dry-run、expected semantic diff | schema、read-only profile backend。orchestrationをimportしない |
+| `_operation_orchestration` | prepared planのapply、atomic output、post-apply semantic / visual validation | schema、plan、mutation backend |
 
 内部moduleは公開facadeを逆向きにimportしません。これにより、既存のimport pathを保ったまま、reader、projection、patch、verificationの保証を個別にテストできます。
 

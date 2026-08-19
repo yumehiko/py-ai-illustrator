@@ -27,18 +27,21 @@ low-level Document IR
 公開モジュールは既存のPython APIとCLIの互換入口として残し、実装は次の依存方向に固定しています。
 
 ```text
-modern facade
+modern reader facade
   -> _modern_container (PDF syntax / object resolution / bounded codecs)
-  -> _modern_cst (decoded PrivateData lexeme / exact-span CST)
   -> _modern_projection (read-only semantic IR projection)
-  -> _modern_discovery (editable target inventory and evidence)
+  -> _modern_cst (decoded PrivateData lexeme / exact-span CST)
+
+modern writing facade
   -> _modern_patch (synchronized PDF + PrivateData patch backend)
+  -> _modern_discovery (editable target inventory and evidence)
+  -> _modern_container / _modern_cst
   -> verification (representation / timestamp / visual evidence)
 
-operation manifest schema
-  -> selector resolution + read-only plan
-  -> apply orchestration
-  -> profile-specific backend + post-apply verification
+operation facade
+  -> _operation_schema (manifest / selector validation)
+  -> _operation_plan (selector resolution / read-only plan)
+  -> _operation_orchestration (apply / post-apply verification)
 ```
 
 | 公開入口 | 内部責務 | 保証境界 |
@@ -46,10 +49,10 @@ operation manifest schema
 | `modern` | PDF-compatible AIのbounded readとPrivateData section discovery | `modern-ai-read-only-v2` |
 | `modern_semantic` | exact-span CST、unknown span、partial node、semantic projection | fixture coverage / diagnostics / classification |
 | `modern_writing` | facadeのみ。mutationは `_modern_patch` へ委譲 | `modern-ai-synchronized-patch-v1` |
-| `editing` | facadeのみ。manifest、selector、plan、apply orchestrationは `_operation_orchestration` | source precondition / fail-closed apply |
+| `editing` | facadeのみ。manifestは `_operation_schema`、planは `_operation_plan`、applyは `_operation_orchestration` | source precondition / fail-closed apply |
 | `verification` | PDF display、timestamp freshness、representation consistency、visual diff | semantic / representation / visual evidence |
 
-container層はsemantic policyやoperation selectorを知りません。CST層はPDFを再解析せず、decoded PrivateDataのspanを所有します。projection層はCSTとmodelだけから読み取り専用IRを構築し、未対応syntaxをeditableとは分類しません。discoveryはpatchを実行せず、対象・根拠・停止理由を返します。patchはdiscovery結果とsource preconditionを受け、PDF表示表現とPrivateDataを同じoperationで更新できない場合は成功扱いにしません。
+container層はoperation selectorを知りません。CST層はPDFを再解析せず、decoded PrivateDataのspanを所有します。projection層はCSTとmodelだけから読み取り専用IRを構築し、未対応syntaxをeditableとは分類しません。discoveryはpatchを実行せず、対象・根拠・停止理由を返します。patchはdiscovery結果とsource preconditionを受け、PDF表示表現とPrivateDataを同じoperationで更新できない場合は成功扱いにしません。operation schemaはplanやapplyをimportせず、planはschemaとread-only backendだけを使い、orchestrationだけがmutation backendを呼び出します。
 
 ## 上位層との境界
 
