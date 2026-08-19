@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "py-ai-illustrator"
 version = "0.1.0.dev0"
-description = "Read, inspect, edit, and write a documented subset of Adobe Illustrator files without Illustrator."
+description = "Parse, inspect, safely edit, and verify supported Adobe Illustrator files with a Python core; optionally compile native AI through Illustrator 2026."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

@@ -2,6 +2,8 @@
 
 このリポジトリは第1層の変換coreとIllustrator backendだけを所有します。
 
+入出力、主経路、CLIごとのIllustrator境界は[System overview](system-overview.md)に集約しています。この文書は、その概要を実装境界と保証の分離へ掘り下げます。
+
 ```text
 .ai bytes
   -> format / container reader
