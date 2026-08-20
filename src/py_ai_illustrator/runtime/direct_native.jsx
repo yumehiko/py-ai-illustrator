@@ -198,6 +198,7 @@
         } else {
             frame = parent.textFrames.pointText([textSpec.x, textSpec.y]);
         }
+        ensureParent(frame, parent, textSpec.id);
         frame.name = textSpec.name;
         frame.note = textSpec.note;
         frame.contents = textSpec.contents;
@@ -226,8 +227,9 @@
     function createImage(parent, imageSpec) {
         var imageFile = new File(imageSpec.file);
         if (!imageFile.exists) throw new Error("Linked image does not exist: " + imageSpec.file);
-        var image = parent.placedItems.add();
+        var image = documentRef.placedItems.add();
         image.file = imageFile;
+        ensureParent(image, parent, imageSpec.id);
         image.name = imageSpec.name;
         image.note = imageSpec.note;
         image.width = imageSpec.width;
@@ -235,10 +237,20 @@
         image.position = [imageSpec.x, imageSpec.y];
         if (Math.abs(imageSpec.rotation) > 0.0001) {
             var position = [image.position[0], image.position[1]];
-            image.rotate(imageSpec.rotation);
+            image.rotate(-imageSpec.rotation);
             image.position = position;
         }
         return image;
+    }
+
+    function ensureParent(item, parent, itemId) {
+        if (item.parent !== parent) {
+            item.move(parent, ElementPlacement.PLACEATBEGINNING);
+        }
+        if (item.parent !== parent) {
+            throw new Error("Could not preserve native parent for " + itemId);
+        }
+        return item;
     }
 
     function createCompound(parent, compoundSpec) {
@@ -374,15 +386,24 @@
         return true;
     }
 
-    function verifyImage(image, imageSpec) {
+    function imageMismatch(image, imageSpec) {
         var expectedFile = new File(imageSpec.file);
-        return image.file.exists
-            && image.file.fsName === expectedFile.fsName
-            && closeEnough(image.position[0], imageSpec.x, 0.1)
-            && closeEnough(image.position[1], imageSpec.y, 0.1)
-            && closeEnough(image.width, imageSpec.width, 0.1)
-            && closeEnough(image.height, imageSpec.height, 0.1)
-            && angleDifference(itemRotation(image), imageSpec.rotation) <= 0.01;
+        if (!image.file.exists) return "linked file does not exist";
+        if (image.file.fsName !== expectedFile.fsName) return "linked file path";
+        if (!closeEnough(image.position[0], imageSpec.x, 0.1)) {
+            return "x position " + image.position[0];
+        }
+        if (!closeEnough(image.position[1], imageSpec.y, 0.1)) {
+            return "y position " + image.position[1];
+        }
+        if (!closeEnough(image.width, imageSpec.dom_width, 0.1)) return "width " + image.width;
+        if (!closeEnough(image.height, imageSpec.dom_height, 0.1)) {
+            return "height " + image.height;
+        }
+        if (angleDifference(itemRotation(image), imageSpec.rotation) > 0.01) {
+            return "rotation " + itemRotation(image);
+        }
+        return null;
     }
 
     function verifyCompound(compound, compoundSpec, path) {
@@ -438,8 +459,14 @@
                 }
             } else if (itemSpec.kind === "text" && !verifyText(item, itemSpec)) {
                 errors.push(path + ": text attributes mismatch for " + itemSpec.id);
-            } else if (itemSpec.kind === "image" && !verifyImage(item, itemSpec)) {
-                errors.push(path + ": linked image mismatch for " + itemSpec.id);
+            } else if (itemSpec.kind === "image") {
+                var imageReason = imageMismatch(item, itemSpec);
+                if (imageReason !== null) {
+                    errors.push(
+                        path + ": linked image mismatch for " + itemSpec.id
+                        + " (" + imageReason + ")"
+                    );
+                }
             } else if (itemSpec.kind === "group") {
                 verifyContainer(item, itemSpec.items, path + "/" + itemSpec.id);
             } else if (itemSpec.kind === "compound_path") {

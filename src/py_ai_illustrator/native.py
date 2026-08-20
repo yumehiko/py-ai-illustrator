@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import platform
 import subprocess
@@ -136,6 +137,9 @@ def _text_spec(text: TextFrame) -> dict[str, object]:
 
 def _image_spec(image: LinkedImage, destination_directory: Path) -> dict[str, object]:
     linked_file = (destination_directory / image.source).resolve()
+    radians = math.radians(image.rotation)
+    cosine = abs(math.cos(radians))
+    sine = abs(math.sin(radians))
     return {
         "kind": "image",
         "id": image.id,
@@ -147,6 +151,8 @@ def _image_spec(image: LinkedImage, destination_directory: Path) -> dict[str, ob
         "width": image.width,
         "height": image.height,
         "rotation": image.rotation,
+        "dom_width": cosine * image.width + sine * image.height,
+        "dom_height": sine * image.width + cosine * image.height,
     }
 
 

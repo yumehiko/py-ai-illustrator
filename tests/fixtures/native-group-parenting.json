@@ -1,0 +1,60 @@
+{
+  "width": 240,
+  "height": 160,
+  "title": "Native group parenting regression",
+  "layers": [
+    {
+      "id": "artwork",
+      "name": "Artwork",
+      "groups": [
+        {
+          "id": "image-group",
+          "name": "Image Group",
+          "linked_images": [
+            {
+              "id": "linked-pixel",
+              "name": "Linked Pixel",
+              "source": "native-group-pixel.png",
+              "x": 18,
+              "y": 142,
+              "width": 36,
+              "height": 28,
+              "rotation": 45
+            }
+          ],
+          "item_order": [
+            {"kind": "image", "id": "linked-pixel"}
+          ]
+        },
+        {
+          "id": "area-text-group",
+          "name": "Area Text Group",
+          "text_frames": [
+            {
+              "id": "editable-area-text",
+              "name": "Editable Area Text",
+              "text": "Grouped editable area text",
+              "x": 82,
+              "y": 136,
+              "font_name": "Helvetica",
+              "font_size": 12,
+              "tracking": 25,
+              "leading": 15,
+              "area_width": 120,
+              "area_height": 48,
+              "fill": {"red": 0.1, "green": 0.2, "blue": 0.3},
+              "alignment": "left"
+            }
+          ],
+          "item_order": [
+            {"kind": "text", "id": "editable-area-text"}
+          ]
+        }
+      ],
+      "item_order": [
+        {"kind": "group", "id": "image-group"},
+        {"kind": "group", "id": "area-text-group"}
+      ]
+    }
+  ]
+}
