@@ -40,6 +40,8 @@ Profile ID: `modern-ai-synchronized-patch-v1`
 - source-localに証明できないpath geometry、gradient、pattern、spot color、effect
 - encrypted PDF、object stream内だけにある更新対象、未対応filter/DecodeParms
 
+linked imageや、PDF表示がoutline/CID subsetでPrivateData live textとのexact-span同期を証明できない対象は、このprofileへ無理に含めません。licensed Illustrator runtimeでcopy/edit/save-as/reopenを行う明示的な別経路は[Illustrator native local-edit profile](modern-ai-native-local-edit-profile.md)を参照してください。
+
 Illustratorでのnative再編集性はPython検証とは別の保証軸です。2026-08-18にIllustrator 30.7.0で、fill/translate/text atomic batchとBézier stroke成果物のcurrent-format再保存・再openが合格しました。DOM構造、text identity/content、PrivateData/PDF再parse、timestampを保持し、PDF再生成によるpixel差は各ページ0.1%以下でした。
 
 実機では`py-ai test-illustrator-modern-roundtrip patched.ai`を使い、open、current-format再保存、再open、DOM構造・text identity・PrivateData・PDF表示・pixel previewをまとめて確認します。第一層の最終matrixは`scripts/test_layer1_illustrator.py`です。

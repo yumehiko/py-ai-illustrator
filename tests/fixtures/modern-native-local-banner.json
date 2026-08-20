@@ -1,0 +1,96 @@
+{
+  "provenance": {
+    "description": "Minimal Illustrator DOM capture from the user-provided Issue #17 fixture",
+    "captured_at": "2026-08-21",
+    "illustrator_version": "30.7.0",
+    "source_filename": "banner-test-oven.ai",
+    "source_sha256": "57f4c266077eeb74960475e7f4f607599a4650e2e18fdee894887381ee2bf5c4",
+    "source_dimensions": [1080, 1080],
+    "linked_source_hint": "/Users/yumehiko/Desktop/oven.png"
+  },
+  "snapshot": {
+    "structure": {
+      "layer_count": 1,
+      "page_item_count": 25,
+      "path_item_count": 10,
+      "group_item_count": 2,
+      "compound_path_item_count": 9,
+      "text_frame_count": 3,
+      "placed_item_count": 1,
+      "artboards": [
+        {"name": "アートボード 1", "rect": [0, 0, 1080, -1080]}
+      ],
+      "layers": [
+        {
+          "name": "レイヤー 1",
+          "visible": true,
+          "locked": false,
+          "page_item_types": ["TextFrame", "PathItem", "GroupItem", "GroupItem", "PlacedItem"],
+          "page_item_count": 5
+        }
+      ]
+    },
+    "texts": [
+      {
+        "type": "text",
+        "id": "illustrator-dom-text-0",
+        "dom_index": 0,
+        "name": "",
+        "note": "",
+        "contents": "オークションに今すぐ参加！"
+      },
+      {
+        "type": "text",
+        "id": "illustrator-dom-text-1",
+        "dom_index": 1,
+        "name": "",
+        "note": "",
+        "contents": "500円!?"
+      },
+      {
+        "type": "text",
+        "id": "illustrator-dom-text-2",
+        "dom_index": 2,
+        "name": "",
+        "note": "",
+        "contents": "オーブントースターが",
+        "kind": "TextType.POINTTEXT",
+        "parent": {"type": "GroupItem", "name": ""},
+        "position": [147.958984375, -630.3701171875],
+        "geometric_bounds": [147.958984375, -630.3701171875, 932.0439453125, -733.7705078125],
+        "visible_bounds": [147.958984375, -630.3701171875, 932.0439453125, -733.7705078125],
+        "width": 784.0849609375,
+        "height": 103.400390625,
+        "matrix": [1, 0, 0, 1, -7356.3427734375, 7370.38836669922],
+        "style": {
+          "font_name": "VDL-LogoJrBlack-Black",
+          "font_size": 88,
+          "tracking": 0,
+          "leading": 154,
+          "auto_leading": true,
+          "fill_color": {"type": "RGBColor", "red": 255, "green": 0, "blue": 0},
+          "justification": "Justification.CENTER"
+        }
+      }
+    ],
+    "linked_images": [
+      {
+        "type": "linked_image",
+        "id": "illustrator-dom-linked-image-0",
+        "dom_index": 0,
+        "name": "",
+        "note": "",
+        "source": null,
+        "source_exists": false,
+        "parent": {"type": "Layer", "name": "レイヤー 1"},
+        "clipped": false,
+        "position": [156, 0],
+        "geometric_bounds": [156, 0, 924, -768],
+        "visible_bounds": [156, 0, 924, -768],
+        "width": 768,
+        "height": 768,
+        "matrix": [1, 0, 0, -1, -7496, 8732]
+      }
+    ]
+  }
+}

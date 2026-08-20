@@ -14,6 +14,7 @@ Adobe Illustratorの起動を前提にしないPython coreと、Illustrator 2026
 - `inspect` / `plan` / `apply` / `validate` / semantic・visual `diff` CLI
 - modern AI PrivateDataのbounded抽出、exact-span CST、read-only IR投影
 - modern AIの証拠付きfill / stroke / rectangle移動 / 一意text同期patch
+- Illustrator DOMによるmodern AIのatomic live text / linked image local edit
 - PDF表示証拠、preview、pixel visual diff
 - `Document` IRからIllustrator 2026 DOMを直接構築するnative compiler
 - Illustrator実機によるfixture適合試験とnative materialization
@@ -53,6 +54,11 @@ uv run py-ai plan input.ai operations.json
 uv run py-ai apply input.ai operations.json -o output.ai
 uv run py-ai diff input.ai output.ai --semantic
 
+# pure synchronized patchで証明できないlive text/linkをlicensed runtimeで編集
+uv run py-ai inspect-native-local input.ai
+uv run py-ai plan-native-local input.ai operations.json
+uv run py-ai apply-native-local input.ai operations.json -o output.ai
+
 # previewとvisual diff
 uv run py-ai preview input.ai -o preview.png
 uv run py-ai diff before.ai after.ai --visual -o visual-diff.png
@@ -69,6 +75,7 @@ operationはtypeとid / name / bounds / hierarchyを組み合わせた検証可�
 - [legacy feature profile](docs/legacy-feature-profile.md)
 - [modern read profile](docs/modern-ai-read-profile.md)
 - [modern synchronized patch profile](docs/modern-ai-write-profile.md)
+- [Illustrator native local-edit profile](docs/modern-ai-native-local-edit-profile.md)
 - [Illustrator適合試験](docs/illustrator-testing.md)
 - [ライセンス方針](docs/license-policy.md)
 - [ADR 0001: modern semantic reader](docs/adr/0001-modern-semantic-reader-strategy.md)

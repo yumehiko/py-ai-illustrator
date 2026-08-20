@@ -44,7 +44,7 @@ flowchart LR
 | 経路 | 入力 | 主な処理 | 出力 | Illustrator |
 | --- | --- | --- | --- | --- |
 | 新規制作 | 上位層が生成した`Document` IR JSON、必要なら相対リンク画像 | `compile-native`が新規Documentを作成し、DOMを構築、保存、再openして照合 | 検証済みPDF-compatible native `.ai` | 必須。macOS上のIllustrator 2026（30.7.0） |
-| 既存編集 | 既存`.ai`とversion 1 operation manifest | selectorとpreconditionを解決し、対応profileだけをsource-preserving patch | 検証済みの別`.ai` | 不要。modern PDF-compatible AIのpatchはPopplerの`pdftocairo`を使う |
+| 既存編集 | 既存`.ai`とversion 1 operation manifest | selectorとpreconditionを解決し、exact-span patchまたは明示的なnative local-edit profileを実行 | 検証済みの別`.ai` | exact-span patchは不要。native local editはIllustrator 2026必須 |
 | 調査・検証 | `.ai` / PDF、または編集前後の2ファイル | container判定、bounded read、構造検証、preview、semantic / visual diff | JSON report、標準出力、PNG evidence | 不要。PDFのraster preview / visual diffはPopplerが必要 |
 
 `illustrator-agent`などの上位層は、データを業務上のcomponentやlayoutへ解釈して`Document` IRを作ります。このリポジトリはその意味を生成せず、受け取ったIRを検証可能な低水準の図形・文字・画像・階層へ変換します。
@@ -59,6 +59,7 @@ flowchart LR
 | `_illustrator_dom` | Python IRの再帰走査、期待構造、DOM snapshot比較、roundtrip semantic比較 | `format` / `legacy` / `model`だけ。subprocessを起動しない |
 | `_illustrator_scripts` | ExtendScriptの生成、path/JSON escape、fixture・保存・materialization script | 値のserializationだけ。ファイルを開かない |
 | `_illustrator_inspection` | 一時コピーのopen、DOM snapshotのresult組み立て | bridge + scripts + DOM |
+| `_illustrator_native_local` | modern AIコピーのlive text/link inventory、atomic edit、save-as、reopen、publish前検証 | bridge + scripts + operation schema + modern/container/visual verification |
 | `_illustrator_fonts` | Illustrator font catalogの取得、query、PostScript名検証 | bridge + scripts |
 | `_illustrator_fixtures` | Illustratorでfixtureを作成し、legacy readerで検証 | bridge + scripts + DOM + legacy reader |
 | `_illustrator_legacy` / `_illustrator_modern` | legacy AI8 / modern PDF-compatible AIのroundtrip adapter | bridge + scripts + inspection + semantic readers |
@@ -121,6 +122,9 @@ bridgeは`Document` parsingやsemantic policyを所有せず、DOM/comparison層
 | `export --to ai7` | IR JSON | legacy AI（`-o`必須） | 不要 | 指定先へ書込み | canonical legacy AI。native current-format AIではない |
 | `plan` | AI + operation manifest | stdout JSON | 不要 | ファイル変更なし | selector、precondition、期待semantic diff、legacyのbyte-preserving範囲をdry-run |
 | `apply` | AI + operation manifest + 新規出力先 | verified AI + stdout JSON report | 不要（modern patchはPopplerが必要） | 入力を変更せず、既存出力を拒否 | legacyはreplacement span外のbyte一致、modernは対応するPDF / PrivateDataとvisual impactを検証 |
+| `inspect-native-local` | PDF-compatible AI | stdout JSON | 必須 | 入力の一時コピーだけをopen | live text / linked imageのDOM selectorとstyle/geometry/link evidence |
+| `plan-native-local` | PDF-compatible AI + operation manifest | stdout JSON | 必須 | 入力の一時コピーだけをopen | source digest、asset、DOM selectorを解決しatomic batchをdry-run |
+| `apply-native-local` | PDF-compatible AI + operation manifest + 新規出力先 | verified AI + visual diff + stdout JSON | 必須（Popplerも必要） | copyを編集し、全gate後だけ新規出力を確定 | save前・再open後DOM、font/link/editability、container、timestamp、target限定visual diff、source不変 |
 | `validate` | 1ファイル | stdout JSON | 不要 | 入力変更なし | 利用可能なcompatibility、container、PDF display、modern representationの構造検証。`safe_to_reserialize`はlegacy profileの値 |
 | `diff --semantic` | legacy AI 2個 | stdout JSON | 不要 | ファイル変更なし | stable IDによるsemantic差分。legacy AIだけを対象 |
 | `diff --visual` | AI / PDF 2個 + PNG先 | stdout JSON + heat-map PNG | 不要（PDFはPoppler） | 既存PNGは`--force`なしで拒否 | 同一raster条件でchanged pixels、ratio、bounds、channel差を記録 |
@@ -161,4 +165,4 @@ illustrator-agent -> py-ai-illustrator
 
 `illustrator-agent`は、業務デザインcomponent、layout、theme、自然言語workflow、データからの制作計画を担当します。`py-ai-illustrator`は、受け取った低水準IR、既存AI、operation manifestを安全に変換・編集・検証します。このrepoには、商品カードやバナーなどの業務上の意味を生成する機能は含まれません。新しいcore機能は、具体的なfixture、operation、保持条件、検証可能な完了条件が揃ったときに追加します。
 
-保証の詳細は[アーキテクチャ](architecture.md)、legacyの範囲は[legacy feature profile](legacy-feature-profile.md)、modernのread / write範囲は[modern read profile](modern-ai-read-profile.md)と[modern write profile](modern-ai-write-profile.md)、native制作の判断は[ADR 0002](adr/0002-direct-native-authoring-backend.md)を正とします。
+保証の詳細は[アーキテクチャ](architecture.md)、legacyの範囲は[legacy feature profile](legacy-feature-profile.md)、modernのread / write範囲は[modern read profile](modern-ai-read-profile.md)と[modern write profile](modern-ai-write-profile.md)、runtime local editは[Illustrator native local-edit profile](modern-ai-native-local-edit-profile.md)、native制作の判断は[ADR 0002](adr/0002-direct-native-authoring-backend.md)を正とします。
