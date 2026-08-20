@@ -30,6 +30,23 @@ def test_javascript_closes_only_its_document_without_saving(tmp_path: Path) -> N
     assert "\\" not in javascript
 
 
+def test_javascript_detects_unthreaded_area_text_overflow_without_dom_overflows_property(
+    tmp_path: Path,
+) -> None:
+    javascript = _build_javascript(tmp_path / "fixture.ai")
+
+    assert ".overflows" not in javascript
+    assert "function areaTextOverflows(frame)" in javascript
+    assert "frame.kind !== TextType.AREATEXT" in javascript
+    assert "frameStart !== storyStart" in javascript
+    assert "frameEnd !== storyEnd" in javascript
+    assert "var visibleStart = lines[0].start" in javascript
+    assert "var visibleEnd = lines[lines.length - 1].end" in javascript
+    assert "return visibleEnd < storyEnd" in javascript
+    assert "catch (overflowError)" in javascript
+    assert "overflow_inspection_preserved" in javascript
+
+
 def test_export_javascript_creates_and_closes_only_its_cmyk_fixture(tmp_path: Path) -> None:
     javascript = _build_export_javascript(tmp_path / 'native "curve".ai', "cmyk-curve")
     assert "app.documents.add(DocumentColorSpace.CMYK, 200, 200)" in javascript

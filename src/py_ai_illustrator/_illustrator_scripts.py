@@ -10,6 +10,54 @@ import json
 from pathlib import Path
 from typing import Any
 
+_AREA_TEXT_OVERFLOW_JAVASCRIPT = """    function areaTextOverflows(frame) {
+        if (
+            !frame
+            || frame.typename !== "TextFrame"
+            || frame.kind !== TextType.AREATEXT
+        ) return null;
+        try {
+            var story = frame.story;
+            var frameRange = frame.textRange;
+            if (!story || !frameRange) return null;
+            var storyRange = story.textRange;
+            if (!storyRange) return null;
+            var frameStart = frameRange.start;
+            var frameEnd = frameRange.end;
+            var storyStart = storyRange.start;
+            var storyEnd = storyRange.end;
+            var storyLength = storyRange.length;
+            if (
+                typeof frameStart !== "number"
+                || typeof frameEnd !== "number"
+                || typeof storyStart !== "number"
+                || typeof storyEnd !== "number"
+                || typeof storyLength !== "number"
+                || storyLength < 0
+                || frameStart !== storyStart
+                || frameEnd !== storyEnd
+                || storyEnd < storyStart
+            ) return null;
+            if (storyLength === 0) return false;
+            var lines = frame.lines;
+            if (!lines || typeof lines.length !== "number") return null;
+            if (lines.length === 0) return true;
+            var visibleStart = lines[0].start;
+            var visibleEnd = lines[lines.length - 1].end;
+            if (
+                typeof visibleStart !== "number"
+                || typeof visibleEnd !== "number"
+                || visibleStart !== storyStart
+                || visibleEnd < visibleStart
+                || visibleEnd > storyEnd
+            ) return null;
+            return visibleEnd < storyEnd;
+        } catch (overflowError) {
+            return null;
+        }
+    }
+"""
+
 
 def character_code_expression(value: str | Path) -> str:
     codepoints = ",".join(str(ord(character)) for character in str(value))
@@ -37,6 +85,7 @@ def build_javascript(source: Path) -> str:
     """Build the read-only DOM inspection script."""
 
     source_literal = character_code_expression(source)
+    overflow_javascript = _AREA_TEXT_OVERFLOW_JAVASCRIPT
     return f"""#target illustrator
 (function () {{
     var source = new File({source_literal});
@@ -94,6 +143,44 @@ def build_javascript(source: Path) -> str:
         if (!item.matrix) return null;
         var matrix = item.matrix;
         return Math.atan2(matrix.mValueB, matrix.mValueA) * 180 / Math.PI;
+    }}
+
+{overflow_javascript}
+
+    function textFrameFingerprint(frame) {{
+        try {{
+            var textRange = frame.textRange;
+            var attributes = textRange ? textRange.characterAttributes : null;
+            var paragraphAttributes = textRange ? textRange.paragraphAttributes : null;
+            var matrix = frame.matrix;
+            return toJson({{
+                contents: frame.contents,
+                story_contents: frame.story ? frame.story.textRange.contents : null,
+                frame_range: textRange ? [textRange.start, textRange.end] : null,
+                story_range: frame.story
+                    ? [frame.story.textRange.start, frame.story.textRange.end] : null,
+                kind: String(frame.kind),
+                position: [frame.position[0], frame.position[1]],
+                width: typeof frame.width === "number" ? frame.width : null,
+                height: typeof frame.height === "number" ? frame.height : null,
+                matrix: matrix ? [matrix.mValueA, matrix.mValueB, matrix.mValueC,
+                    matrix.mValueD, matrix.mValueTX, matrix.mValueTY] : null,
+                font_size: attributes && typeof attributes.size === "number"
+                    ? attributes.size : null,
+                font_name: attributes && attributes.textFont ? attributes.textFont.name : null,
+                tracking: attributes && typeof attributes.tracking === "number"
+                    ? attributes.tracking : null,
+                leading: attributes && typeof attributes.leading === "number"
+                    ? attributes.leading : null,
+                auto_leading: attributes && typeof attributes.autoLeading === "boolean"
+                    ? attributes.autoLeading : null,
+                fill_color: attributes ? colorToObject(attributes.fillColor) : null,
+                justification: paragraphAttributes
+                    ? String(paragraphAttributes.justification) : null
+            }});
+        }} catch (fingerprintError) {{
+            return null;
+        }}
     }}
 
     try {{
@@ -199,11 +286,16 @@ def build_javascript(source: Path) -> str:
                 var textRange = textFrame.textRange;
                 var attributes = textRange ? textRange.characterAttributes : null;
                 var paragraphAttributes = textRange ? textRange.paragraphAttributes : null;
+                var fingerprintBefore = textFrameFingerprint(textFrame);
+                var overflow = areaTextOverflows(textFrame);
+                var fingerprintAfter = textFrameFingerprint(textFrame);
                 textFrames.push({{
                     kind: textFrame.typename === "TextFrame" ? String(textFrame.kind) : "LegacyTextItem",
                     name: textFrame.name,
                     note: textFrame.note,
                     contents: textFrame.contents,
+                    story_contents: textFrame.typename === "TextFrame" && textFrame.story
+                        ? textFrame.story.textRange.contents : null,
                     position: [textFrame.position[0], textFrame.position[1]],
                     font_size: attributes && typeof attributes.size === "number" ? attributes.size : null,
                     font_name: attributes && attributes.textFont ? attributes.textFont.name : null,
@@ -212,8 +304,9 @@ def build_javascript(source: Path) -> str:
                     rotation: itemRotation(textFrame),
                     width: typeof textFrame.width === "number" ? textFrame.width : null,
                     height: typeof textFrame.height === "number" ? textFrame.height : null,
-                    overflows: textFrame.typename === "TextFrame" && typeof textFrame.overflows === "boolean"
-                        ? textFrame.overflows : null,
+                    overflows: overflow,
+                    overflow_inspection_preserved: fingerprintBefore !== null
+                        && fingerprintBefore === fingerprintAfter,
                     fill_color: attributes ? colorToObject(attributes.fillColor) : null,
                     justification: paragraphAttributes ? String(paragraphAttributes.justification) : null
                 }});
