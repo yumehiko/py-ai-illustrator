@@ -108,13 +108,15 @@ Python coreとExtendScriptのversion 1 JSON境界、runtime bridge、失敗分�
 ```bash
 uv run py-ai compile-native document.json -o output.native.ai
 
-# production昇格gateの3 fixtureをまとめて実行
+# production昇格3 fixtureとgroup parenting回帰fixtureをまとめて実行
 PYTHONPATH=src uv run python tools/run_direct_native_gate.py /tmp/py-ai-direct-gate
 ```
 
-昇格gateは、リポジトリに残す生成済みlegacy AI fixtureをreaderで低水準`Document` IRへ復元し、そのIRをdirect compilerへ渡します。これは第2層のPython authoring実装を第1層へ戻さずfixtureを再現するためのtest setupです。compiler本体はlegacy AIやlegacy writerをpre-passとして使用しません。
+昇格gateは、リポジトリに残す生成済みlegacy AI fixtureをreaderで低水準`Document` IRへ復元し、そのIRをdirect compilerへ渡します。加えて、group直下のlinked imageとeditable area textを持つ最小JSON fixtureを回帰検証します。これは第2層のPython authoring実装を第1層へ戻さずfixtureを再現するためのtest setupです。compiler本体はlegacy AIやlegacy writerをpre-passとして使用しません。
 
 compilerはArtboard、Layer、Group、Path、CompoundPath、ClippingGroup、point/area TextFrame、LinkedImageを再帰的に構築します。page itemのstable IDは`note`へ保存し、Layerはname・順序・visibility・lock、Artboardはname・順序・矩形で照合します。保存後のnative AIを再度開き、hierarchy、item order、geometry、paint、stroke、text、link、native editabilityを入力IRへ照合します。PDF-compatible containerであることまで確認した後にだけ、既存でない指定出力へ確定します。
+
+LinkedImageの`width` / `height`は回転前の配置寸法です。runtimeはそのaspect ratioを変えずにrotationを適用し、再open後のIllustrator DOMが返す回転後boundsはIR寸法から投影した期待値へstrictに照合します。
 
 missing font/link、未対応IR、保存・再open後の属性不一致、非PDF-compatible出力は失敗です。失敗時は指定出力を残しません。Illustrator 2026がインストール・認証済みで応答可能であることがproduction compileのruntime要件です。
 

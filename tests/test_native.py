@@ -27,6 +27,7 @@ from py_ai_illustrator.native_bridge import (
 )
 
 ROOT = Path(__file__).parents[1]
+GROUP_PARENTING_FIXTURE = ROOT / "tests" / "fixtures" / "native-group-parenting.json"
 
 
 def sample_document() -> Document:
@@ -202,6 +203,41 @@ def test_document_spec_preserves_ir_order_and_native_identity(tmp_path: Path) ->
     assert items[1]["items"][0]["note"].startswith("py-ai-text:")
 
 
+def test_group_parenting_fixture_request_preserves_nested_area_text_and_image(
+    tmp_path: Path,
+) -> None:
+    document, source_base = _load_document(GROUP_PARENTING_FIXTURE)
+    assert source_base == GROUP_PARENTING_FIXTURE.parent
+
+    spec = _document_spec(document, tmp_path, NativeCompileProfile())
+    layer_items = spec["layers"][0]["items"]
+
+    assert [item["id"] for item in layer_items] == ["image-group", "area-text-group"]
+    assert [[child["kind"] for child in item["items"]] for item in layer_items] == [
+        ["image"],
+        ["text"],
+    ]
+    image = layer_items[0]["items"][0]
+    area_text = layer_items[1]["items"][0]
+    assert image["note"].startswith("py-ai-image:")
+    assert (image["x"], image["y"], image["width"], image["height"], image["rotation"]) == (
+        18.0,
+        142.0,
+        36.0,
+        28.0,
+        45.0,
+    )
+    assert image["width"] / image["height"] == 36.0 / 28.0
+    assert image["dom_width"] == pytest.approx(45.25483399593904)
+    assert image["dom_height"] == pytest.approx(45.25483399593904)
+    assert area_text["note"].startswith("py-ai-text:")
+    assert (area_text["area_width"], area_text["area_height"]) == (120.0, 48.0)
+
+    request = NativeCompileRequest(document=spec, destination=str(tmp_path / "result.ai"))
+    payload = json.loads(serialize_native_compile_request(request))
+    assert payload["document"]["layers"][0]["items"] == layer_items
+
+
 def test_direct_javascript_owns_and_reopens_only_its_document(tmp_path: Path) -> None:
     output = tmp_path / 'native "quoted".ai'
     spec = _document_spec(sample_document(), tmp_path, NativeCompileProfile())
@@ -219,6 +255,12 @@ def test_direct_javascript_owns_and_reopens_only_its_document(tmp_path: Path) ->
     assert "日本語" not in javascript
     assert "py-ai-native-request.json" in javascript
     assert str(tmp_path) not in javascript
+    assert "item.move(parent, ElementPlacement.PLACEATBEGINNING)" in javascript
+    assert "ensureParent(frame, parent, textSpec.id)" in javascript
+    assert "ensureParent(image, parent, imageSpec.id)" in javascript
+    assert "image.width = imageSpec.width" in javascript
+    assert "image.height = imageSpec.height" in javascript
+    assert "image.rotate(-imageSpec.rotation)" in javascript
 
 
 def test_validation_rejects_duplicate_ids() -> None:

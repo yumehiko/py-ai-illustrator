@@ -1,4 +1,4 @@
-"""Run the three-fixture direct-native production promotion gate."""
+"""Run the direct-native production and group-parenting regression gate."""
 
 from __future__ import annotations
 
@@ -16,11 +16,21 @@ FIXTURES = (
     ("quarterly-kpi-report", ROOT / "examples" / "quarterly-kpi-report.ai"),
     ("editorial-brochure", ROOT / "examples" / "editorial-brochure.ai"),
     ("product-catalog", ROOT / "examples" / "product-catalog.ai"),
+    (
+        "native-group-parenting",
+        ROOT / "tests" / "fixtures" / "native-group-parenting.json",
+    ),
 )
 
 
 def _load_fixture_document(source: Path) -> Document:
-    document = read_ai7(source).document
+    if source.suffix == ".json":
+        payload = json.loads(source.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise TypeError("Document fixture JSON must contain an object")
+        document = Document.from_dict(payload)
+    else:
+        document = read_ai7(source).document
     if not isinstance(document, Document):  # pragma: no cover - defensive API guard
         raise TypeError(f"Fixture reader returned {type(document).__name__}, not Document")
     return document
