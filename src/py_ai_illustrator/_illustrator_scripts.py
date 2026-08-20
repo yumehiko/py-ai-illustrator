@@ -494,6 +494,349 @@ def build_modern_roundtrip_javascript(source: Path, destination: Path) -> str:
     return _build_save_javascript(source, destination, compatibility=False)
 
 
+def _native_local_dom_helpers() -> str:
+    """Shared deterministic DOM snapshot helpers for native local editing."""
+
+    return r'''
+    function quoteString(value) {
+        var slash = String.fromCharCode(92);
+        var quote = String.fromCharCode(34);
+        var carriageReturn = String.fromCharCode(13);
+        var lineFeed = String.fromCharCode(10);
+        return quote + String(value)
+            .split(slash).join(slash + slash)
+            .split(quote).join(slash + quote)
+            .split(carriageReturn).join(slash + "r")
+            .split(lineFeed).join(slash + "n") + quote;
+    }
+
+    function toJson(value) {
+        if (value === null || typeof value === "undefined") return "null";
+        if (typeof value === "string") return quoteString(value);
+        if (typeof value === "number" || typeof value === "boolean") return String(value);
+        var parts = [];
+        var index;
+        if (value instanceof Array) {
+            for (index = 0; index < value.length; index++) parts.push(toJson(value[index]));
+            return "[" + parts.join(",") + "]";
+        }
+        for (var key in value) {
+            if (value.hasOwnProperty(key)) parts.push(quoteString(key) + ":" + toJson(value[key]));
+        }
+        return "{" + parts.join(",") + "}";
+    }
+
+    function colorToObject(color) {
+        if (!color) return null;
+        var value = {type: color.typename};
+        if (color.typename === "RGBColor") {
+            value.red = color.red; value.green = color.green; value.blue = color.blue;
+        } else if (color.typename === "CMYKColor") {
+            value.cyan = color.cyan; value.magenta = color.magenta;
+            value.yellow = color.yellow; value.black = color.black;
+        } else if (color.typename === "GrayColor") {
+            value.gray = color.gray;
+        }
+        return value;
+    }
+
+    function arrayValue(value) {
+        if (!value || typeof value.length !== "number") return null;
+        var result = [];
+        for (var index = 0; index < value.length; index++) result.push(value[index]);
+        return result;
+    }
+
+    function itemMatrix(item) {
+        try {
+            var matrix = item.matrix;
+            return [matrix.mValueA, matrix.mValueB, matrix.mValueC,
+                matrix.mValueD, matrix.mValueTX, matrix.mValueTY];
+        } catch (error) { return null; }
+    }
+
+    function itemParent(item) {
+        try {
+            return {type: item.parent.typename, name: item.parent.name || ""};
+        } catch (error) { return null; }
+    }
+
+    function textStyle(frame) {
+        var range = frame.textRange;
+        var attributes = range ? range.characterAttributes : null;
+        var paragraph = range ? range.paragraphAttributes : null;
+        return {
+            font_name: attributes && attributes.textFont ? attributes.textFont.name : null,
+            font_size: attributes && typeof attributes.size === "number" ? attributes.size : null,
+            tracking: attributes && typeof attributes.tracking === "number" ? attributes.tracking : null,
+            leading: attributes && typeof attributes.leading === "number" ? attributes.leading : null,
+            auto_leading: attributes && typeof attributes.autoLeading === "boolean"
+                ? attributes.autoLeading : null,
+            fill_color: attributes ? colorToObject(attributes.fillColor) : null,
+            justification: paragraph ? String(paragraph.justification) : null
+        };
+    }
+
+    function textSnapshot(frame, index) {
+        return {
+            type: "text", id: "illustrator-dom-text-" + index, dom_index: index,
+            name: frame.name || "", note: frame.note || "", contents: frame.contents,
+            kind: String(frame.kind), parent: itemParent(frame),
+            position: arrayValue(frame.position), geometric_bounds: arrayValue(frame.geometricBounds),
+            visible_bounds: arrayValue(frame.visibleBounds), width: frame.width, height: frame.height,
+            matrix: itemMatrix(frame), style: textStyle(frame)
+        };
+    }
+
+    function imageSnapshot(item, index) {
+        var source = null; var sourceExists = false;
+        try { source = item.file.fsName; sourceExists = item.file.exists; } catch (error) {}
+        var parent = itemParent(item);
+        var clipped = false;
+        try { clipped = item.parent.typename === "GroupItem" && item.parent.clipped; } catch (error) {}
+        return {
+            type: "linked_image", id: "illustrator-dom-linked-image-" + index,
+            dom_index: index, name: item.name || "", note: item.note || "",
+            source: source, source_exists: sourceExists, parent: parent, clipped: clipped,
+            position: arrayValue(item.position), geometric_bounds: arrayValue(item.geometricBounds),
+            visible_bounds: arrayValue(item.visibleBounds), width: item.width, height: item.height,
+            matrix: itemMatrix(item)
+        };
+    }
+
+    function pathSnapshot(item, index) {
+        var anchors = [];
+        for (var pointIndex = 0; pointIndex < item.pathPoints.length; pointIndex++) {
+            var point = item.pathPoints[pointIndex];
+            anchors.push({anchor: arrayValue(point.anchor), left: arrayValue(point.leftDirection),
+                right: arrayValue(point.rightDirection), point_type: String(point.pointType)});
+        }
+        return {id: "illustrator-dom-path-" + index, dom_index: index,
+            name: item.name || "", note: item.note || "", parent: itemParent(item),
+            closed: item.closed, clipping: item.clipping, filled: item.filled, stroked: item.stroked,
+            fill_color: item.filled ? colorToObject(item.fillColor) : null,
+            stroke_color: item.stroked ? colorToObject(item.strokeColor) : null,
+            stroke_width: item.strokeWidth, position: arrayValue(item.position),
+            geometric_bounds: arrayValue(item.geometricBounds), visible_bounds: arrayValue(item.visibleBounds),
+            matrix: itemMatrix(item), anchors: anchors};
+    }
+
+    function structureSnapshot(documentRef) {
+        var layers = [];
+        for (var layerIndex = 0; layerIndex < documentRef.layers.length; layerIndex++) {
+            var layer = documentRef.layers[layerIndex]; var types = [];
+            for (var itemIndex = 0; itemIndex < layer.pageItems.length; itemIndex++) {
+                var item = layer.pageItems[itemIndex];
+                if (item.parent === layer) types.push(item.typename);
+            }
+            layers.push({name: layer.name, visible: layer.visible, locked: layer.locked,
+                page_item_types: types, page_item_count: layer.pageItems.length});
+        }
+        var artboards = [];
+        for (var artboardIndex = 0; artboardIndex < documentRef.artboards.length; artboardIndex++) {
+            artboards.push({name: documentRef.artboards[artboardIndex].name,
+                rect: arrayValue(documentRef.artboards[artboardIndex].artboardRect)});
+        }
+        return {layer_count: documentRef.layers.length, page_item_count: documentRef.pageItems.length,
+            path_item_count: documentRef.pathItems.length, group_item_count: documentRef.groupItems.length,
+            compound_path_item_count: documentRef.compoundPathItems.length,
+            text_frame_count: documentRef.textFrames.length,
+            placed_item_count: documentRef.placedItems.length, artboards: artboards, layers: layers};
+    }
+
+    function documentSnapshot(documentRef) {
+        var texts = []; var images = []; var paths = [];
+        for (var textIndex = 0; textIndex < documentRef.textFrames.length; textIndex++)
+            texts.push(textSnapshot(documentRef.textFrames[textIndex], textIndex));
+        for (var imageIndex = 0; imageIndex < documentRef.placedItems.length; imageIndex++)
+            images.push(imageSnapshot(documentRef.placedItems[imageIndex], imageIndex));
+        for (var pathIndex = 0; pathIndex < documentRef.pathItems.length; pathIndex++)
+            paths.push(pathSnapshot(documentRef.pathItems[pathIndex], pathIndex));
+        return {structure: structureSnapshot(documentRef), texts: texts,
+            linked_images: images, paths: paths};
+    }
+
+    function reportSnapshot(snapshot) {
+        return {structure: snapshot.structure, texts: snapshot.texts,
+            linked_images: snapshot.linked_images, verified_path_count: snapshot.paths.length};
+    }
+
+    function closeNumber(left, right) {
+        return typeof left === "number" && typeof right === "number" && Math.abs(left - right) < 0.02;
+    }
+
+    function closeArray(left, right) {
+        if (left === null || right === null || left.length !== right.length) return left === right;
+        for (var index = 0; index < left.length; index++) if (!closeNumber(left[index], right[index])) return false;
+        return true;
+    }
+
+    function textPrecondition(actual, expected) {
+        return actual.id === expected.id && actual.contents === expected.contents
+            && actual.name === expected.name && actual.note === expected.note
+            && actual.kind === expected.kind && toJson(actual.parent) === toJson(expected.parent)
+            && closeArray(actual.position, expected.position)
+            && closeArray(actual.geometric_bounds, expected.geometric_bounds)
+            && closeArray(actual.matrix, expected.matrix)
+            && toJson(actual.style) === toJson(expected.style);
+    }
+
+    function imagePrecondition(actual, expected) {
+        return actual.id === expected.id && actual.name === expected.name && actual.note === expected.note
+            && toJson(actual.parent) === toJson(expected.parent) && actual.clipped === expected.clipped
+            && closeArray(actual.position, expected.position)
+            && closeArray(actual.geometric_bounds, expected.geometric_bounds)
+            && closeArray(actual.visible_bounds, expected.visible_bounds)
+            && closeNumber(actual.width, expected.width) && closeNumber(actual.height, expected.height)
+            && closeArray(actual.matrix, expected.matrix);
+    }
+
+    function imageGeometryPreserved(actual, expected) {
+        var actualLinear = actual.matrix === null ? null : actual.matrix.slice(0, 4);
+        var expectedLinear = expected.matrix === null ? null : expected.matrix.slice(0, 4);
+        return actual.name === expected.name && actual.note === expected.note
+            && toJson(actual.parent) === toJson(expected.parent) && actual.clipped === expected.clipped
+            && closeArray(actual.position, expected.position)
+            && closeArray(actual.geometric_bounds, expected.geometric_bounds)
+            && closeArray(actual.visible_bounds, expected.visible_bounds)
+            && closeNumber(actual.width, expected.width) && closeNumber(actual.height, expected.height)
+            && closeArray(actualLinear, expectedLinear);
+    }
+'''
+
+
+def build_native_local_inspection_javascript(source: Path) -> str:
+    """Build a licensed-runtime selector inventory for one existing modern AI."""
+
+    source_literal = character_code_expression(source)
+    helpers = _native_local_dom_helpers()
+    return f'''#target illustrator
+(function () {{
+    var source = new File({source_literal});
+    var documentRef = null; var previousInteractionLevel = app.userInteractionLevel;
+{helpers}
+    try {{
+        app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
+        if (!source.exists) throw new Error("Temporary fixture does not exist");
+        documentRef = app.open(source);
+        var snapshot = documentSnapshot(documentRef);
+        return toJson({{ok: true, illustrator_version: app.version,
+            document_name: documentRef.name, snapshot: reportSnapshot(snapshot)}});
+    }} catch (error) {{
+        return toJson({{ok: false, error: String(error), line: error.line || null}});
+    }} finally {{
+        if (documentRef !== null) documentRef.close(SaveOptions.DONOTSAVECHANGES);
+        app.userInteractionLevel = previousInteractionLevel;
+    }}
+}}());
+'''
+
+
+def build_native_local_apply_javascript(
+    source: Path,
+    destination: Path,
+    request: dict[str, object],
+) -> str:
+    """Build one atomic DOM edit/save/reopen transaction for a modern AI copy."""
+
+    source_literal = character_code_expression(source)
+    destination_literal = character_code_expression(destination)
+    request_literal = character_code_expression(
+        json.dumps(request, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+    )
+    helpers = _native_local_dom_helpers()
+    return f'''#target illustrator
+(function () {{
+    var source = new File({source_literal}); var destination = new File({destination_literal});
+    var request = eval("(" + {request_literal} + ")");
+    var documentRef = null; var previousInteractionLevel = app.userInteractionLevel;
+{helpers}
+    function isTarget(type, index) {{
+        for (var i = 0; i < request.operations.length; i++)
+            if (request.operations[i].type === type && request.operations[i].dom_index === index) return true;
+        return false;
+    }}
+    function nonTargetsEqual(before, after) {{
+        if (before.texts.length !== after.texts.length
+            || before.linked_images.length !== after.linked_images.length
+            || before.paths.length !== after.paths.length) return false;
+        var index;
+        for (index = 0; index < before.texts.length; index++)
+            if (!isTarget("text", index) && toJson(before.texts[index]) !== toJson(after.texts[index])) return false;
+        for (index = 0; index < before.linked_images.length; index++)
+            if (!isTarget("linked_image", index) && toJson(before.linked_images[index]) !== toJson(after.linked_images[index])) return false;
+        for (index = 0; index < before.paths.length; index++)
+            if (toJson(before.paths[index]) !== toJson(after.paths[index])) return false;
+        return true;
+    }}
+    function targetsMatch(snapshot, phase) {{
+        for (var i = 0; i < request.operations.length; i++) {{
+            var operation = request.operations[i];
+            if (operation.type === "text") {{
+                var text = snapshot.texts[operation.dom_index];
+                if (!text || text.contents !== operation.after) return false;
+                if (toJson(text.style) !== toJson(operation.before.style)) return false;
+                if (!closeArray(text.matrix, operation.before.matrix)) return false;
+                if (text.parent === null || toJson(text.parent) !== toJson(operation.before.parent)) return false;
+            }} else {{
+                var image = snapshot.linked_images[operation.dom_index];
+                if (!image || !image.source_exists || image.source !== operation.after) return false;
+                if (!imageGeometryPreserved(image, operation.before)) return false;
+            }}
+        }}
+        return true;
+    }}
+    try {{
+        app.userInteractionLevel = UserInteractionLevel.DONTDISPLAYALERTS;
+        if (!source.exists) throw new Error("Temporary fixture does not exist");
+        if (destination.exists) throw new Error("Temporary destination already exists");
+        documentRef = app.open(source);
+        var before = documentSnapshot(documentRef);
+        for (var operationIndex = 0; operationIndex < request.operations.length; operationIndex++) {{
+            var operation = request.operations[operationIndex];
+            if (operation.type === "text") {{
+                var frame = documentRef.textFrames[operation.dom_index];
+                if (!frame || !textPrecondition(textSnapshot(frame, operation.dom_index), operation.before))
+                    throw new Error("text precondition mismatch for " + operation.id);
+                frame.contents = operation.after;
+            }} else if (operation.type === "linked_image") {{
+                var placed = documentRef.placedItems[operation.dom_index];
+                if (!placed || !imagePrecondition(imageSnapshot(placed, operation.dom_index), operation.before))
+                    throw new Error("linked image precondition mismatch for " + operation.id);
+                var replacement = new File(operation.after);
+                if (!replacement.exists) throw new Error("replacement linked image does not exist");
+                placed.relink(replacement);
+            }} else throw new Error("unsupported native local operation type");
+        }}
+        var afterMutation = documentSnapshot(documentRef);
+        var checks = {{
+            structure_preserved_before_save: toJson(before.structure) === toJson(afterMutation.structure),
+            non_targets_preserved_before_save: nonTargetsEqual(before, afterMutation),
+            targets_match_before_save: targetsMatch(afterMutation, "before-save")
+        }};
+        var options = new IllustratorSaveOptions();
+        options.pdfCompatible = true; options.embedLinkedFiles = false; options.compressed = true;
+        documentRef.saveAs(destination, options);
+        documentRef.close(SaveOptions.DONOTSAVECHANGES); documentRef = null;
+        documentRef = app.open(destination);
+        var afterReopen = documentSnapshot(documentRef);
+        checks.structure_preserved_after_reopen = toJson(before.structure) === toJson(afterReopen.structure);
+        checks.non_targets_preserved_after_reopen = nonTargetsEqual(before, afterReopen);
+        checks.targets_match_after_reopen = targetsMatch(afterReopen, "after-reopen");
+        var allPassed = true; for (var check in checks) if (!checks[check]) allPassed = false;
+        return toJson({{ok: allPassed, illustrator_version: app.version, checks: checks,
+            before: reportSnapshot(before), after_mutation: reportSnapshot(afterMutation),
+            after_reopen: reportSnapshot(afterReopen)}});
+    }} catch (error) {{
+        return toJson({{ok: false, error: String(error), line: error.line || null}});
+    }} finally {{
+        if (documentRef !== null) documentRef.close(SaveOptions.DONOTSAVECHANGES);
+        app.userInteractionLevel = previousInteractionLevel;
+    }}
+}}());
+'''
+
+
 def _build_save_javascript(source: Path, destination: Path, *, compatibility: bool) -> str:
     source_literal = character_code_expression(source)
     destination_literal = character_code_expression(destination)

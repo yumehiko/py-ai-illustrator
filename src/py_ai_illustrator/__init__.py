@@ -25,7 +25,12 @@ from .editing import (
     unexpected_semantic_differences,
 )
 from .format import FileFormat, FormatReport, inspect_file
-from .illustrator import run_illustrator_modern_roundtrip_test
+from .illustrator import (
+    apply_illustrator_native_local,
+    inspect_illustrator_native_local,
+    plan_illustrator_native_local,
+    run_illustrator_modern_roundtrip_test,
+)
 from .legacy import (
     LegacyPatchPlan,
     ReplaceLinkedImageSource,
@@ -207,12 +212,14 @@ __all__ = [
     "VisualDiffResult",
     "apply_edit",
     "apply_edit_plan",
+    "apply_illustrator_native_local",
     "apply_legacy_patch",
     "compile_native_ai",
     "parse_native_compile_result",
     "serialize_native_compile_request",
     "extract_pdf_display",
     "inspect_file",
+    "inspect_illustrator_native_local",
     "inspect_editable_legacy",
     "inspect_editable_modern",
     "inspect_modern_fill_targets",
@@ -238,6 +245,7 @@ __all__ = [
     "plan_legacy_patch",
     "parse_modern_private_data",
     "plan_edit",
+    "plan_illustrator_native_local",
     "read_ai7",
     "read_modern_ai",
     "run_illustrator_modern_roundtrip_test",

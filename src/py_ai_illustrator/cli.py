@@ -17,8 +17,11 @@ from .editing import (
 )
 from .format import FileFormat, inspect_file
 from .illustrator import (
+    apply_illustrator_native_local,
+    inspect_illustrator_native_local,
     list_illustrator_fonts,
     materialize_native_ai,
+    plan_illustrator_native_local,
     run_illustrator_export_test,
     run_illustrator_modern_roundtrip_test,
     run_illustrator_roundtrip_test,
@@ -231,9 +234,7 @@ def _validate(args: argparse.Namespace) -> int:
         modern_read = modern.to_dict()
         pdf_display = display.to_dict()
         if report.format is FileFormat.PDF_COMPATIBLE_AI:
-            representation_consistency = inspect_modern_representation_consistency(
-                args.input
-            )
+            representation_consistency = inspect_modern_representation_consistency(args.input)
         errors.extend(
             diagnostic.message
             for diagnostic in modern.diagnostics
@@ -295,9 +296,7 @@ def _validate(args: argparse.Namespace) -> int:
     result = {
         "valid": valid,
         "safe_to_reserialize": bool(
-            not errors
-            and compatibility is not None
-            and compatibility["safe_to_reserialize"]
+            not errors and compatibility is not None and compatibility["safe_to_reserialize"]
         ),
         "classification": classification if valid else "unconvertible",
         "format": report.format.value,
@@ -323,6 +322,39 @@ def _test_illustrator(args: argparse.Namespace) -> int:
     destination = Path(args.output) if args.output else None
     _write_json(result, destination)
     return 0 if result["status"] == "passed" else 1
+
+
+def _inspect_native_local(args: argparse.Namespace) -> int:
+    result = inspect_illustrator_native_local(
+        args.input,
+        timeout=args.timeout,
+        application_name=args.application,
+    )
+    _write_json(result, None)
+    return 0 if result["status"] == "passed" else 1
+
+
+def _plan_native_local(args: argparse.Namespace) -> int:
+    result = plan_illustrator_native_local(
+        args.input,
+        _read_request(args.operations),
+        timeout=args.timeout,
+        application_name=args.application,
+    )
+    _write_json(result, None)
+    return 0 if result["applicable"] else 1
+
+
+def _apply_native_local(args: argparse.Namespace) -> int:
+    result = apply_illustrator_native_local(
+        args.input,
+        _read_request(args.operations),
+        args.output,
+        timeout=args.timeout,
+        application_name=args.application,
+    )
+    _write_json(result, None)
+    return 0 if result["applied"] else 1
 
 
 def _materialize_native(args: argparse.Namespace) -> int:
@@ -478,6 +510,36 @@ def build_parser() -> argparse.ArgumentParser:
     illustrator_parser.add_argument("--application", default="Adobe Illustrator")
     illustrator_parser.add_argument("-o", "--output")
     illustrator_parser.set_defaults(handler=_test_illustrator)
+
+    native_local_inspect_parser = subparsers.add_parser(
+        "inspect-native-local",
+        help="inspect live text and linked images through a licensed Illustrator copy",
+    )
+    native_local_inspect_parser.add_argument("input")
+    native_local_inspect_parser.add_argument("--timeout", type=float, default=90.0)
+    native_local_inspect_parser.add_argument("--application", default="Adobe Illustrator")
+    native_local_inspect_parser.set_defaults(handler=_inspect_native_local)
+
+    native_local_plan_parser = subparsers.add_parser(
+        "plan-native-local",
+        help="resolve an atomic local-edit manifest against a fresh Illustrator DOM snapshot",
+    )
+    native_local_plan_parser.add_argument("input")
+    native_local_plan_parser.add_argument("operations")
+    native_local_plan_parser.add_argument("--timeout", type=float, default=90.0)
+    native_local_plan_parser.add_argument("--application", default="Adobe Illustrator")
+    native_local_plan_parser.set_defaults(handler=_plan_native_local)
+
+    native_local_apply_parser = subparsers.add_parser(
+        "apply-native-local",
+        help="edit a copy in Illustrator, save as current AI, reopen, verify, and publish",
+    )
+    native_local_apply_parser.add_argument("input")
+    native_local_apply_parser.add_argument("operations")
+    native_local_apply_parser.add_argument("-o", "--output", required=True)
+    native_local_apply_parser.add_argument("--timeout", type=float, default=120.0)
+    native_local_apply_parser.add_argument("--application", default="Adobe Illustrator")
+    native_local_apply_parser.set_defaults(handler=_apply_native_local)
 
     native_parser = subparsers.add_parser(
         "materialize-native",

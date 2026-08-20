@@ -197,6 +197,8 @@ AI8互換のlegacy再保存ではfont名、paragraph属性、描画結果に影�
 
 2026-08-20にIllustrator 30.7.0でAreaText overflow gateを実行し、同一geometry（120×48 pt）、Helvetica 12 pt、leading 14 ptの短文は`false`、長文は`true`、対照のpoint textは`null`になりました。direct verificationと独立DOM inspectionの結果が一致し、検査前後の全fingerprintとnative fixtureのSHA-256は不変でした。既存direct-native gateも4 fixtureすべて`passed`で、`editorial-brochure`の4 AreaText、`product-catalog`の1 AreaText、`native-group-parenting`の1 AreaTextはすべて`false`でした。
 
+2026-08-21にIllustrator 30.7.0で`illustrator-native-local-edit-v1`の実fixture gateを実行しました。`banner-test-oven.ai`（SHA-256 `57f4c266077eeb74960475e7f4f607599a4650e2e18fdee894887381ee2bf5c4`）から、linked imageと商品名live textを1 manifestで置換し、空気清浄機版と最新型炊飯器版を別々に生成しました。両方で保存前・再open後のtarget、全非対象text/image/path、document structure、font/style、link/bounds、PDF-compatible container、PrivateData/PDF timestamp、source不変、target bounds外changed pixel 0が合格しました。詳細な保証境界は[Illustrator native local-edit profile](modern-ai-native-local-edit-profile.md)を参照してください。
+
 | direct fixture | 再open後の主な構造 | 主な昇格境界 |
 | --- | --- | --- |
 | `quarterly-kpi-report` | 1 layer / 4 groups / 17 paths / 24 native texts | nested hierarchy、異種item order、path/stroke、point text |

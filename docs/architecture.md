@@ -52,6 +52,8 @@ operation facade
 | `editing` | facadeのみ。manifestは `_operation_schema`、planは `_operation_plan`、applyは `_operation_orchestration` | source precondition / fail-closed apply |
 | `verification` | PDF display、timestamp freshness、representation consistency、visual diff | semantic / representation / visual evidence |
 
+Python exact-span patchでPDF/PrivateData同期を証明できないlive objectは、`_illustrator_native_local`が明示的なlicensed-runtime profileとして所有します。operation schemaは共有しますが、通常のmodern patchへfallbackせず、DOM inspection → copy上のatomic edit → current-format save-as → reopen → Python container/visual検証を一つの独立経路にします。Illustrator再保存はsource不変を保証しますが、outputのsource-prefix保持は保証しません。
+
 container層はoperation selectorを知りません。CST層はPDFを再解析せず、decoded PrivateDataのspanを所有します。projection層はCSTとmodelだけから読み取り専用IRを構築し、未対応syntaxをeditableとは分類しません。discoveryはpatchを実行せず、対象・根拠・停止理由を返します。patchはdiscovery結果とsource preconditionを受け、PDF表示表現とPrivateDataを同じoperationで更新できない場合は成功扱いにしません。operation schemaはplanやapplyをimportせず、planはschemaとread-only backendだけを使い、orchestrationだけがmutation backendを呼び出します。
 
 ## 上位層との境界

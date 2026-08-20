@@ -43,12 +43,23 @@ from ._illustrator_fonts import list_illustrator_fonts as _list_fonts
 from ._illustrator_inspection import run_illustrator_test as _run_test
 from ._illustrator_legacy import run_illustrator_roundtrip_test as _run_legacy_roundtrip
 from ._illustrator_modern import run_illustrator_modern_roundtrip_test as _run_modern_roundtrip
+from ._illustrator_native_local import (
+    apply_illustrator_native_local as _apply_native_local,
+)
+from ._illustrator_native_local import (
+    inspect_illustrator_native_local as _inspect_native_local,
+)
+from ._illustrator_native_local import (
+    plan_illustrator_native_local as _plan_native_local,
+)
 from ._illustrator_native_materialization import materialize_native_ai as _materialize_native
 from ._illustrator_scripts import (
     build_export_javascript,
     build_font_catalog_javascript,
     build_javascript,
     build_modern_roundtrip_javascript,
+    build_native_local_apply_javascript,
+    build_native_local_inspection_javascript,
     build_native_materialization_javascript,
     build_roundtrip_javascript,
     character_code_expression,
@@ -79,6 +90,8 @@ _build_export_javascript = build_export_javascript
 _build_roundtrip_javascript = build_roundtrip_javascript
 _build_modern_roundtrip_javascript = build_modern_roundtrip_javascript
 _build_native_materialization_javascript = build_native_materialization_javascript
+_build_native_local_apply_javascript = build_native_local_apply_javascript
+_build_native_local_inspection_javascript = build_native_local_inspection_javascript
 _build_font_catalog_javascript = build_font_catalog_javascript
 _compare_structure = compare_structure
 _color_close = color_close
@@ -111,6 +124,51 @@ def run_illustrator_test(
 ) -> dict[str, Any]:
     return _run_test(
         source, timeout=timeout, application_name=application_name, executor=_execute_javascript
+    )
+
+
+def inspect_illustrator_native_local(
+    source: str | Path,
+    *,
+    timeout: float = 90.0,
+    application_name: str = "Adobe Illustrator",
+) -> dict[str, Any]:
+    return _inspect_native_local(
+        source, timeout=timeout, application_name=application_name, executor=_execute_javascript
+    )
+
+
+def plan_illustrator_native_local(
+    source: str | Path,
+    manifest: object,
+    *,
+    timeout: float = 90.0,
+    application_name: str = "Adobe Illustrator",
+) -> dict[str, Any]:
+    return _plan_native_local(
+        source,
+        manifest,
+        timeout=timeout,
+        application_name=application_name,
+        executor=_execute_javascript,
+    )
+
+
+def apply_illustrator_native_local(
+    source: str | Path,
+    manifest: object,
+    output: str | Path,
+    *,
+    timeout: float = 120.0,
+    application_name: str = "Adobe Illustrator",
+) -> dict[str, Any]:
+    return _apply_native_local(
+        source,
+        manifest,
+        output,
+        timeout=timeout,
+        application_name=application_name,
+        executor=_execute_javascript,
     )
 
 
