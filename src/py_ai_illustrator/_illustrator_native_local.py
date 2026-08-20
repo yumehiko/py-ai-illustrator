@@ -392,6 +392,106 @@ def _script_request(plan: dict[str, object]) -> dict[str, object]:
     return {"operations": operations}
 
 
+def _verify_replacement_assets(
+    plan: dict[str, object], *, changed_code: str
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    evidence: list[dict[str, object]] = []
+    reasons: list[dict[str, object]] = []
+    operations = plan.get("operations")
+    if not isinstance(operations, list):
+        return evidence, [
+            {
+                "code": "replacement-asset-precondition-missing",
+                "message": "The applicable plan has no operation list.",
+            }
+        ]
+    for operation in operations:
+        if not isinstance(operation, dict):
+            reasons.append(
+                {
+                    "code": "replacement-asset-precondition-missing",
+                    "message": "The applicable plan contains an invalid operation.",
+                }
+            )
+            continue
+        request = operation.get("request")
+        if not isinstance(request, dict) or request.get("op") != "replace_linked_image_source":
+            continue
+        index = operation.get("index")
+        asset = operation.get("replacement_asset")
+        if not isinstance(asset, dict):
+            reasons.append(
+                {
+                    "code": "replacement-asset-precondition-missing",
+                    "operation_index": index,
+                    "message": "The plan has no replacement asset fingerprint.",
+                }
+            )
+            continue
+        raw_path = asset.get("path")
+        expected = asset.get("sha256")
+        if not isinstance(raw_path, str) or not isinstance(expected, str):
+            reasons.append(
+                {
+                    "code": "replacement-asset-precondition-missing",
+                    "operation_index": index,
+                    "message": "The replacement asset path or SHA-256 is invalid.",
+                }
+            )
+            continue
+        asset_path = Path(raw_path)
+        actual: str | None = None
+        error: str | None = None
+        try:
+            actual = hashlib.sha256(asset_path.read_bytes()).hexdigest()
+        except OSError as exception:
+            error = str(exception)
+        item = {
+            "operation_index": index,
+            "path": str(asset_path),
+            "expected_sha256": expected,
+            "actual_sha256": actual,
+            "matches": actual == expected,
+        }
+        if error is not None:
+            item["error"] = error
+        evidence.append(item)
+        if actual != expected:
+            reasons.append(
+                {
+                    "code": changed_code,
+                    "operation_index": index,
+                    "message": (
+                        f"replacement asset is missing or changed: {asset_path} "
+                        f"(expected {expected}, got {actual})"
+                    ),
+                }
+            )
+    return evidence, reasons
+
+
+def _publish_exclusive(
+    destination: Path,
+    output_data: bytes,
+    difference_path: Path,
+    difference_data: bytes,
+) -> None:
+    created: list[Path] = []
+    try:
+        destination_stream = destination.open("xb")
+        created.append(destination)
+        with destination_stream:
+            destination_stream.write(output_data)
+        difference_stream = difference_path.open("xb")
+        created.append(difference_path)
+        with difference_stream:
+            difference_stream.write(difference_data)
+    except OSError:
+        for path in reversed(created):
+            path.unlink(missing_ok=True)
+        raise
+
+
 def _visual_impacts_within_targets(
     difference_path: Path,
     runtime: dict[str, Any],
@@ -469,6 +569,7 @@ def apply_illustrator_native_local(
 
     source_path = Path(source).resolve()
     destination = Path(output).resolve()
+    manifest = OperationManifest.from_dict(manifest_data)
     plan = plan_illustrator_native_local(
         source_path,
         manifest_data,
@@ -497,6 +598,32 @@ def apply_illustrator_native_local(
                 }
             ],
         }
+    expected_source_sha256 = plan.get("source_sha256")
+    try:
+        original = source_path.read_bytes()
+        actual_source_sha256 = hashlib.sha256(original).hexdigest()
+    except OSError:
+        original = None
+        actual_source_sha256 = None
+    if (
+        not isinstance(expected_source_sha256, str)
+        or manifest.source_sha256 != expected_source_sha256
+        or actual_source_sha256 != expected_source_sha256
+    ):
+        return {
+            **base,
+            "status": "failed",
+            "stop_reasons": [
+                {
+                    "code": "stale-source",
+                    "message": (
+                        "source bytes no longer match the manifest and applicable plan "
+                        f"(expected {expected_source_sha256}, got {actual_source_sha256})."
+                    ),
+                }
+            ],
+        }
+    assert original is not None
     diff_path = destination.with_name(destination.stem + "-visual-diff.png")
     if destination.exists() or diff_path.exists():
         existing = destination if destination.exists() else diff_path
@@ -510,14 +637,26 @@ def apply_illustrator_native_local(
                 }
             ],
         }
-    original = source_path.read_bytes()
+    assets_before_executor, asset_reasons = _verify_replacement_assets(
+        plan, changed_code="stale-replacement-asset"
+    )
+    asset_verification: dict[str, object] = {
+        "before_executor": assets_before_executor,
+    }
+    if asset_reasons:
+        return {
+            **base,
+            "status": "failed",
+            "replacement_asset_verification": asset_verification,
+            "stop_reasons": asset_reasons,
+        }
     script_request = _script_request(plan)
     with tempfile.TemporaryDirectory(prefix="py-ai-native-local-apply-") as directory:
         root = Path(directory)
         input_copy = root / "input.ai"
         candidate = root / "candidate.ai"
         temporary_diff = root / "visual-difference.png"
-        shutil.copy2(source_path, input_copy)
+        input_copy.write_bytes(original)
         try:
             completed = executor(
                 build_native_local_apply_javascript(input_copy, candidate, script_request),
@@ -544,6 +683,18 @@ def apply_illustrator_native_local(
                 "status": "environment-unavailable",
                 "stop_reasons": [{"code": "runtime-failed", "message": str(error)}],
             }
+        assets_after_executor, asset_reasons = _verify_replacement_assets(
+            plan, changed_code="replacement-asset-changed-during-apply"
+        )
+        asset_verification["after_executor"] = assets_after_executor
+        if asset_reasons:
+            return {
+                **base,
+                "status": "failed",
+                "runtime": runtime,
+                "replacement_asset_verification": asset_verification,
+                "stop_reasons": asset_reasons,
+            }
         runtime["request_operations"] = script_request["operations"]
         if runtime.get("ok") is not True or not candidate.is_file():
             return {
@@ -560,7 +711,7 @@ def apply_illustrator_native_local(
         modern = read_modern_ai(candidate)
         display = extract_pdf_display(candidate)
         difference = visual_diff(
-            source_path,
+            input_copy,
             candidate,
             temporary_diff,
             dpi=144,
@@ -599,16 +750,26 @@ def apply_illustrator_native_local(
                     {"code": "post-apply-validation-failed", "message": str(validation)}
                 ],
             }
+        assets_before_publish, asset_reasons = _verify_replacement_assets(
+            plan, changed_code="replacement-asset-changed-during-apply"
+        )
+        asset_verification["before_publish"] = assets_before_publish
+        if asset_reasons:
+            return {
+                **base,
+                "status": "failed",
+                "runtime": runtime,
+                "validation": validation,
+                "replacement_asset_verification": asset_verification,
+                "stop_reasons": asset_reasons,
+            }
         output_data = candidate.read_bytes()
-        try:
-            with destination.open("xb") as stream:
-                stream.write(output_data)
-            with diff_path.open("xb") as stream:
-                stream.write(temporary_diff.read_bytes())
-        except OSError:
-            destination.unlink(missing_ok=True)
-            diff_path.unlink(missing_ok=True)
-            raise
+        _publish_exclusive(
+            destination,
+            output_data,
+            diff_path,
+            temporary_diff.read_bytes(),
+        )
     return {
         **base,
         "status": "applied",
@@ -617,6 +778,7 @@ def apply_illustrator_native_local(
         "output_sha256": hashlib.sha256(output_data).hexdigest(),
         "runtime": runtime,
         "validation": validation,
+        "replacement_asset_verification": asset_verification,
         "visual_diff": {**difference.to_dict(), "artifact": str(diff_path)},
         "visual_bounds_evidence": {
             "threshold": 8,

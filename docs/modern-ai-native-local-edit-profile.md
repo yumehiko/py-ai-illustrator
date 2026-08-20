@@ -24,16 +24,17 @@ manifestはoperation schema version 1を使い、このprofileでは`source_sha2
 
 ## atomic apply
 
-1. source digest、manifest、replacement assetをPythonで検証する。
-2. sourceを一時コピーし、そのコピーだけをIllustratorでopenする。
-3. 全selectorのDOM fingerprintを再確認してから、manifest順に全operationを適用する。
-4. 保存前にtargetのrequested value、font/style、text基準matrix、linked image identity/link/bounds/size/rotation/clipping、全非対象text/image/path fingerprint、document structureを照合する。
-5. `pdfCompatible=true`、`embedLinkedFiles=false`で新しい一時`.ai`へ別名保存する。
-6. 一時出力を再openし、同じDOM条件とnative editabilityを再検証する。
-7. Pythonでcontainer、PrivateData、PDF display、PDF/PrivateData timestamp、target限定visual diff、source不変を検証する。
-8. 全checkがtrueの場合だけ、既存でない最終outputとvisual diff artifactを作成する。
+1. plan後にsourceを一度読み、そのbytesがmanifestとplanのSHA-256に一致することを再検証する。
+2. 照合済みbytesを一時inputへ書き、そのinputだけをIllustratorでopenする。source pathからの再copyは行わない。
+3. replacement assetのSHA-256をexecutor直前、executor直後、publish直前にplanと照合する。
+4. 全selectorのDOM fingerprintを再確認してから、manifest順に全operationを適用する。
+5. 保存前にtargetのrequested value、font/style、text基準matrix、linked image identity/link/bounds/size/rotation/clipping、全非対象text/image/path fingerprint、document structureを照合する。
+6. `pdfCompatible=true`、`embedLinkedFiles=false`で新しい一時`.ai`へ別名保存する。
+7. 一時出力を再openし、同じDOM条件とnative editabilityを再検証する。
+8. Pythonでcontainer、PrivateData、PDF display、PDF/PrivateData timestamp、target限定visual diff、source不変を検証する。
+9. 全checkがtrueの場合だけ、exclusive createできた最終outputとvisual diff artifactを作成する。
 
-一件でも失敗した場合、最終outputは作りません。入力や既存outputの上書きは拒否します。
+一件でも失敗した場合、最終outputは作りません。入力や既存outputの上書きは拒否します。publish競合時のcleanup対象は、このapply呼び出しが実際に作成したpathだけです。
 
 ## pure gateとruntime gate
 

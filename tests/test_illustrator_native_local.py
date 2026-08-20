@@ -1,5 +1,10 @@
+import hashlib
 import json
+import subprocess
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 from py_ai_illustrator import _illustrator_native_local as native_local
 from py_ai_illustrator._illustrator_scripts import (
@@ -146,3 +151,278 @@ def test_native_local_cli_commands_are_explicit_runtime_routes() -> None:
         ).command
         == "apply-native-local"
     )
+
+
+def _replace_text_manifest(source_sha256: str) -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "source_sha256": source_sha256,
+        "operations": [
+            {
+                "op": "replace_text",
+                "selector": {"type": "text", "id": "illustrator-dom-text-2"},
+                "text": "空気清浄機が",
+            }
+        ],
+    }
+
+
+def _applicable_plan(
+    source_sha256: str, *, replacement: Path | None = None
+) -> dict[str, object]:
+    operations: list[dict[str, object]] = []
+    if replacement is not None:
+        operations.append(
+            {
+                "index": 0,
+                "request": {
+                    "op": "replace_linked_image_source",
+                    "selector": {
+                        "type": "linked_image",
+                        "id": "illustrator-dom-linked-image-0",
+                    },
+                    "source": str(replacement),
+                },
+                "resolved_target": {
+                    "type": "linked_image",
+                    "id": "illustrator-dom-linked-image-0",
+                },
+                "runtime_evidence": {"dom_index": 0},
+                "requested_after": str(replacement),
+                "replacement_asset": {
+                    "path": str(replacement),
+                    "sha256": hashlib.sha256(b"planned asset").hexdigest(),
+                },
+            }
+        )
+    return {
+        "applicable": True,
+        "source_sha256": source_sha256,
+        "operations": operations,
+        "stop_reasons": [],
+    }
+
+
+def _replace_image_manifest(source_sha256: str, replacement: Path) -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "source_sha256": source_sha256,
+        "operations": [
+            {
+                "op": "replace_linked_image_source",
+                "selector": {
+                    "type": "linked_image",
+                    "id": "illustrator-dom-linked-image-0",
+                },
+                "source": str(replacement),
+            }
+        ],
+    }
+
+
+def test_native_local_apply_stops_when_source_changes_after_plan(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    planned_source = b"planned source bytes"
+    source = tmp_path / "source.ai"
+    source.write_bytes(planned_source)
+    digest = hashlib.sha256(planned_source).hexdigest()
+    executor_called = False
+
+    def fake_plan(*args: object, **kwargs: object) -> dict[str, object]:
+        source.write_bytes(b"changed after plan")
+        return _applicable_plan(digest)
+
+    def fake_executor(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal executor_called
+        executor_called = True
+        raise AssertionError("stale source must stop before the apply executor")
+
+    monkeypatch.setattr(native_local, "plan_illustrator_native_local", fake_plan)
+
+    result = native_local.apply_illustrator_native_local(
+        source,
+        _replace_text_manifest(digest),
+        tmp_path / "output.ai",
+        executor=fake_executor,
+    )
+
+    assert result["applied"] is False
+    assert result["stop_reasons"][0]["code"] == "stale-source"
+    assert executor_called is False
+
+
+@pytest.mark.parametrize("asset_state", ["missing", "mismatched"])
+def test_native_local_apply_stops_on_stale_asset_before_executor(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, asset_state: str
+) -> None:
+    source_data = b"source"
+    source = tmp_path / "source.ai"
+    source.write_bytes(source_data)
+    digest = hashlib.sha256(source_data).hexdigest()
+    replacement = tmp_path / "replacement.png"
+    if asset_state == "mismatched":
+        replacement.write_bytes(b"changed asset")
+    plan = _applicable_plan(digest, replacement=replacement)
+    executor_called = False
+
+    def fake_executor(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal executor_called
+        executor_called = True
+        raise AssertionError("stale asset must stop before the apply executor")
+
+    monkeypatch.setattr(
+        native_local, "plan_illustrator_native_local", lambda *args, **kwargs: plan
+    )
+
+    result = native_local.apply_illustrator_native_local(
+        source,
+        _replace_image_manifest(digest, replacement),
+        tmp_path / "output.ai",
+        executor=fake_executor,
+    )
+
+    assert result["applied"] is False
+    assert result["stop_reasons"][0]["code"] == "stale-replacement-asset"
+    assert executor_called is False
+
+
+def test_native_local_apply_does_not_publish_asset_changed_during_executor(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    source_data = b"verified source bytes"
+    source = tmp_path / "source.ai"
+    source.write_bytes(source_data)
+    digest = hashlib.sha256(source_data).hexdigest()
+    replacement = tmp_path / "replacement.png"
+    replacement.write_bytes(b"planned asset")
+    plan = _applicable_plan(digest, replacement=replacement)
+    output = tmp_path / "output.ai"
+
+    def fake_executor(
+        script: str, directory: Path, **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        assert (directory / "input.ai").read_bytes() == source_data
+        (directory / "candidate.ai").write_bytes(b"candidate")
+        replacement.write_bytes(b"changed during executor")
+        return subprocess.CompletedProcess([], 0, '{"ok": true}', "")
+
+    monkeypatch.setattr(
+        native_local, "plan_illustrator_native_local", lambda *args, **kwargs: plan
+    )
+
+    result = native_local.apply_illustrator_native_local(
+        source,
+        _replace_image_manifest(digest, replacement),
+        output,
+        executor=fake_executor,
+    )
+
+    assert result["applied"] is False
+    assert result["stop_reasons"][0]["code"] == (
+        "replacement-asset-changed-during-apply"
+    )
+    assert output.exists() is False
+    assert output.with_name("output-visual-diff.png").exists() is False
+
+
+def test_native_local_apply_rechecks_asset_immediately_before_publish(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    source_data = b"verified source bytes"
+    source = tmp_path / "source.ai"
+    source.write_bytes(source_data)
+    digest = hashlib.sha256(source_data).hexdigest()
+    replacement = tmp_path / "replacement.png"
+    replacement.write_bytes(b"planned asset")
+    plan = _applicable_plan(digest, replacement=replacement)
+    output = tmp_path / "output.ai"
+
+    def fake_executor(
+        script: str, directory: Path, **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        (directory / "candidate.ai").write_bytes(b"candidate")
+        return subprocess.CompletedProcess([], 0, '{"ok": true, "checks": {"ok": true}}', "")
+
+    def mutate_during_visual_validation(
+        *args: object, **kwargs: object
+    ) -> tuple[bool, int, list[list[float]]]:
+        replacement.write_bytes(b"changed before publish")
+        return True, 0, [[0.0, 0.0, 1.0, 1.0]]
+
+    monkeypatch.setattr(
+        native_local, "plan_illustrator_native_local", lambda *args, **kwargs: plan
+    )
+    monkeypatch.setattr(
+        native_local,
+        "read_modern_ai",
+        lambda *args, **kwargs: SimpleNamespace(
+            private_data_status="extracted", container_status="parsed"
+        ),
+    )
+    monkeypatch.setattr(
+        native_local,
+        "extract_pdf_display",
+        lambda *args, **kwargs: SimpleNamespace(
+            valid=True, private_data_freshness="timestamps_match"
+        ),
+    )
+    monkeypatch.setattr(
+        native_local,
+        "visual_diff",
+        lambda *args, **kwargs: SimpleNamespace(to_dict=lambda: {}),
+    )
+    monkeypatch.setattr(
+        native_local,
+        "inspect_file",
+        lambda *args, **kwargs: SimpleNamespace(
+            format=native_local.FileFormat.PDF_COMPATIBLE_AI
+        ),
+    )
+    monkeypatch.setattr(
+        native_local,
+        "_visual_impacts_within_targets",
+        mutate_during_visual_validation,
+    )
+
+    result = native_local.apply_illustrator_native_local(
+        source,
+        _replace_image_manifest(digest, replacement),
+        output,
+        executor=fake_executor,
+    )
+
+    assert result["applied"] is False
+    assert result["stop_reasons"][0]["code"] == (
+        "replacement-asset-changed-during-apply"
+    )
+    before_publish = result["replacement_asset_verification"]["before_publish"]
+    assert before_publish[0]["matches"] is False
+    assert output.exists() is False
+    assert output.with_name("output-visual-diff.png").exists() is False
+
+
+def test_native_local_publish_collision_preserves_competing_diff(tmp_path: Path) -> None:
+    destination = tmp_path / "output.ai"
+    difference = tmp_path / "output-visual-diff.png"
+    difference.write_bytes(b"competing process")
+
+    with pytest.raises(FileExistsError):
+        native_local._publish_exclusive(destination, b"ours", difference, b"our diff")
+
+    assert destination.exists() is False
+    assert difference.read_bytes() == b"competing process"
+
+
+def test_native_local_publish_collision_preserves_competing_destination(
+    tmp_path: Path,
+) -> None:
+    destination = tmp_path / "output.ai"
+    difference = tmp_path / "output-visual-diff.png"
+    destination.write_bytes(b"competing process")
+
+    with pytest.raises(FileExistsError):
+        native_local._publish_exclusive(destination, b"ours", difference, b"our diff")
+
+    assert destination.read_bytes() == b"competing process"
+    assert difference.exists() is False
