@@ -110,11 +110,16 @@ uv run py-ai compile-native document.json -o output.native.ai
 
 # production昇格3 fixtureとgroup parenting回帰fixtureをまとめて実行
 PYTHONPATH=src uv run python tools/run_direct_native_gate.py /tmp/py-ai-direct-gate
+
+# AreaTextのfit / overset / point-text対照と非破壊性を実測
+PYTHONPATH=src uv run python tools/run_area_text_overflow_gate.py /tmp/py-ai-overflow-gate
 ```
 
 昇格gateは、リポジトリに残す生成済みlegacy AI fixtureをreaderで低水準`Document` IRへ復元し、そのIRをdirect compilerへ渡します。加えて、group直下のlinked imageとeditable area textを持つ最小JSON fixtureを回帰検証します。これは第2層のPython authoring実装を第1層へ戻さずfixtureを再現するためのtest setupです。compiler本体はlegacy AIやlegacy writerをpre-passとして使用しません。
 
 compilerはArtboard、Layer、Group、Path、CompoundPath、ClippingGroup、point/area TextFrame、LinkedImageを再帰的に構築します。page itemのstable IDは`note`へ保存し、Layerはname・順序・visibility・lock、Artboardはname・順序・矩形で照合します。保存後のnative AIを再度開き、hierarchy、item order、geometry、paint、stroke、text、link、native editabilityを入力IRへ照合します。PDF-compatible containerであることまで確認した後にだけ、既存でない指定出力へ確定します。
+
+AreaTextのオーバーセット判定は、存在しない`TextFrameItem.overflows`を参照しません。単一frameがstory全体を所有する場合だけ、frameの可視`lines`の先頭・末尾rangeをstory全rangeと比較します。point/path text、frameとstoryのrange境界が一致しないthreaded text、DOM例外、range不整合は`null`です。direct native verificationはAreaTextの結果が厳密に`false`の場合だけ合格させ、`true`と`null`をfail-closedで拒否します。検査前後にはcontents、story contents、frame/story range、position、寸法、matrix、font、size、tracking、leading、fill、justificationのfingerprint一致も確認します。
 
 LinkedImageの`width` / `height`は回転前の配置寸法です。runtimeはそのaspect ratioを変えずにrotationを適用し、再open後のIllustrator DOMが返す回転後boundsはIR寸法から投影した期待値へstrictに照合します。
 
@@ -189,6 +194,8 @@ AI8互換のlegacy再保存ではfont名、paragraph属性、描画結果に影�
 現時点の正式サポート対象はIllustrator 2026です。新しい正式版が公開された場合は、この文書のfixture一式をそのversionで検証し、合格後にのみ対応versionへ追加します。
 
 2026-08-19にIllustrator 30.7.0でdirect native production昇格gateを実行し、3 fixtureすべてが`passed`になりました。いずれも一時保存、current-format再open、DOM意味照合、native editability、PDF-compatible container判定を通過し、PDF previewにも欠落・越境・意図しない重なりはありませんでした。
+
+2026-08-20にIllustrator 30.7.0でAreaText overflow gateを実行し、同一geometry（120×48 pt）、Helvetica 12 pt、leading 14 ptの短文は`false`、長文は`true`、対照のpoint textは`null`になりました。direct verificationと独立DOM inspectionの結果が一致し、検査前後の全fingerprintとnative fixtureのSHA-256は不変でした。既存direct-native gateも4 fixtureすべて`passed`で、`editorial-brochure`の4 AreaText、`product-catalog`の1 AreaText、`native-group-parenting`の1 AreaTextはすべて`false`でした。
 
 | direct fixture | 再open後の主な構造 | 主な昇格境界 |
 | --- | --- | --- |

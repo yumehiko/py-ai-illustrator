@@ -7,6 +7,7 @@
     var previousInteractionLevel = app.userInteractionLevel;
     var previousCoordinateSystem = app.coordinateSystem;
     var errors = [];
+    var textOverflowInspections = [];
 
     function quoteString(value) {
         var slash = String.fromCharCode(92);
@@ -65,6 +66,101 @@
 
     function normalizedText(value) {
         return String(value).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    }
+
+    function areaTextOverflows(frame) {
+        if (
+            !frame
+            || frame.typename !== "TextFrame"
+            || frame.kind !== TextType.AREATEXT
+        ) return null;
+        try {
+            var story = frame.story;
+            var frameRange = frame.textRange;
+            if (!story || !frameRange) return null;
+            var storyRange = story.textRange;
+            if (!storyRange) return null;
+            var frameStart = frameRange.start;
+            var frameEnd = frameRange.end;
+            var storyStart = storyRange.start;
+            var storyEnd = storyRange.end;
+            var storyLength = storyRange.length;
+            if (
+                typeof frameStart !== "number"
+                || typeof frameEnd !== "number"
+                || typeof storyStart !== "number"
+                || typeof storyEnd !== "number"
+                || typeof storyLength !== "number"
+                || storyLength < 0
+                || frameStart !== storyStart
+                || frameEnd !== storyEnd
+                || storyEnd < storyStart
+            ) return null;
+            if (storyLength === 0) return false;
+            var lines = frame.lines;
+            if (!lines || typeof lines.length !== "number") return null;
+            if (lines.length === 0) return true;
+            var visibleStart = lines[0].start;
+            var visibleEnd = lines[lines.length - 1].end;
+            if (
+                typeof visibleStart !== "number"
+                || typeof visibleEnd !== "number"
+                || visibleStart !== storyStart
+                || visibleEnd < visibleStart
+                || visibleEnd > storyEnd
+            ) return null;
+            return visibleEnd < storyEnd;
+        } catch (overflowError) {
+            return null;
+        }
+    }
+
+    function colorFingerprint(color) {
+        if (!color) return null;
+        if (color.typename === "RGBColor") {
+            return [color.typename, color.red, color.green, color.blue];
+        }
+        if (color.typename === "CMYKColor") {
+            return [color.typename, color.cyan, color.magenta, color.yellow, color.black];
+        }
+        if (color.typename === "GrayColor") return [color.typename, color.gray];
+        return [color.typename];
+    }
+
+    function textFrameFingerprint(frame) {
+        try {
+            var textRange = frame.textRange;
+            var attributes = textRange ? textRange.characterAttributes : null;
+            var paragraphAttributes = textRange ? textRange.paragraphAttributes : null;
+            var matrix = frame.matrix;
+            return toJson({
+                contents: frame.contents,
+                story_contents: frame.story ? frame.story.textRange.contents : null,
+                frame_range: textRange ? [textRange.start, textRange.end] : null,
+                story_range: frame.story
+                    ? [frame.story.textRange.start, frame.story.textRange.end] : null,
+                kind: String(frame.kind),
+                position: [frame.position[0], frame.position[1]],
+                width: typeof frame.width === "number" ? frame.width : null,
+                height: typeof frame.height === "number" ? frame.height : null,
+                matrix: matrix ? [matrix.mValueA, matrix.mValueB, matrix.mValueC,
+                    matrix.mValueD, matrix.mValueTX, matrix.mValueTY] : null,
+                font_size: attributes && typeof attributes.size === "number"
+                    ? attributes.size : null,
+                font_name: attributes && attributes.textFont ? attributes.textFont.name : null,
+                tracking: attributes && typeof attributes.tracking === "number"
+                    ? attributes.tracking : null,
+                leading: attributes && typeof attributes.leading === "number"
+                    ? attributes.leading : null,
+                auto_leading: attributes && typeof attributes.autoLeading === "boolean"
+                    ? attributes.autoLeading : null,
+                fill_color: attributes ? colorFingerprint(attributes.fillColor) : null,
+                justification: paragraphAttributes
+                    ? String(paragraphAttributes.justification) : null
+            });
+        } catch (fingerprintError) {
+            return null;
+        }
     }
 
     function makeColor(colorSpec) {
@@ -355,35 +451,50 @@
         return null;
     }
 
-    function verifyText(frame, textSpec) {
-        if (normalizedText(frame.contents) !== normalizedText(textSpec.contents)) return false;
+    function textMismatch(frame, textSpec) {
+        var fingerprintBefore = textFrameFingerprint(frame);
+        var overflow = areaTextOverflows(frame);
+        var fingerprintAfter = textFrameFingerprint(frame);
+        var inspectionPreserved = fingerprintBefore !== null
+            && fingerprintBefore === fingerprintAfter;
+        textOverflowInspections.push({
+            id: textSpec.id,
+            overflows: overflow,
+            inspection_preserved: inspectionPreserved
+        });
+        if (!inspectionPreserved) return "overflow inspection changed text frame";
+        var actualContents = frame.kind === TextType.AREATEXT && frame.story
+            ? frame.story.textRange.contents : frame.contents;
+        if (normalizedText(actualContents) !== normalizedText(textSpec.contents)) return "contents";
         var attributes = frame.textRange.characterAttributes;
-        if (attributes.textFont.name !== textSpec.font_name) return false;
-        if (!closeEnough(attributes.size, textSpec.font_size, 0.01)) return false;
-        if (!closeEnough(attributes.tracking, textSpec.tracking, 0.01)) return false;
-        if (!colorMatches(attributes.fillColor, textSpec.fill)) return false;
+        if (attributes.textFont.name !== textSpec.font_name) return "font";
+        if (!closeEnough(attributes.size, textSpec.font_size, 0.01)) return "font size";
+        if (!closeEnough(attributes.tracking, textSpec.tracking, 0.01)) return "tracking";
+        if (!colorMatches(attributes.fillColor, textSpec.fill)) return "fill color";
         if (
             textSpec.leading !== null
             && !closeEnough(attributes.leading, textSpec.leading, 0.01)
-        ) return false;
+        ) return "leading";
         var justification = String(frame.textRange.paragraphAttributes.justification);
-        if (justification !== "Justification." + textSpec.alignment.toUpperCase()) return false;
-        if (angleDifference(itemRotation(frame), textSpec.rotation) > 0.01) return false;
+        if (justification !== "Justification." + textSpec.alignment.toUpperCase()) {
+            return "justification";
+        }
+        if (angleDifference(itemRotation(frame), textSpec.rotation) > 0.01) return "rotation";
         if (textSpec.area_width !== null) {
-            if (frame.kind !== TextType.AREATEXT) return false;
-            if (!closeEnough(frame.width, textSpec.area_width, 0.1)) return false;
-            if (!closeEnough(frame.height, textSpec.area_height, 0.1)) return false;
-            if (!closeEnough(frame.position[0], textSpec.x, 0.1)) return false;
-            if (!closeEnough(frame.position[1], textSpec.y, 0.1)) return false;
-            if (frame.overflows) return false;
+            if (frame.kind !== TextType.AREATEXT) return "text kind";
+            if (!closeEnough(frame.width, textSpec.area_width, 0.1)) return "width";
+            if (!closeEnough(frame.height, textSpec.area_height, 0.1)) return "height";
+            if (!closeEnough(frame.position[0], textSpec.x, 0.1)) return "x position";
+            if (!closeEnough(frame.position[1], textSpec.y, 0.1)) return "y position";
+            if (overflow !== false) return "area text overflow " + String(overflow);
         } else {
-            if (frame.kind !== TextType.POINTTEXT) return false;
+            if (frame.kind !== TextType.POINTTEXT) return "text kind";
             if (Math.abs(textSpec.rotation) <= 0.0001) {
-                if (!closeEnough(frame.anchor[0], textSpec.x, 0.1)) return false;
-                if (!closeEnough(frame.anchor[1], textSpec.y, 0.1)) return false;
+                if (!closeEnough(frame.anchor[0], textSpec.x, 0.1)) return "anchor x";
+                if (!closeEnough(frame.anchor[1], textSpec.y, 0.1)) return "anchor y";
             }
         }
-        return true;
+        return null;
     }
 
     function imageMismatch(image, imageSpec) {
@@ -457,8 +568,14 @@
                         + " (" + pathReason + ")"
                     );
                 }
-            } else if (itemSpec.kind === "text" && !verifyText(item, itemSpec)) {
-                errors.push(path + ": text attributes mismatch for " + itemSpec.id);
+            } else if (itemSpec.kind === "text") {
+                var textReason = textMismatch(item, itemSpec);
+                if (textReason !== null) {
+                    errors.push(
+                        path + ": text attributes mismatch for " + itemSpec.id
+                        + " (" + textReason + ")"
+                    );
+                }
             } else if (itemSpec.kind === "image") {
                 var imageReason = imageMismatch(item, itemSpec);
                 if (imageReason !== null) {
@@ -598,6 +715,7 @@
             illustrator_version: app.version,
             checks: checks,
             errors: errors,
+            text_overflows: textOverflowInspections,
             counts: {
                 layers: documentRef.layers.length,
                 artboards: documentRef.artboards.length,
@@ -613,7 +731,8 @@
             ok: false,
             error: String(error),
             line: error.line || null,
-            errors: errors
+            errors: errors,
+            text_overflows: textOverflowInspections
         });
     } finally {
         if (documentRef !== null) documentRef.close(SaveOptions.DONOTSAVECHANGES);

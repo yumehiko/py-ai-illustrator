@@ -28,6 +28,7 @@ from py_ai_illustrator.native_bridge import (
 
 ROOT = Path(__file__).parents[1]
 GROUP_PARENTING_FIXTURE = ROOT / "tests" / "fixtures" / "native-group-parenting.json"
+AREA_TEXT_OVERFLOW_FIXTURE = ROOT / "tests" / "fixtures" / "native-area-text-overflow.json"
 
 
 def sample_document() -> Document:
@@ -238,6 +239,28 @@ def test_group_parenting_fixture_request_preserves_nested_area_text_and_image(
     assert payload["document"]["layers"][0]["items"] == layer_items
 
 
+def test_area_text_overflow_fixture_uses_matching_fit_and_overset_geometry() -> None:
+    document, source_base = _load_document(AREA_TEXT_OVERFLOW_FIXTURE)
+
+    assert source_base == AREA_TEXT_OVERFLOW_FIXTURE.parent
+    texts = document.layers[0].text_frames
+    assert [text.id for text in texts] == [
+        "fit-area-text",
+        "overset-area-text",
+        "point-text-control",
+    ]
+    fit, overset, point = texts
+    assert (fit.area_width, fit.area_height, fit.font_name, fit.font_size, fit.leading) == (
+        overset.area_width,
+        overset.area_height,
+        overset.font_name,
+        overset.font_size,
+        overset.leading,
+    )
+    assert len(overset.text) > len(fit.text)
+    assert point.is_area_text is False
+
+
 def test_direct_javascript_owns_and_reopens_only_its_document(tmp_path: Path) -> None:
     output = tmp_path / 'native "quoted".ai'
     spec = _document_spec(sample_document(), tmp_path, NativeCompileProfile())
@@ -261,6 +284,12 @@ def test_direct_javascript_owns_and_reopens_only_its_document(tmp_path: Path) ->
     assert "image.width = imageSpec.width" in javascript
     assert "image.height = imageSpec.height" in javascript
     assert "image.rotate(-imageSpec.rotation)" in javascript
+    assert ".overflows" not in javascript
+    assert "function areaTextOverflows(frame)" in javascript
+    assert "frameStart !== storyStart" in javascript
+    assert "frameEnd !== storyEnd" in javascript
+    assert 'if (overflow !== false) return "area text overflow " + String(overflow)' in javascript
+    assert "text_overflows: textOverflowInspections" in javascript
 
 
 def test_validation_rejects_duplicate_ids() -> None:

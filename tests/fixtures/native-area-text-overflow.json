@@ -1,0 +1,60 @@
+{
+  "width": 400,
+  "height": 300,
+  "title": "Native area text overflow regression",
+  "layers": [
+    {
+      "id": "artwork",
+      "name": "Artwork",
+      "text_frames": [
+        {
+          "id": "fit-area-text",
+          "name": "Fit Area Text",
+          "text": "Short area text.",
+          "x": 24,
+          "y": 270,
+          "font_name": "Helvetica",
+          "font_size": 12,
+          "tracking": 0,
+          "leading": 14,
+          "area_width": 120,
+          "area_height": 48,
+          "fill": {"red": 0.1, "green": 0.2, "blue": 0.3},
+          "alignment": "left"
+        },
+        {
+          "id": "overset-area-text",
+          "name": "Overset Area Text",
+          "text": "This intentionally long area text overflows the same small frame. It repeats enough words to require many more lines than the available geometry can display in Illustrator 30.7 while preserving the complete story for inspection.",
+          "x": 24,
+          "y": 190,
+          "font_name": "Helvetica",
+          "font_size": 12,
+          "tracking": 0,
+          "leading": 14,
+          "area_width": 120,
+          "area_height": 48,
+          "fill": {"red": 0.1, "green": 0.2, "blue": 0.3},
+          "alignment": "left"
+        },
+        {
+          "id": "point-text-control",
+          "name": "Point Text Control",
+          "text": "Point text remains outside area overflow detection.",
+          "x": 24,
+          "y": 100,
+          "font_name": "Helvetica",
+          "font_size": 12,
+          "tracking": 0,
+          "fill": {"red": 0.1, "green": 0.2, "blue": 0.3},
+          "alignment": "left"
+        }
+      ],
+      "item_order": [
+        {"kind": "text", "id": "fit-area-text"},
+        {"kind": "text", "id": "overset-area-text"},
+        {"kind": "text", "id": "point-text-control"}
+      ]
+    }
+  ]
+}
